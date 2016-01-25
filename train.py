@@ -18,8 +18,7 @@ summary_dir = 'inceptionv3'
 restore_file = None
 save_file = 'inceptionv3/save.ckpt'
 graph_def_orig_file = 'inception_params/tensorflow_inception_graph.pb'
-#image_size = 299
-image_width, image_height = 299, 299
+image_size = 299
 input_mean = 128.
 input_std = 128.
 
@@ -37,7 +36,6 @@ with graphs['orig'].as_default():
 
 input_op = graphs['orig'].get_operation_by_name('Mul')
 logits_op = graphs['orig'].get_operation_by_name('pool_3')
-mixed_op = graphs['orig'].get_operation_by_name('mixed_10/join')
 
 param_ops = [
     op for op in graphs['orig'].get_operations() 
@@ -50,8 +48,6 @@ i_input = reuse_ops.index(input_op)
 i_logits = reuse_ops.index(logits_op)
 reuse_ops = reuse_ops[i_input+1:i_logits+1]
 reuse_ops = [op for op in reuse_ops if op not in param_ops]
-#print('\n'.join([op.name for op in reuse_ops]))
-#import sys; sys.exit()
 
 with tf.Session(graph=graphs['orig']):
     
@@ -82,16 +78,16 @@ def forward(X, Y, batch_size, phase):
     x = tf.read_file(x)
     x = tf.image.decode_png(x, channels=3)
     if phase == 'train':
-        x = tf.image.resize_images(x, image_height/5*6, image_width/5*6)
+        x = tf.image.resize_images(x, image_size/5*6, image_size/5*6)
         tf.image_summary('orig_image', tf.expand_dims(x, 0))
-        x = tf.image.random_crop(x, [image_height, image_width])
+        x = tf.image.random_crop(x, [image_size, image_size])
         x = tf.image.random_flip_left_right(x)
         x = tf.image.random_flip_up_down(x)
 #         x = tf.image.random_contrast(x, lower=0.8, upper=1.2)
         x0 = x
         tf.image_summary('train_image', tf.expand_dims(x, 0))
     else:
-        x = tf.image.resize_images(x, image_height, image_width)
+        x = tf.image.resize_images(x, image_size, image_size)
 
     x -= input_mean
     x /= input_std
@@ -144,15 +140,14 @@ def forward(X, Y, batch_size, phase):
     a = tf.equal(tf.argmax(y, 1), tf.argmax(z, 1))
     a = tf.reduce_mean(tf.cast(a, 'float'), name=phase+'/accuracy')
 
-    B = tf.shape(tensors[mixed_op.name])
-    return L, a, B
+    return L, a
 
-L, a, B = {}, {}, {}
+L, a = {}, {}
 
 global_step = tf.Variable(0, trainable=False)
 
 for phase in ['train', 'test']:
-    L[phase], a[phase], B[phase] = \
+    L[phase], a[phase] = \
         forward(data[phase]['X'], data[phase]['Y'], batch_size[phase], phase)
     tf.scalar_summary(L[phase].op.name, L[phase])
     tf.scalar_summary(a[phase].op.name, a[phase])
@@ -203,9 +198,8 @@ with tf.Session(config=config) as sess:
         while not coord.should_stop():
 
             t = time.time()
-            train_loss, test_accuracy, weights_norm, summary_str, _, _, shape = \
-                sess.run([L['train'], a['test'], W_norm, summary_op, train_op, smooth_op, B['train']])
-            print(shape)
+            train_loss, test_accuracy, weights_norm, summary_str, _, _ = \
+                sess.run([L['train'], a['test'], W_norm, summary_op, train_op, smooth_op])
             dt = (time.time()-t)/batch_size['train']
 
             writer.add_summary(summary_str, global_step=global_step.eval())
