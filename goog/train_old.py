@@ -18,7 +18,7 @@ H = {
     'epsilon': 1.0,
     'weight_decay': 1e-4,
     'use_dropout': True,
-    'batch_size': 50,
+    'batch_size': 2,
     'min_skin_prob': 0.4,
     'min_tax_score': 0.8
 }
@@ -31,7 +31,10 @@ num_threads = 6
 if H['base_net'] == 'googlenet':
     head_weights = [0.2, 0.2, 0.6]
     features_dim = 1024
-    image_size = 224
+    #image_size = 224
+    #image_size = 480
+    image_width = 640
+    image_height = 480
     input_mean = 117.
     input_std  = 1.
     input_layer = 'input'
@@ -136,6 +139,9 @@ W_norm = [tf.nn.l2_loss(weight) for weight in weight_vars.values() + W]
 W_norm = tf.reduce_sum(tf.pack(W_norm), name='weights_norm')
 tf.scalar_summary(W_norm.op.name, W_norm)
 
+def is_early_loss(name):
+    early_loss_layers = ['head0', 'nn0', 'softmax0', 'head1', 'nn1', 'softmax1', 'output1']
+    return any(name.startswith(prefix) for prefix in early_loss_layers)
 def model(x, weights_dict):
 
     T = weights_dict
@@ -155,19 +161,31 @@ def model(x, weights_dict):
 
         else:
 
-            copied_op = x.graph.create_op(
-                op_type = op.type, 
-                inputs = [T[t.op.name] for t in list(op.inputs)], 
-                dtypes = [o.dtype for o in op.outputs], 
-                name = op.name, 
-                attrs =  op.node_def.attr
-            )
+            if is_early_loss(op.name):
+                continue
+            elif op.name == 'avgpool0':
+                #break
+                #import ipdb; ipdb.set_trace()
+                pool_op = tf.nn.avg_pool(T['mixed5b'], ksize=[1,15,20,1], strides=[1,1,1,1], padding='VALID', name=op.name)
+                T[op.name] = pool_op
 
-            T[op.name] = copied_op.outputs[0]
-        print(op.name)
+            else:
+                copied_op = x.graph.create_op(
+                    op_type = op.type, 
+                    inputs = [T[t.op.name] for t in list(op.inputs)], 
+                    dtypes = [o.dtype for o in op.outputs], 
+                    name = op.name, 
+                    attrs =  op.node_def.attr
+                )
+
+                T[op.name] = copied_op.outputs[0]
     
 
-    Z = [T[i.name] for i in features_ops]
+    #Z = [T[i.name] for i in features_ops if not is_early_loss(i.name)]
+    cnn_feat = T['mixed5b']
+    cnn_feat_r = tf.reshape(cnn_feat, [H['batch_size'] * 15 * 20, 1024])
+
+    Z = [T[i.name] for i in features_ops if not is_early_loss(i.name)]
     S = tf.shape(weights_dict['mixed5b'])
     if H['base_net'] == 'inception': Z = [tf.squeeze(z) for z in Z]
 
@@ -186,7 +204,7 @@ def save_deploy_graph(sess, step):
 
         x = tf.placeholder(
             dtype=tf.float32, 
-            shape=[None, image_size, image_size, 3], 
+            shape=[None, image_height, image_width, 3], 
             name='input'
         )
 
@@ -220,14 +238,14 @@ for phase in ['train', 'test']:
     x = tf.read_file(files[phase])
     x = tf.image.decode_png(x, channels=3)
     if phase == 'train':
-        x = tf.image.resize_images(x, image_size/5*6, image_size/5*6)
+        x = tf.image.resize_images(x, image_height/5*6, image_width/5*6)
         tf.image_summary('orig_image', tf.expand_dims(x, 0))
-        x = tf.image.random_crop(x, [image_size]*2)
+        x = tf.image.random_crop(x, [image_height, image_width])
         x = tf.image.random_flip_left_right(x)
         x = tf.image.random_flip_up_down(x)
         tf.image_summary('train_image', tf.expand_dims(x, 0))
     else:
-        x = tf.image.resize_images(x, image_size, image_size)
+        x = tf.image.resize_images(x, image_height, image_width)
 
     x -= input_mean
     x /= input_std
