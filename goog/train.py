@@ -34,7 +34,6 @@ if H['base_net'] == 'googlenet':
     image_width = 640
     image_height = 480
     input_mean = 117.
-    input_std  = 1.
     input_layer = 'input'
     features_layers = ['nn0/reshape', 'nn1/reshape', 'avgpool0/reshape']
 
@@ -60,7 +59,7 @@ else:
     restore_file = None
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
 config = tf.ConfigProto(gpu_options=gpu_options)
 
 data = train_utils.load_data('')
@@ -171,10 +170,9 @@ def model(x, weights_dict):
     cnn_feat = T['mixed5b']
     cnn_feat_r = tf.reshape(cnn_feat, [H['batch_size'] * 15 * 20, 1024])
 
-    Z = [cnn_feat_r]
+    Z = cnn_feat_r
 
     S = tf.shape(weights_dict['mixed5b'])
-    if H['base_net'] == 'inception': Z = [tf.squeeze(z) for z in Z]
 
     return Z, S
 
@@ -194,23 +192,19 @@ for phase in ['train', 'test']:
 
     x = tf.read_file(files[phase])
     x = tf.image.decode_png(x, channels=3)
+    x = tf.image.resize_images(x, image_height, image_width)
     if phase == 'train':
-        #x = tf.image.resize_images(x, image_height/5*6, image_width/5*6)
-        x = tf.image.resize_images(x, image_height, image_width)
-        tf.image_summary('orig_image', tf.expand_dims(x, 0))
-        tf.scalar_summary('x.shape[0]', tf.shape(x)[0])
-        tf.scalar_summary('x.shape[1]', tf.shape(x)[1])
-        tf.scalar_summary('y.shape[0]', tf.shape(y)[0])
-        tf.scalar_summary('y.shape[1]', tf.shape(y)[1])
+        y_density = tf.cast(tf.argmax(y, 1) * 128, 'uint8')
+        y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
+        tf.image_summary('train_label', y_density_image)
         #x = tf.image.random_crop(x, [image_height, image_width])
         #x = tf.image.random_flip_left_right(x)
         #x = tf.image.random_flip_up_down(x)
         tf.image_summary('train_image', tf.expand_dims(x, 0))
     else:
-        x = tf.image.resize_images(x, image_height, image_width)
+        tf.image_summary('test_image', tf.expand_dims(x, 0))
 
     x -= input_mean
-    x /= input_std
 
     x, y, files[phase] = tf.train.shuffle_batch(
         tensor_list = [x, y, files[phase]],
@@ -223,9 +217,9 @@ for phase in ['train', 'test']:
     Z, S = model(x, weight_tensors)
 
     if H['use_dropout'] and phase == 'train':
-        Z = [tf.nn.dropout(z, 0.5) for z in Z]
+        Z = tf.nn.dropout(Z, 0.5)
 
-    Z2 = tf.reshape(tf.nn.xw_plus_b(Z[0],W[0],B[0], name=phase+'/logits_0'), 
+    Z2 = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
           [H['batch_size'], 300, k])
     Z2 = [Z2]
     Z3 = [tf.reshape(Z2[0], [H['batch_size'] * 300, k])]
@@ -263,6 +257,16 @@ for phase in ['train', 'test']:
         smooth_op = moving_avg.apply([a])
         tf.scalar_summary(a.op.name + '/smooth', moving_avg.average(a))
 
+        #x = tf.image.resize_images(x, image_height, image_width)
+        y_out0 = tf.reshape(z, [H['batch_size'], 300, k])[0, :, :]
+        y_density = tf.cast(tf.argmax(y_out0, 1) * 128, 'uint8')
+        y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
+        tf.image_summary('test_output', y_density_image)
+        ##x = tf.image.random_crop(x, [image_height, image_width])
+        ##x = tf.image.random_flip_left_right(x)
+        ##x = tf.image.random_flip_up_down(x)
+        #tf.image_summary('train_image', tf.expand_dims(x, 0))
+
     if phase == 'train':
         grads = opt.compute_gradients(L + H['weight_decay']*W_norm)
         global_step = tf.Variable(0, trainable=False)
@@ -274,7 +278,7 @@ coord = tf.train.Coordinator()
 saver = tf.train.Saver(max_to_keep=None)
 writer = tf.train.SummaryWriter(
     logdir=save_dir, 
-    flush_secs=1
+    flush_secs=10
 )
 writer.add_graph(tf.get_default_graph().as_graph_def())
 
@@ -323,6 +327,7 @@ with tf.Session(config=config) as sess:
         dt = (time.time()-t)/H['batch_size']
 
         writer.add_summary(summary_str, global_step=global_step.eval())
+        writer.flush()
         print print_str % (
             global_step.eval(),
             batch_loss['train'],

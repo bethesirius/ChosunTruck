@@ -79,9 +79,11 @@ def load_data(directory):
     config = json.load(open('./reinspect/config.json', 'r'))
     net_config = config["net"]
     data_mean = np.ones((480, 640, 3)) * 128
-    #a = list(load_idl('./data/brainwash/brainwash_train.idl', data_mean, net_config, False))
-    from itertools import islice
-    a = list(islice(load_idl('./data/brainwash/brainwash_train.idl', data_mean, net_config, False), 100))
+    if True:
+        a = list(load_idl('./data/brainwash/brainwash_train.idl', data_mean, net_config, False))
+    else:
+        from itertools import islice
+        a = list(islice(load_idl('./data/brainwash/brainwash_train.idl', data_mean, net_config, False), 100))
 
     output = {}
     for phase in ['train', 'test']:
