@@ -7,7 +7,6 @@ import time
 import string
 import json
 
-
 def model(x, weights_dict, input_op, reuse_ops, H):
     def is_early_loss(name):
         early_loss_layers = ['head0', 'nn0', 'softmax0', 'head1', 'nn1', 'softmax1', 'output1']
@@ -53,23 +52,18 @@ def model(x, weights_dict, input_op, reuse_ops, H):
 
     Z = cnn_feat_r
 
-    S = tf.shape(weights_dict['mixed5b'])
+    return Z
 
-    return Z, S
-
-def foo(H):
+def build(H):
 
     gpu_id = 0
     num_threads = 6
 
-    if H['base_net'] == 'googlenet':
-        head_weights = [0.2, 0.2, 0.6]
-        features_dim = 1024
-        image_width = 640
-        image_height = 480
-        input_mean = 117.
-        input_layer = 'input'
-        features_layers = ['nn0/reshape', 'nn1/reshape', 'avgpool0/reshape']
+    head_weights = [0.2, 0.2, 0.6]
+    features_dim = 1024
+    input_mean = 117.
+    input_layer = 'input'
+    features_layers = ['nn0/reshape', 'nn1/reshape', 'avgpool0/reshape']
 
 
     opt = tf.train.AdamOptimizer(learning_rate=H['learning_rate'], epsilon=H['epsilon'])
@@ -93,11 +87,6 @@ def foo(H):
         tf.import_graph_def(graph_def, name='')
 
     input_op = graphs['orig'].get_operation_by_name(input_layer)
-
-    #features_ops = [
-        #graphs['orig'].get_operation_by_name(i)
-        #for i in features_layers
-    #]
 
     weights_ops = [
         op for op in graphs['orig'].get_operations() 
@@ -161,12 +150,12 @@ def foo(H):
 
         x = tf.read_file(files[phase])
         x = tf.image.decode_png(x, channels=3)
-        x = tf.image.resize_images(x, image_height, image_width)
+        x = tf.image.resize_images(x, H['image_height'], H['image_width'])
         if phase == 'train':
             y_density = tf.cast(tf.argmax(y, 1) * 128, 'uint8')
             y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
             tf.image_summary('train_label', y_density_image)
-            #x = tf.image.random_crop(x, [image_height, image_width])
+            #x = tf.image.random_crop(x, [H['image_height'], H['image_width']])
             #x = tf.image.random_flip_left_right(x)
             #x = tf.image.random_flip_up_down(x)
             tf.image_summary('train_image', tf.expand_dims(x, 0))
@@ -185,27 +174,25 @@ def foo(H):
             min_after_dequeue = H['batch_size']
         )
 
-        Z, S = model(x, weight_tensors, input_op, reuse_ops, H)
+        Z = model(x, weight_tensors, input_op, reuse_ops, H)
 
         if H['use_dropout'] and phase == 'train':
             Z = tf.nn.dropout(Z, 0.5)
 
         Z2 = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
               [H['batch_size'], 300, k])
-        Z2 = [Z2]
-        Z3 = [tf.reshape(Z2[0], [H['batch_size'] * 300, k])]
+        Z3 = tf.reshape(Z2, [H['batch_size'] * 300, k])
 
         if H['use_loss_matrix']:
 
             loss_weights = tf.nn.embedding_lookup(H['loss_matrix'], y)
-            L = [tf.reduce_sum(-tf.log(tf.nn.softmax(z)+1e-8)*loss_weights, 1)
-                 for z in Z2]
+            L = [tf.reduce_sum(-tf.log(tf.nn.softmax(Z2)+1e-8)*loss_weights, 1)]
         else:
 
             y_sparse = y
             y = tf.reshape(y_sparse, [H['batch_size'] * 300, k])
 
-            L = [tf.nn.softmax_cross_entropy_with_logits(Z3[0], y)]
+            L = [tf.nn.softmax_cross_entropy_with_logits(Z3, y)]
 
 
         L = tf.mul(tf.pack(L), np.array(head_weights).reshape([len(features_layers), 1]))
@@ -215,10 +202,9 @@ def foo(H):
         tf.scalar_summary(L.op.name, L)
         loss[phase] = L
 
-        z = Z3[-1]
-        scores[phase] = z
+        scores[phase] = Z3
 
-        a = tf.equal(tf.argmax(y, 1), tf.argmax(z, 1))
+        a = tf.equal(tf.argmax(y, 1), tf.argmax(Z3, 1))
         a = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
         tf.scalar_summary(a.op.name, a)
         accuracy[phase] = a
@@ -228,12 +214,12 @@ def foo(H):
             smooth_op = moving_avg.apply([a])
             tf.scalar_summary(a.op.name + '/smooth', moving_avg.average(a))
 
-            #x = tf.image.resize_images(x, image_height, image_width)
-            y_out0 = tf.reshape(z, [H['batch_size'], 300, k])[0, :, :]
+            #x = tf.image.resize_images(x, H['image_height'], H['image_width'])
+            y_out0 = tf.reshape(Z3, [H['batch_size'], 300, k])[0, :, :]
             y_density = tf.cast(tf.argmax(y_out0, 1) * 128, 'uint8')
             y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
             tf.image_summary('test_output', y_density_image)
-            ##x = tf.image.random_crop(x, [image_height, image_width])
+            ##x = tf.image.random_crop(x, [H['image_height'], H['image_width']])
             ##x = tf.image.random_flip_left_right(x)
             ##x = tf.image.random_flip_up_down(x)
             #tf.image_summary('train_image', tf.expand_dims(x, 0))
@@ -245,14 +231,12 @@ def foo(H):
 
     summary_op = tf.merge_all_summaries()
 
-    return S, files, scores, loss, accuracy, W_norm, summary_op, train_op, smooth_op, data, config, global_step
+    return files, scores, loss, accuracy, W_norm, summary_op, train_op, smooth_op, data, config, global_step
 
 H = {
     'base_net': 'googlenet',
     'weight_init_size': 1e-3,
     'use_loss_matrix': False,
-    'optimizer': 'Adam',
-    #'learning_rate': 1e-3,
     'learning_rate': 1e-4,
     'epsilon': 1.0,
     'weight_decay': 1e-4,
@@ -261,6 +245,8 @@ H = {
     'min_skin_prob': 0.4,
     'min_tax_score': 0.8,
     'save_dir': 'default',
+    'image_width': 640,
+    'image_height': 480,
 }
 
 def main():
@@ -275,12 +261,8 @@ def main():
         for i in os.listdir(H['save_dir']) 
         if '.ckpt-' in i
     ])
-    if ckpt_iters:
-        restore_file = ckpt_file+'-'+str(ckpt_iters[-1])
-    else:
-        restore_file = None
 
-    S, files, scores, loss, accuracy, W_norm, summary_op, train_op, smooth_op, data, config, global_step = foo(H)
+    files, scores, loss, accuracy, W_norm, summary_op, train_op, smooth_op, data, config, global_step = build(H)
 
     coord = tf.train.Coordinator()
     saver = tf.train.Saver(max_to_keep=None)
@@ -290,56 +272,40 @@ def main():
     )
     writer.add_graph(tf.get_default_graph().as_graph_def())
 
-    print_str = string.join([
-        'Step: %d',
-        'Train Loss: %.2f',
-        'Test Accuracy: %.1f%%',
-        'W_norm/Loss: %.2f',
-        'Time/image (ms): %.1f'
-    ], ', ')
-
-    scores_lookup = {'train': {}, 'test': {}}
-
-
-    batch_files, batch_scores, batch_loss, batch_accuracy = {},{},{},{}
-
     with tf.Session(config=config) as sess:
 
         sess.run(tf.initialize_all_variables())
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        if restore_file: saver.restore(sess, restore_file)
+        if ckpt_iters:
+            saver.restore(sess, '%s-%d' % (ckpt_file, ckpt_iters[-1]))
 
         while not coord.should_stop():
             t = time.time()
 
-            #feed = {test_image: sess.run(test_x)}
-            batch_loss['train'], batch_accuracy['test'], weights_norm, \
-                summary_str, _, _, \
-                batch_scores['train'], batch_scores['test'], \
-                batch_files['train'], batch_files['test'], \
-                shape = \
+            batch_loss_train, test_accuracy, weights_norm, \
+                summary_str, _, _ = \
                 sess.run([loss['train'], accuracy['test'], W_norm, 
-                    summary_op, train_op, smooth_op,
-                    scores['train'], scores['test'], 
-                    files['train'], files['test'], S])
-                    #files['train'], files['test'], S], feed_dict=feed)
-            print(shape)
+                    summary_op, train_op, smooth_op])
 
-            for phase in ['train', 'test']:
-                for filename, feats in zip(batch_files[phase], batch_scores[phase]):
-                    scores_lookup[phase][filename] = feats
 
-            dt = (time.time()-t)/H['batch_size']
+            dt = (time.time() - t) / H['batch_size']
 
             writer.add_summary(summary_str, global_step=global_step.eval())
             writer.flush()
-            print print_str % (
+            print_str = string.join([
+                'Step: %d',
+                'Train Loss: %.2f',
+                'Test Accuracy: %.1f%%',
+                'W_norm/Loss: %.2f',
+                'Time/image (ms): %.1f'
+            ], ', ')
+            print(print_str % (
                 global_step.eval(),
-                batch_loss['train'],
-                batch_accuracy['test']*100,
-                H['weight_decay']*weights_norm, dt*1000
-            )
+                batch_loss_train,
+                test_accuracy * 100,
+                H['weight_decay'] * weights_norm, dt * 1000
+            ))
 
             if global_step.eval() % 1000 == 0: 
                 saver.save(sess, ckpt_file, global_step=global_step)
