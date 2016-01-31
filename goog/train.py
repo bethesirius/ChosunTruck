@@ -62,7 +62,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
 config = tf.ConfigProto(gpu_options=gpu_options)
 
-data = train_utils.load_data('')
+data = train_utils.load_data()
 
 k = len(data['train']['Y'][0][0])
 
@@ -179,13 +179,14 @@ def model(x, weights_dict):
 files, scores, loss, accuracy = {},{},{},{}
 
 for phase in ['train', 'test']:
-
     X = data[phase]['X']
     Y = data[phase]['Y']
-    print(Y.shape)
+    boxes = data[phase]['boxes']
 
-    files[phase], y = tf.train.slice_input_producer(
-        tensor_list=[X, Y],
+    test_image = tf.placeholder(tf.uint8, [480, 640, 3])
+
+    files[phase], y, boxes = tf.train.slice_input_producer(
+        tensor_list=[X, Y, boxes],
         shuffle=True,
         capacity=H['batch_size']*(num_threads+1)
     )
@@ -202,12 +203,13 @@ for phase in ['train', 'test']:
         #x = tf.image.random_flip_up_down(x)
         tf.image_summary('train_image', tf.expand_dims(x, 0))
     else:
-        tf.image_summary('test_image', tf.expand_dims(x, 0))
+        test_x = x
+        tf.image_summary('test_image', tf.expand_dims(test_image, 0))
 
     x -= input_mean
 
-    x, y, files[phase] = tf.train.shuffle_batch(
-        tensor_list = [x, y, files[phase]],
+    x, y, boxes, files[phase] = tf.train.shuffle_batch(
+        tensor_list = [x, y, boxes, files[phase]],
         batch_size = H['batch_size'],
         num_threads = num_threads,
         capacity = H['batch_size']*(num_threads+1),
@@ -306,9 +308,9 @@ with tf.Session(config=config) as sess:
     #if restore_file: print(restore_file)
 
     while not coord.should_stop():
-
         t = time.time()
 
+        feed = {test_image: sess.run(test_x)}
         batch_loss['train'], batch_accuracy['test'], weights_norm, \
             summary_str, _, _, \
             batch_scores['train'], batch_scores['test'], \
@@ -317,7 +319,7 @@ with tf.Session(config=config) as sess:
             sess.run([loss['train'], accuracy['test'], W_norm, 
                 summary_op, train_op, smooth_op,
                 scores['train'], scores['test'], 
-                files['train'], files['test'], S])
+                files['train'], files['test'], S], feed_dict=feed)
         print(shape)
 
         for phase in ['train', 'test']:

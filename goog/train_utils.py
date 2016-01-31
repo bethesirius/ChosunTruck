@@ -57,25 +57,7 @@ def make_sparse(n, d=10):
     v[n] = 1.
     return v
 
-def load_data(directory):
-    base_dir = '/home/stewartr/git/reinspect/data/brainwash'
-    output = {}
-    for phase in ['train', 'test']:
-        with open('%s/brainwash_%s.idl' % (base_dir, phase)) as f:
-            data = [line.strip() for line in f.readlines()]
-        #data = data[:10]
-        images = []
-        labels = []
-        for idx, line in enumerate(data):
-            images.append('%s/%s' % (base_dir, line.split('"')[1].replace('jpg', 'png')))
-            labels.append(min(sum(1 for char in line if char == ')'), 9))
-            
-        labels_repeat = np.array([[make_sparse(target)] * 300 for target in labels])
-        #output[phase] = {'Y': labels, 'X': images}
-        output[phase] = {'Y': labels_repeat, 'X': images}
-    return output
-
-def load_data(directory):
+def load_data():
     config = json.load(open('./reinspect/config.json', 'r'))
     net_config = config["net"]
     data_mean = np.ones((480, 640, 3)) * 128
@@ -91,17 +73,22 @@ def load_data(directory):
             #data = [line.strip() for line in f.readlines()]
         images = []
         labels = []
+        box_labels = []
         for idx, d in enumerate(a):
             images.append(d['imname'].replace('jpg', 'png'))
             #'%s/%s' % (base_dir, line.split('"')[1].replace('jpg', 'png')))
             #labels.append(min(sum(1 for char in line if char == ')'), 9))
             flags = d['box_flags'][0,:,0,0:1,0]
+            boxes = d['boxes'][0,:,:,0:1,0]
             assert(flags.shape == (300, 1))
+            assert(boxes.shape == (300, 4, 1))
             labels.append([make_sparse(row[0]) for row in flags])
+            box_labels.append(boxes)
             #import ipdb; ipdb.set_trace()
             
-        labels_repeat = np.array(labels)
-        output[phase] = {'Y': labels_repeat, 'X': images}
+        labels_array = np.array(labels)
+        box_labels_array = np.array(box_labels)
+        output[phase] = {'Y': labels_array, 'boxes': box_labels_array, 'X': images}
     return output
 
 
