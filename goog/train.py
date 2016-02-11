@@ -138,6 +138,7 @@ def build(H):
     weights_ops = [
         op for op in graphs['orig'].get_operations() 
         if any('params' in op.name or 'batchnorm/beta' in op.name)
+        or any(op.name.endswith(x) for x in [ '_w', '_b'])
         and op.type == 'Const'
     ]
 
