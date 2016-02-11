@@ -6,6 +6,51 @@ import train_utils
 import time
 import string
 import json
+import cv2
+from utils import Rect, stitch_rects
+
+
+def add_rectangles(orig_image, confidences, boxes, net_config):
+    image = np.copy(orig_image[0])
+    num_cells = net_config["grid_height"] * net_config["grid_width"]
+    num_rects_per_cell = 1
+    boxes_r = np.reshape(boxes, (net_config["batch_size"],
+                                 net_config["grid_height"],
+                                 net_config["grid_width"],
+                                 num_rects_per_cell,
+                                 4))
+    confidences_r = np.reshape(confidences, (net_config["batch_size"],
+                                             net_config["grid_height"],
+                                             net_config["grid_width"],
+                                             num_rects_per_cell,
+                                             10))
+                                             
+    cell_pix_size = 32
+    all_rects = [[[] for _ in range(net_config["grid_width"])] for _ in range(net_config["grid_height"])]
+    for n in range(num_rects_per_cell):
+        for y in range(net_config["grid_height"]):
+            for x in range(net_config["grid_width"]):
+                bbox = boxes_r[0, y, x, n, :]
+                conf = confidences_r[0, y, x, n, 1]
+                abs_cx = int(bbox[0]) + cell_pix_size/2 + cell_pix_size * x
+                abs_cy = int(bbox[1]) + cell_pix_size/2 + cell_pix_size * y
+                w = bbox[2]
+                h = bbox[3]
+                all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
+
+    #print(confidences_r[0,:,:,0,1])
+
+    acc_rects = [r for row in all_rects for cell in row for r in cell]
+
+    for rect in acc_rects:
+        if rect.confidence > 0.5:
+            cv2.rectangle(image, 
+                (rect.cx-int(rect.width/2), rect.cy-int(rect.height/2)), 
+                (rect.cx+int(rect.width/2), rect.cy+int(rect.height/2)), 
+                (255,0,0),
+                2)
+
+    return image
 
 def model(x, weights_dict, input_op, reuse_ops, H):
     def is_early_loss(name):
@@ -48,7 +93,7 @@ def model(x, weights_dict, input_op, reuse_ops, H):
     
 
     cnn_feat = T['mixed5b']
-    cnn_feat_r = tf.reshape(cnn_feat, [H['batch_size'] * 15 * 20, 1024])
+    cnn_feat_r = tf.reshape(cnn_feat, [H['net']['batch_size'] * 15 * 20, 1024])
 
     Z = cnn_feat_r
 
@@ -59,12 +104,15 @@ def build(H):
     gpu_id = 0
     num_threads = 6
 
-    head_weights = [0.2, 0.2, 0.6]
     features_dim = 1024
     input_mean = 117.
     input_layer = 'input'
-    features_layers = ['nn0/reshape', 'nn1/reshape', 'avgpool0/reshape']
 
+    #features_layers = ['nn0/reshape', 'nn1/reshape', 'avgpool0/reshape']
+    #head_weights = [0.2, 0.2, 0.6]
+
+    features_layers = ['output/confidences', 'output/boxes']
+    head_weights = [1.0, 0.1]
 
     opt = tf.train.AdamOptimizer(learning_rate=H['learning_rate'], epsilon=H['epsilon'])
     graph_def_orig_file = 'graphs/{}.pb'.format(H['base_net'])
@@ -73,12 +121,11 @@ def build(H):
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
     config = tf.ConfigProto(gpu_options=gpu_options)
 
-    data = train_utils.load_data()
+    data = train_utils.load_data(H['load_fast'])
 
     k = len(data['train']['Y'][0][0])
 
     graphs = {name: tf.Graph() for name in ['orig']}
-
     graph_def = tf.GraphDef()
     with open(graph_def_orig_file) as f:
         graph_def.MergeFromString(f.read())
@@ -90,7 +137,7 @@ def build(H):
 
     weights_ops = [
         op for op in graphs['orig'].get_operations() 
-        if ('params' in op.name or 'batchnorm/beta' in op.name)
+        if any('params' in op.name or 'batchnorm/beta' in op.name)
         and op.type == 'Const'
     ]
 
@@ -106,16 +153,23 @@ def build(H):
             for op in weights_ops
         }
 
-    weight_init = lambda: H['weight_init_size']*rnd.randn(features_dim, k).astype(np.float32)
-    bias_init = lambda: H['weight_init_size']*rnd.randn(k).astype(np.float32)
+    def weight_init(num_output):
+        return H['weight_init_size'] * rnd.randn(features_dim, num_output).astype(np.float32)
+
+    def bias_init(num_output):
+        return H['weight_init_size'] * rnd.randn(num_output).astype(np.float32)
+
+    dense_layer_num_output = [k, 4]
 
     W = [
-        tf.Variable(weight_init(), name='softmax/weights_{}'.format(i)) 
+        tf.Variable(weight_init(dense_layer_num_output[i]), 
+                    name='softmax/weights_{}'.format(i)) 
         for i in range(len(features_layers))
     ]
 
     B = [
-        tf.Variable(bias_init(), name='softmax/biases_{}'.format(i)) 
+        tf.Variable(bias_init(dense_layer_num_output[i]),
+                    name='softmax/biases_{}'.format(i)) 
         for i in range(len(features_layers))
     ]
 
@@ -133,78 +187,82 @@ def build(H):
     W_norm = tf.reduce_sum(tf.pack(W_norm), name='weights_norm')
     tf.scalar_summary(W_norm.op.name, W_norm)
 
-    files, scores, loss, accuracy = {},{},{},{}
+    files, loss, accuracy = {}, {}, {}
+
+    test_image_to_log = tf.placeholder(tf.uint8, [480, 640, 3])
+    tf.image_summary('test_image_to_log', tf.expand_dims(test_image_to_log, 0))
 
     for phase in ['train', 'test']:
         X = data[phase]['X']
         Y = data[phase]['Y']
         boxes = data[phase]['boxes']
 
-        #test_image = tf.placeholder(tf.uint8, [480, 640, 3])
-
-        files[phase], y, boxes = tf.train.slice_input_producer(
+        files[phase], confidences, boxes = tf.train.slice_input_producer(
             tensor_list=[X, Y, boxes],
             shuffle=True,
-            capacity=H['batch_size']*(num_threads+1)
+            capacity=H['net']['batch_size']*(num_threads+1)
         )
 
         x = tf.read_file(files[phase])
         x = tf.image.decode_png(x, channels=3)
         x = tf.image.resize_images(x, H['image_height'], H['image_width'])
         if phase == 'train':
-            y_density = tf.cast(tf.argmax(y, 1) * 128, 'uint8')
+            y_density = tf.cast(tf.argmax(confidences, 1) * 128, 'uint8')
             y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
             tf.image_summary('train_label', y_density_image)
             #x = tf.image.random_crop(x, [H['image_height'], H['image_width']])
             #x = tf.image.random_flip_left_right(x)
             #x = tf.image.random_flip_up_down(x)
             tf.image_summary('train_image', tf.expand_dims(x, 0))
-        else:
-            #test_x = x
-            #tf.image_summary('test_image', tf.expand_dims(test_image, 0))
-            pass
+        #else:
+            #test_image = x
 
         x -= input_mean
 
-        x, y, boxes, files[phase] = tf.train.shuffle_batch(
-            tensor_list = [x, y, boxes, files[phase]],
-            batch_size = H['batch_size'],
+        x, confidences, boxes, files[phase] = tf.train.shuffle_batch(
+            tensor_list = [x, confidences, boxes, files[phase]],
+            batch_size = H['net']['batch_size'],
             num_threads = num_threads,
-            capacity = H['batch_size']*(num_threads+1),
-            min_after_dequeue = H['batch_size']
+            capacity = H['net']['batch_size']*(num_threads+1),
+            min_after_dequeue = H['net']['batch_size']
         )
+        #if phase == 'test':
+        if phase == 'train':
+            test_boxes = boxes
+            test_image = x + input_mean
+            test_confidences = confidences
 
         Z = model(x, weight_tensors, input_op, reuse_ops, H)
 
         if H['use_dropout'] and phase == 'train':
             Z = tf.nn.dropout(Z, 0.5)
 
-        Z2 = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
-              [H['batch_size'], 300, k])
-        Z3 = tf.reshape(Z2, [H['batch_size'] * 300, k])
+        pred_confidences = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
+              [H['net']['batch_size'] * 300, k])
 
-        if H['use_loss_matrix']:
+        pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1], name=phase+'/logits_1'), 
+              [H['net']['batch_size'] * 300, 4]) * 100
 
-            loss_weights = tf.nn.embedding_lookup(H['loss_matrix'], y)
-            L = [tf.reduce_sum(-tf.log(tf.nn.softmax(Z2)+1e-8)*loss_weights, 1)]
-        else:
+        confidences = tf.reshape(confidences, [H['net']['batch_size'] * 300, k])
+        boxes = tf.cast(tf.reshape(boxes, [H['net']['batch_size'] * 300, 4]), 'float32')
+        #if phase == 'test':
+        if phase == 'train':
+            test_pred_confidences = tf.nn.softmax(pred_confidences)
+            test_pred_boxes = pred_boxes
 
-            y_sparse = y
-            y = tf.reshape(y_sparse, [H['batch_size'] * 300, k])
+        L = (head_weights[0] * tf.nn.softmax_cross_entropy_with_logits(pred_confidences, confidences),
+             head_weights[1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences[:, 1], 1))
 
-            L = [tf.nn.softmax_cross_entropy_with_logits(Z3, y)]
+        confidences_loss = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['net']['batch_size'] * 300)
+        boxes_loss = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['net']['batch_size'] * 300)
+        tf.scalar_summary(confidences_loss.op.name, confidences_loss)
+        tf.scalar_summary(boxes_loss.op.name, boxes_loss)
 
-
-        L = tf.mul(tf.pack(L), np.array(head_weights).reshape([len(features_layers), 1]))
-        L = tf.reduce_sum(L, reduction_indices=0)
-        tf.histogram_summary(phase+'/loss_histogram', L)
-        L = tf.reduce_mean(L, name=phase+'/loss')
-        tf.scalar_summary(L.op.name, L)
+        L = boxes_loss + confidences_loss
+        #L = confidences_loss
         loss[phase] = L
 
-        scores[phase] = Z3
-
-        a = tf.equal(tf.argmax(y, 1), tf.argmax(Z3, 1))
+        a = tf.equal(tf.argmax(confidences, 1), tf.argmax(pred_confidences, 1))
         a = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
         tf.scalar_summary(a.op.name, a)
         accuracy[phase] = a
@@ -215,8 +273,9 @@ def build(H):
             tf.scalar_summary(a.op.name + '/smooth', moving_avg.average(a))
 
             #x = tf.image.resize_images(x, H['image_height'], H['image_width'])
-            y_out0 = tf.reshape(Z3, [H['batch_size'], 300, k])[0, :, :]
-            y_density = tf.cast(tf.argmax(y_out0, 1) * 128, 'uint8')
+            y_out0 = tf.reshape(tf.nn.softmax(pred_confidences), [H['net']['batch_size'], 300, k])[0, :, :]
+            #y_density = tf.cast(tf.argmax(y_out0, 1) * 128, 'uint8')
+            y_density = tf.cast(y_out0[:, 1] * 128, 'uint8')
             y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
             tf.image_summary('test_output', y_density_image)
             ##x = tf.image.random_crop(x, [H['image_height'], H['image_width']])
@@ -231,22 +290,26 @@ def build(H):
 
     summary_op = tf.merge_all_summaries()
 
-    return files, scores, loss, accuracy, W_norm, summary_op, train_op, smooth_op, data, config, global_step
+    return config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step, test_image_to_log
 
 H = {
     'base_net': 'googlenet',
     'weight_init_size': 1e-3,
-    'use_loss_matrix': False,
-    'learning_rate': 1e-4,
+    'learning_rate': 1e-3,
     'epsilon': 1.0,
     'weight_decay': 1e-4,
     'use_dropout': True,
-    'batch_size': 20,
     'min_skin_prob': 0.4,
     'min_tax_score': 0.8,
     'save_dir': 'default',
     'image_width': 640,
     'image_height': 480,
+    'load_fast': False,
+    "net": {
+        "grid_height": 15,
+        "grid_width": 20,
+        "batch_size": 10,
+    },
 }
 
 def main():
@@ -262,7 +325,8 @@ def main():
         if '.ckpt-' in i
     ])
 
-    files, scores, loss, accuracy, W_norm, summary_op, train_op, smooth_op, data, config, global_step = build(H)
+
+    config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step, test_image_to_log = build(H)
 
     coord = tf.train.Coordinator()
     saver = tf.train.Saver(max_to_keep=None)
@@ -280,16 +344,22 @@ def main():
         if ckpt_iters:
             saver.restore(sess, '%s-%d' % (ckpt_file, ckpt_iters[-1]))
 
+        test_output_to_log = np.ones((H['image_height'], H['image_width'], 3)) * 128
         while not coord.should_stop():
             t = time.time()
 
-            batch_loss_train, test_accuracy, weights_norm, \
-                summary_str, _, _ = \
-                sess.run([loss['train'], accuracy['test'], W_norm, 
-                    summary_op, train_op, smooth_op])
+            feed = {test_image_to_log: test_output_to_log}
+            (batch_loss_train, test_accuracy, weights_norm, 
+                summary_str, np_test_image, np_test_boxes, np_test_confidences,
+                _, _) = sess.run([loss['train'], accuracy['test'], W_norm, 
+                    summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op], feed_dict=feed)
+
+            #print(np_test_boxes.shape)
+            test_output_to_log = add_rectangles(np_test_image, np_test_confidences, np_test_boxes, H["net"])
+            assert test_output_to_log.shape == (480, 640, 3)
 
 
-            dt = (time.time() - t) / H['batch_size']
+            dt = (time.time() - t) / H['net']['batch_size']
 
             writer.add_summary(summary_str, global_step=global_step.eval())
             writer.flush()

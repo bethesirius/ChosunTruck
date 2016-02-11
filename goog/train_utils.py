@@ -30,6 +30,7 @@ def load_idl(idlfile, data_mean, net_config, jitter):
     for anno in annos:
         anno.imageName = os.path.join(
             os.path.dirname(os.path.realpath(idlfile)), anno.imageName)
+    random.seed(0)
     random.shuffle(annos)
     result = []
     for anno in annos:
@@ -52,20 +53,20 @@ def load_idl(idlfile, data_mean, net_config, jitter):
         #yield {"imname": anno.imageName, "raw": jit_image, "image": image,
                #"boxes": boxes, "box_flags": box_flags}
 
-def make_sparse(n, d=10):
+def make_sparse(n, d):
     v = np.zeros((d,), dtype=np.float32)
     v[n] = 1.
     return v
 
-def load_data():
+def load_data(load_fast):
     config = json.load(open('./reinspect/config.json', 'r'))
     net_config = config["net"]
     data_mean = np.ones((480, 640, 3)) * 128
-    if True:
-        a = list(load_idl('./data/brainwash/brainwash_train.idl', data_mean, net_config, False))
-    else:
+    if load_fast:
         from itertools import islice
-        a = list(islice(load_idl('./data/brainwash/brainwash_train.idl', data_mean, net_config, False), 100))
+        a = list(islice(load_idl('./data/brainwash/brainwash_train.idl', data_mean, net_config, False), 20))
+    else:
+        a = list(load_idl('./data/brainwash/brainwash_train.idl', data_mean, net_config, False))
 
     output = {}
     for phase in ['train', 'test']:
@@ -79,10 +80,10 @@ def load_data():
             #'%s/%s' % (base_dir, line.split('"')[1].replace('jpg', 'png')))
             #labels.append(min(sum(1 for char in line if char == ')'), 9))
             flags = d['box_flags'][0,:,0,0:1,0]
-            boxes = d['boxes'][0,:,:,0:1,0]
+            boxes = np.transpose(d['boxes'][0,:,:,0:1,0], (0,2,1))
             assert(flags.shape == (300, 1))
-            assert(boxes.shape == (300, 4, 1))
-            labels.append([make_sparse(row[0]) for row in flags])
+            assert(boxes.shape == (300, 1, 4))
+            labels.append([make_sparse(row[0], d=10) for row in flags]) #TODO: change d to 2 and retrain
             box_labels.append(boxes)
             #import ipdb; ipdb.set_trace()
             
