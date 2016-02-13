@@ -13,6 +13,46 @@ from munkres import Munkres, print_matrix, make_cost_matrix
 
 from stitch_wrapper import stitch_rects
 
+def add_rectangles(orig_image, confidences, boxes, net_config):
+    image = np.copy(orig_image[0])
+    num_cells = net_config["grid_height"] * net_config["grid_width"]
+    num_rects_per_cell = 1
+    boxes_r = np.reshape(boxes, (net_config["batch_size"],
+                                 net_config["grid_height"],
+                                 net_config["grid_width"],
+                                 num_rects_per_cell,
+                                 4))
+    confidences_r = np.reshape(confidences, (net_config["batch_size"],
+                                             net_config["grid_height"],
+                                             net_config["grid_width"],
+                                             num_rects_per_cell,
+                                             10))
+                                             
+    cell_pix_size = 32
+    all_rects = [[[] for _ in range(net_config["grid_width"])] for _ in range(net_config["grid_height"])]
+    for n in range(num_rects_per_cell):
+        for y in range(net_config["grid_height"]):
+            for x in range(net_config["grid_width"]):
+                bbox = boxes_r[0, y, x, n, :]
+                conf = confidences_r[0, y, x, n, 1]
+                abs_cx = int(bbox[0]) + cell_pix_size/2 + cell_pix_size * x
+                abs_cy = int(bbox[1]) + cell_pix_size/2 + cell_pix_size * y
+                w = bbox[2]
+                h = bbox[3]
+                all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
+
+    acc_rects = [r for row in all_rects for cell in row for r in cell]
+
+    for rect in acc_rects:
+        if rect.confidence > 0.5:
+            cv2.rectangle(image, 
+                (rect.cx-int(rect.width/2), rect.cy-int(rect.height/2)), 
+                (rect.cx+int(rect.width/2), rect.cy+int(rect.height/2)), 
+                (255,0,0),
+                2)
+
+    return image
+
 def load_data_mean(data_mean_filename, img_width, img_height, image_scaling = 1.0):
     data_mean = np.load(data_mean_filename)
     data_mean = data_mean.astype(np.float32) / image_scaling
