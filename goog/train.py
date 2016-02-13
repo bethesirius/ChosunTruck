@@ -6,6 +6,7 @@ import train_utils
 import time
 import string
 import json
+import argparse
 import cv2
 from utils import Rect, stitch_rects
 
@@ -137,7 +138,7 @@ def build(H):
 
     weights_ops = [
         op for op in graphs['orig'].get_operations() 
-        if any('params' in op.name or 'batchnorm/beta' in op.name)
+        if any(x in op.name for x in ['params', 'batchnorm/beta'])
         or any(op.name.endswith(x) for x in [ '_w', '_b'])
         and op.type == 'Const'
     ]
@@ -227,8 +228,7 @@ def build(H):
             capacity = H['net']['batch_size']*(num_threads+1),
             min_after_dequeue = H['net']['batch_size']
         )
-        #if phase == 'test':
-        if phase == 'train':
+        if phase == 'test':
             test_boxes = boxes
             test_image = x + input_mean
             test_confidences = confidences
@@ -238,20 +238,22 @@ def build(H):
         if H['use_dropout'] and phase == 'train':
             Z = tf.nn.dropout(Z, 0.5)
 
-        pred_confidences = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
+        pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
               [H['net']['batch_size'] * 300, k])
+        pred_confidences = tf.nn.softmax(pred_logits)
 
         pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1], name=phase+'/logits_1'), 
               [H['net']['batch_size'] * 300, 4]) * 100
 
         confidences = tf.reshape(confidences, [H['net']['batch_size'] * 300, k])
         boxes = tf.cast(tf.reshape(boxes, [H['net']['batch_size'] * 300, 4]), 'float32')
-        #if phase == 'test':
-        if phase == 'train':
-            test_pred_confidences = tf.nn.softmax(pred_confidences)
+        if phase == 'test':
+            test_pred_confidences = pred_confidences
             test_pred_boxes = pred_boxes
 
-        L = (head_weights[0] * tf.nn.softmax_cross_entropy_with_logits(pred_confidences, confidences),
+        cross_entropy = -tf.reduce_sum(confidences*tf.log(tf.clip_by_value(pred_confidences,1e-10,1.0)))
+
+        L = (head_weights[0] * cross_entropy,
              head_weights[1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences[:, 1], 1))
 
         confidences_loss = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['net']['batch_size'] * 300)
@@ -274,7 +276,7 @@ def build(H):
             tf.scalar_summary(a.op.name + '/smooth', moving_avg.average(a))
 
             #x = tf.image.resize_images(x, H['image_height'], H['image_width'])
-            y_out0 = tf.reshape(tf.nn.softmax(pred_confidences), [H['net']['batch_size'], 300, k])[0, :, :]
+            y_out0 = tf.reshape(pred_confidences, [H['net']['batch_size'], 300, k])[0, :, :]
             #y_density = tf.cast(tf.argmax(y_out0, 1) * 128, 'uint8')
             y_density = tf.cast(y_out0[:, 1] * 128, 'uint8')
             y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
@@ -302,10 +304,9 @@ H = {
     'use_dropout': True,
     'min_skin_prob': 0.4,
     'min_tax_score': 0.8,
-    'save_dir': 'default',
+    'save_dir': 'log/default' + str(time.time()),
     'image_width': 640,
     'image_height': 480,
-    'load_fast': False,
     "net": {
         "grid_height": 15,
         "grid_width": 20,
@@ -314,20 +315,21 @@ H = {
 }
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--weights', default=None, type=str)
+    parser.add_argument('--load_fast', action='store_true')
+    args = parser.parse_args()
+    assert 'load_fast' not in H
+    H['load_fast'] = args.load_fast
     if not os.path.exists(H['save_dir']): os.makedirs(H['save_dir'])
 
     ckpt_file = H['save_dir'] + '/save.ckpt'
     with open(H['save_dir'] + '/hypes.json', 'w') as f:
         json.dump(H, f, indent=4)
 
-    ckpt_iters = sorted([
-        int(i.split('-')[-1]) 
-        for i in os.listdir(H['save_dir']) 
-        if '.ckpt-' in i
-    ])
-
-
     config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step, test_image_to_log = build(H)
+    check_op = tf.add_check_numerics_ops()
+
 
     coord = tf.train.Coordinator()
     saver = tf.train.Saver(max_to_keep=None)
@@ -342,44 +344,48 @@ def main():
         sess.run(tf.initialize_all_variables())
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        if ckpt_iters:
-            saver.restore(sess, '%s-%d' % (ckpt_file, ckpt_iters[-1]))
+        if args.weights is not None:
+            saver.restore(sess, args.weights)
 
         test_output_to_log = np.ones((H['image_height'], H['image_width'], 3)) * 128
         while not coord.should_stop():
-            t = time.time()
+            try:
+                t = time.time()
 
-            feed = {test_image_to_log: test_output_to_log}
-            (batch_loss_train, test_accuracy, weights_norm, 
-                summary_str, np_test_image, np_test_boxes, np_test_confidences,
-                _, _) = sess.run([loss['train'], accuracy['test'], W_norm, 
-                    summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op], feed_dict=feed)
+                feed = {test_image_to_log: test_output_to_log}
+                (batch_loss_train, test_accuracy, weights_norm, 
+                    summary_str, np_test_image, np_test_boxes, np_test_confidences,
+                    _, _, _) = sess.run([loss['train'], accuracy['test'], W_norm, 
+                        summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op, check_op], feed_dict=feed)
 
-            #print(np_test_boxes.shape)
-            test_output_to_log = add_rectangles(np_test_image, np_test_confidences, np_test_boxes, H["net"])
-            assert test_output_to_log.shape == (480, 640, 3)
+                #print(np_test_boxes.shape)
+                test_output_to_log = add_rectangles(np_test_image, np_test_confidences, np_test_boxes, H["net"])
+                assert test_output_to_log.shape == (480, 640, 3)
 
 
-            dt = (time.time() - t) / H['net']['batch_size']
+                dt = (time.time() - t) / H['net']['batch_size']
 
-            writer.add_summary(summary_str, global_step=global_step.eval())
-            writer.flush()
-            print_str = string.join([
-                'Step: %d',
-                'Train Loss: %.2f',
-                'Test Accuracy: %.1f%%',
-                'W_norm/Loss: %.2f',
-                'Time/image (ms): %.1f'
-            ], ', ')
-            print(print_str % (
-                global_step.eval(),
-                batch_loss_train,
-                test_accuracy * 100,
-                H['weight_decay'] * weights_norm, dt * 1000
-            ))
+                writer.add_summary(summary_str, global_step=global_step.eval())
+                writer.flush()
+                print_str = string.join([
+                    'Step: %d',
+                    'Train Loss: %.2f',
+                    'Test Accuracy: %.1f%%',
+                    'W_norm/Loss: %.2f',
+                    'Time/image (ms): %.1f'
+                ], ', ')
+                print(print_str % (
+                    global_step.eval(),
+                    batch_loss_train,
+                    test_accuracy * 100,
+                    H['weight_decay'] * weights_norm, dt * 1000
+                ))
 
-            if global_step.eval() % 1000 == 0: 
-                saver.save(sess, ckpt_file, global_step=global_step)
+                if global_step.eval() % 1000 == 0: 
+                    saver.save(sess, ckpt_file, global_step=global_step)
+            except:
+                import ipdb; ipdb.set_trace()
+
 
     coord.join(threads)
 

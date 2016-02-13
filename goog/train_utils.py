@@ -6,6 +6,7 @@ from scipy.misc import imread, imresize
 from utils import (annotation_jitter, image_to_h5,
                    annotation_to_h5, load_data_mean)
 from utils.annolist import AnnotationLib as al
+from itertools import islice
 
 def rescale_boxes(anno, target_width, target_height):
     I = imread(anno.imageName)
@@ -32,7 +33,6 @@ def load_idl(idlfile, data_mean, net_config, jitter):
             os.path.dirname(os.path.realpath(idlfile)), anno.imageName)
     random.seed(0)
     random.shuffle(annos)
-    result = []
     for anno in annos:
         #I = rescale_boxes(anno, net_config["img_width"], net_config["img_height"])
         #if jitter:
@@ -62,23 +62,19 @@ def load_data(load_fast):
     config = json.load(open('./reinspect/config.json', 'r'))
     net_config = config["net"]
     data_mean = np.ones((480, 640, 3)) * 128
-    if load_fast:
-        from itertools import islice
-        a = list(islice(load_idl('./data/brainwash/brainwash_train.idl', data_mean, net_config, False), 20))
-    else:
-        a = list(load_idl('./data/brainwash/brainwash_train.idl', data_mean, net_config, False))
 
     output = {}
-    for phase in ['train', 'test']:
-        #with open('%s/brainwash_%s.idl' % (base_dir, phase)) as f:
-            #data = [line.strip() for line in f.readlines()]
+    for phase in ['train', 'val']:
+        if load_fast:
+            data = list(islice(load_idl('./data/brainwash/brainwash_%s.idl' % phase, data_mean, net_config, False), 20))
+        else:
+            data = list(load_idl('./data/brainwash/brainwash_%s.idl' % phase, data_mean, net_config, False))
+
         images = []
         labels = []
         box_labels = []
-        for idx, d in enumerate(a):
+        for idx, d in enumerate(data):
             images.append(d['imname'].replace('jpg', 'png'))
-            #'%s/%s' % (base_dir, line.split('"')[1].replace('jpg', 'png')))
-            #labels.append(min(sum(1 for char in line if char == ')'), 9))
             flags = d['box_flags'][0,:,0,0:1,0]
             boxes = np.transpose(d['boxes'][0,:,:,0:1,0], (0,2,1))
             assert(flags.shape == (300, 1))
@@ -90,6 +86,8 @@ def load_data(load_fast):
         labels_array = np.array(labels)
         box_labels_array = np.array(box_labels)
         output[phase] = {'Y': labels_array, 'boxes': box_labels_array, 'X': images}
+    if 'val' in output:
+        output['test'] = output['val']
     return output
 
 
