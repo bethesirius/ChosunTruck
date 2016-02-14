@@ -1,4 +1,5 @@
 import json
+import random
 import time
 import string
 import argparse
@@ -6,24 +7,27 @@ import os
 import tensorflow as tf
 import numpy as np
 
+random.seed(0)
+np.random.seed(0)
+
+
 import train_utils
 from utils import add_rectangles
 import googlenet_load
 
 def build(H):
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(H['gpu_id'])
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(H['gpu'])
+    #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+    #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4)
+    gpu_options = tf.GPUOptions()
     config = tf.ConfigProto(gpu_options=gpu_options)
 
     k = 10
     W, B, weight_tensors, reuse_ops, input_op, W_norm = googlenet_load.setup(config, k)
     data = train_utils.load_data(H['load_fast'])
-    test_image_to_log = tf.placeholder(tf.uint8, [480, 640, 3])
-    tf.image_summary('test_image_to_log', tf.expand_dims(test_image_to_log, 0))
     num_threads = 6
     input_mean = 117.
-    head_weights = [1.0, 0.1]
-    opt = tf.train.AdamOptimizer(learning_rate=H['learning_rate'], epsilon=H['epsilon'])
+    opt = tf.train.RMSPropOptimizer(learning_rate=H['learning_rate'], decay=0.9, epsilon=H['epsilon'])
     files, loss, accuracy = {}, {}, {}
     for phase in ['train', 'test']:
         X = data[phase]['X']
@@ -77,17 +81,25 @@ def build(H):
             test_pred_confidences = pred_confidences
             test_pred_boxes = pred_boxes
 
-        cross_entropy = -tf.reduce_sum(confidences*tf.log(tf.clip_by_value(pred_confidences,1e-10,1.0)))
+        cross_entropy = -tf.reduce_sum(confidences*tf.log(pred_confidences + 1e-7))
 
-        L = (head_weights[0] * cross_entropy,
-             head_weights[1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences[:, 1], 1))
+        L = (H['head_weights'][0] * cross_entropy,
+             H['head_weights'][1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences[:, 1], 1))
 
         confidences_loss = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['net']['batch_size'] * 300)
         boxes_loss = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['net']['batch_size'] * 300)
         tf.scalar_summary(confidences_loss.op.name, confidences_loss)
         tf.scalar_summary(boxes_loss.op.name, boxes_loss)
 
-        L = boxes_loss + confidences_loss
+        L = 0.
+        if H['head_weights'][0] > 0.:
+            print('using confidences loss')
+            L += confidences_loss
+        if H['head_weights'][1] > 0.:
+            print('using box loss')
+            L += boxes_loss
+
+        #L = boxes_loss + confidences_loss
         #L = confidences_loss
         loss[phase] = L
 
@@ -101,45 +113,48 @@ def build(H):
             smooth_op = moving_avg.apply([a])
             tf.scalar_summary(a.op.name + '/smooth', moving_avg.average(a))
 
-            #x = tf.image.resize_images(x, H['image_height'], H['image_width'])
-            y_out0 = tf.reshape(pred_confidences, [H['net']['batch_size'], 300, k])[0, :, :]
-            #y_density = tf.cast(tf.argmax(y_out0, 1) * 128, 'uint8')
-            y_density = tf.cast(y_out0[:, 1] * 128, 'uint8')
-            y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
-            tf.image_summary('test_output', y_density_image)
-            ##x = tf.image.random_crop(x, [H['image_height'], H['image_width']])
-            ##x = tf.image.random_flip_left_right(x)
-            ##x = tf.image.random_flip_up_down(x)
-            #tf.image_summary('train_image', tf.expand_dims(x, 0))
+            #y_out0 = tf.reshape(pred_confidences, [H['net']['batch_size'], 300, k])[0, :, :]
+            #y_density = tf.cast(y_out0[:, 1] * 128, 'uint8')
+            #y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
+            #tf.image_summary('test_output', y_density_image)
+            ##x = tf.image.resize_images(x, H['image_height'], H['image_width'])
+            ##y_density = tf.cast(tf.argmax(y_out0, 1) * 128, 'uint8')
+            ###x = tf.image.random_crop(x, [H['image_height'], H['image_width']])
+            ###x = tf.image.random_flip_left_right(x)
+            ###x = tf.image.random_flip_up_down(x)
+            ##tf.image_summary('train_image', tf.expand_dims(x, 0))
 
         if phase == 'train':
-            grads = opt.compute_gradients(L + H['weight_decay']*W_norm)
+            #grads = opt.compute_gradients(L)
             global_step = tf.Variable(0, trainable=False)
-            train_op = opt.apply_gradients(grads, global_step=global_step)
+            #train_op = opt.apply_gradients(grads, global_step=global_step)
+            train_op = opt.minimize(L, global_step=global_step)
 
     summary_op = tf.merge_all_summaries()
 
-    return config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step, test_image_to_log
+    return config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', default=None, type=str)
     parser.add_argument('--load_fast', action='store_true')
-    parser.add_argument('--gpu_id', default=0, type=int)
+    parser.add_argument('--gpu', default=0, type=int)
+    parser.add_argument('--config', required=True, type=str)
     args = parser.parse_args()
-    with open('./config.json', 'r') as f:
+    with open(args.config, 'r') as f:
         H = json.load(f)
-    assert 'gpu_id' not in H
-    H['gpu_id'] = args.gpu_id
+    assert 'gpu' not in H
+    H['gpu'] = args.gpu
     assert 'load_fast' not in H
     H['load_fast'] = args.load_fast
+    H['save_dir'] = 'log/default' + str(time.time())
     if not os.path.exists(H['save_dir']): os.makedirs(H['save_dir'])
 
     ckpt_file = H['save_dir'] + '/save.ckpt'
     with open(H['save_dir'] + '/hypes.json', 'w') as f:
         json.dump(H, f, indent=4)
 
-    config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step, test_image_to_log = build(H)
+    config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step = build(H)
     check_op = tf.add_check_numerics_ops()
 
 
@@ -151,26 +166,31 @@ def main():
     )
     writer.add_graph(tf.get_default_graph().as_graph_def())
 
+    test_image_to_log = tf.placeholder(tf.uint8, [480, 640, 3])
+    log_image = tf.image_summary('test_image_to_log', tf.expand_dims(test_image_to_log, 0))
+
     with tf.Session(config=config) as sess:
 
+        tf.set_random_seed(0)
         sess.run(tf.initialize_all_variables())
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
         if args.weights is not None:
             saver.restore(sess, args.weights)
 
-        test_output_to_log = np.ones((H['image_height'], H['image_width'], 3)) * 128
         while not coord.should_stop():
             try:
                 t = time.time()
 
-                feed = {test_image_to_log: test_output_to_log}
                 (batch_loss_train, test_accuracy, weights_norm, 
                     summary_str, np_test_image, np_test_boxes, np_test_confidences,
                     _, _, _) = sess.run([loss['train'], accuracy['test'], W_norm, 
-                        summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op, check_op], feed_dict=feed)
+                        summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op, check_op])
 
                 test_output_to_log = add_rectangles(np_test_image, np_test_confidences, np_test_boxes, H["net"])
+                feed = {test_image_to_log: test_output_to_log}
+                sess.run(log_image, feed_dict=feed)
+
                 assert test_output_to_log.shape == (480, 640, 3)
 
 
@@ -188,7 +208,7 @@ def main():
                     global_step.eval(),
                     batch_loss_train,
                     test_accuracy * 100,
-                    H['weight_decay'] * weights_norm, dt * 1000
+                    weights_norm, dt * 1000
                 ))
 
                 if global_step.eval() % 1000 == 0: 

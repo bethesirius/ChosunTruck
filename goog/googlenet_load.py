@@ -13,7 +13,9 @@ def setup(config, k):
 
     googlenet_graph = tf.Graph()
     graph_def = tf.GraphDef()
+    tf.set_random_seed(0)
     with open(graph_def_orig_file) as f:
+        tf.set_random_seed(0)
         graph_def.MergeFromString(f.read())
 
     with googlenet_graph.as_default():
