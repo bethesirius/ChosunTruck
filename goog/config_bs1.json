@@ -2,7 +2,7 @@
     "use_dropout": true, 
     "net": {
         "grid_height": 15, 
-        "batch_size": 3, 
+        "batch_size": 2, 
         "grid_width": 20
     }, 
     "epsilon": 1.0, 
