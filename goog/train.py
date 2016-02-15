@@ -21,10 +21,11 @@ def build(H):
     #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4)
     gpu_options = tf.GPUOptions()
     config = tf.ConfigProto(gpu_options=gpu_options)
+    net_config = H['net']
 
     k = 10
     W, B, weight_tensors, reuse_ops, input_op, W_norm = googlenet_load.setup(config, k)
-    data = train_utils.load_data(H['load_fast'])
+    data = train_utils.load_data(H['load_fast'], H)
     num_threads = 6
     input_mean = 117.
     opt = tf.train.RMSPropOptimizer(learning_rate=H['learning_rate'], decay=0.9, epsilon=H['epsilon'])
@@ -42,10 +43,10 @@ def build(H):
 
         x = tf.read_file(files[phase])
         x = tf.image.decode_png(x, channels=3)
-        x = tf.image.resize_images(x, H['image_height'], H['image_width'])
+        x = tf.image.resize_images(x, net_config['image_height'], net_config['image_width'])
         if phase == 'train':
             y_density = tf.cast(tf.argmax(confidences, 1) * 128, 'uint8')
-            y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
+            y_density_image = tf.reshape(y_density, [1, H['net']['grid_height'], H['net']['grid_width'], 1])
             tf.image_summary('train_label', y_density_image)
             tf.image_summary('train_image', tf.expand_dims(x, 0))
 
@@ -68,26 +69,30 @@ def build(H):
         if H['use_dropout'] and phase == 'train':
             Z = tf.nn.dropout(Z, 0.5)
 
+        grid_size = H['net']['grid_width'] * H['net']['grid_height']
         pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
-              [H['net']['batch_size'] * 300, k])
-        pred_confidences = tf.nn.softmax(pred_logits)
+              [H['net']['batch_size'] * grid_size, k])
+        #pred_confidences = tf.nn.softmax(pred_logits)
 
         pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1], name=phase+'/logits_1'), 
-              [H['net']['batch_size'] * 300, 4]) * 100
+              [H['net']['batch_size'] * grid_size, 4]) * 100
 
-        confidences = tf.reshape(confidences, [H['net']['batch_size'] * 300, k])
-        boxes = tf.cast(tf.reshape(boxes, [H['net']['batch_size'] * 300, 4]), 'float32')
+        confidences = tf.reshape(confidences, [H['net']['batch_size'] * grid_size, k])
+        boxes = tf.cast(tf.reshape(boxes, [H['net']['batch_size'] * grid_size, 4]), 'float32')
         if phase == 'test':
-            test_pred_confidences = pred_confidences
+            #test_pred_confidences = pred_confidences
+            test_pred_confidences = confidences
             test_pred_boxes = pred_boxes
 
-        cross_entropy = -tf.reduce_sum(confidences*tf.log(pred_confidences + 1e-7))
+        #cross_entropy = -tf.reduce_sum(confidences*tf.log(pred_confidences + 1e-7))
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(pred_logits, confidences)
 
         L = (H['head_weights'][0] * cross_entropy,
+        #L = (H['head_weights'][0] * 0,
              H['head_weights'][1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences[:, 1], 1))
 
-        confidences_loss = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['net']['batch_size'] * 300)
-        boxes_loss = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['net']['batch_size'] * 300)
+        confidences_loss = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['net']['batch_size'] * grid_size)
+        boxes_loss = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['net']['batch_size'] * grid_size)
         tf.scalar_summary(confidences_loss.op.name, confidences_loss)
         tf.scalar_summary(boxes_loss.op.name, boxes_loss)
 
@@ -99,11 +104,10 @@ def build(H):
             print('using box loss')
             L += boxes_loss
 
-        #L = boxes_loss + confidences_loss
-        #L = confidences_loss
         loss[phase] = L
 
-        a = tf.equal(tf.argmax(confidences, 1), tf.argmax(pred_confidences, 1))
+        #a = tf.equal(tf.argmax(confidences, 1), tf.argmax(pred_confidences, 1))
+        a = tf.equal(tf.argmax(confidences, 1), tf.argmax(confidences, 1))
         a = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
         tf.scalar_summary(a.op.name, a)
         accuracy[phase] = a
@@ -113,21 +117,8 @@ def build(H):
             smooth_op = moving_avg.apply([a])
             tf.scalar_summary(a.op.name + '/smooth', moving_avg.average(a))
 
-            #y_out0 = tf.reshape(pred_confidences, [H['net']['batch_size'], 300, k])[0, :, :]
-            #y_density = tf.cast(y_out0[:, 1] * 128, 'uint8')
-            #y_density_image = tf.reshape(y_density, [1, 15, 20, 1])
-            #tf.image_summary('test_output', y_density_image)
-            ##x = tf.image.resize_images(x, H['image_height'], H['image_width'])
-            ##y_density = tf.cast(tf.argmax(y_out0, 1) * 128, 'uint8')
-            ###x = tf.image.random_crop(x, [H['image_height'], H['image_width']])
-            ###x = tf.image.random_flip_left_right(x)
-            ###x = tf.image.random_flip_up_down(x)
-            ##tf.image_summary('train_image', tf.expand_dims(x, 0))
-
         if phase == 'train':
-            #grads = opt.compute_gradients(L)
             global_step = tf.Variable(0, trainable=False)
-            #train_op = opt.apply_gradients(grads, global_step=global_step)
             train_op = opt.minimize(L, global_step=global_step)
 
     summary_op = tf.merge_all_summaries()
@@ -147,7 +138,7 @@ def main():
     H['gpu'] = args.gpu
     assert 'load_fast' not in H
     H['load_fast'] = args.load_fast
-    H['save_dir'] = 'log/default' + str(time.time())
+    H['save_dir'] = 'log/%s_%s' % (H['logging']['log_dir'], str(time.time()))
     if not os.path.exists(H['save_dir']): os.makedirs(H['save_dir'])
 
     ckpt_file = H['save_dir'] + '/save.ckpt'
@@ -166,7 +157,8 @@ def main():
     )
     writer.add_graph(tf.get_default_graph().as_graph_def())
 
-    test_image_to_log = tf.placeholder(tf.uint8, [480, 640, 3])
+    net_config = H['net']
+    test_image_to_log = tf.placeholder(tf.uint8, [net_config['image_height'], net_config['image_width'], 3])
     log_image = tf.image_summary('test_image_to_log', tf.expand_dims(test_image_to_log, 0))
 
     with tf.Session(config=config) as sess:
@@ -191,7 +183,7 @@ def main():
                 feed = {test_image_to_log: test_output_to_log}
                 sess.run(log_image, feed_dict=feed)
 
-                assert test_output_to_log.shape == (480, 640, 3)
+                assert test_output_to_log.shape == (net_config['image_height'], net_config['image_width'], 3)
 
 
                 dt = (time.time() - t) / H['net']['batch_size']

@@ -34,7 +34,7 @@ def load_idl(idlfile, data_mean, net_config, jitter):
     random.seed(0)
     random.shuffle(annos)
     for anno in annos:
-        #I = rescale_boxes(anno, net_config["img_width"], net_config["img_height"])
+        I = rescale_boxes(anno, net_config["image_width"], net_config["image_height"])
         #if jitter:
             #jit_image, jit_anno = annotation_jitter(I,
                 #anno, target_width=net_config["img_width"],
@@ -58,10 +58,11 @@ def make_sparse(n, d):
     v[n] = 1.
     return v
 
-def load_data(load_fast):
-    config = json.load(open('./reinspect/config.json', 'r'))
-    net_config = config["net"]
-    data_mean = np.ones((480, 640, 3)) * 128
+def load_data(load_fast, H):
+    net_config = H["net"]
+    grid_size = net_config['grid_width'] * net_config['grid_height']
+    #config = json.load(open('./reinspect/config.json', 'r'))
+    data_mean = np.ones((net_config['image_height'], net_config['image_width'], 3)) * 128
 
     output = {}
     for phase in ['train', 'val']:
@@ -77,8 +78,8 @@ def load_data(load_fast):
             images.append(d['imname'].replace('jpg', 'png'))
             flags = d['box_flags'][0,:,0,0:1,0]
             boxes = np.transpose(d['boxes'][0,:,:,0:1,0], (0,2,1))
-            assert(flags.shape == (300, 1))
-            assert(boxes.shape == (300, 1, 4))
+            assert(flags.shape == (grid_size, 1))
+            assert(boxes.shape == (grid_size, 1, 4))
             labels.append([make_sparse(row[0], d=10) for row in flags]) #TODO: change d to 2 and retrain
             box_labels.append(boxes)
             #import ipdb; ipdb.set_trace()
