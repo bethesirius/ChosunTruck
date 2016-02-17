@@ -45,7 +45,7 @@ def load_idl(idlfile, data_mean, net_config, jitter):
         #image = image_to_h5(jit_image, data_mean, image_scaling=1.0)
         boxes, box_flags = annotation_to_h5(
             anno, net_config["grid_width"], net_config["grid_height"],
-            net_config["region_size"], net_config["max_len"])
+            net_config["region_size"], net_config["rnn_len"])
         #if net_config.get("use_log", False):
             #boxes[:, :, 2:4, :, :] = np.log(boxes[:, :, 2:4, :, :])
         yield {"imname": anno.imageName, "raw": [], "image": [],
@@ -74,19 +74,23 @@ def load_data(load_fast, H):
         images = []
         labels = []
         box_labels = []
+        box_flag_labels = []
         for idx, d in enumerate(data):
             images.append(d['imname'].replace('jpg', 'png'))
-            flags = d['box_flags'][0,:,0,0:1,0]
-            boxes = np.transpose(d['boxes'][0,:,:,0:1,0], (0,2,1))
-            assert(flags.shape == (grid_size, 1))
-            assert(boxes.shape == (grid_size, 1, 4))
-            labels.append([make_sparse(row[0], d=10) for row in flags]) #TODO: change d to 2 and retrain
+            rnn_len = 1 #net_config["rnn_len"]
+            box_flags = d['box_flags'][0,:,0,0:rnn_len,0]
+            boxes = np.transpose(d['boxes'][0,:,:,0:rnn_len,0], (0,2,1))
+            assert(box_flags.shape == (grid_size, rnn_len))
+            assert(boxes.shape == (grid_size, rnn_len, 4))
+            labels.append([make_sparse(row[0], d=2) for row in box_flags]) #TODO: change d to 2 and retrain
             box_labels.append(boxes)
+            box_flag_labels.append(box_flags)
             #import ipdb; ipdb.set_trace()
             
         labels_array = np.array(labels)
         box_labels_array = np.array(box_labels)
-        output[phase] = {'Y': labels_array, 'boxes': box_labels_array, 'X': images}
+        box_flag_labels_array = np.array(box_flag_labels)
+        output[phase] = {'Y': labels_array, 'boxes': box_labels_array, 'box_flags': box_flag_labels_array, 'X': images}
     if 'val' in output:
         output['test'] = output['val']
     return output
