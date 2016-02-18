@@ -5,10 +5,10 @@
         "image_height": 480,
         "grid_height": 15, 
         "grid_width": 20,
-        "batch_size": 10, 
+        "batch_size": 4, 
         "region_size": 32,
         "lstm_size": 200,
-        "rnn_len": 5
+        "rnn_len": 1
     }, 
     "logging": {
         "logdir": "normal"

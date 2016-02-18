@@ -26,7 +26,7 @@ def add_rectangles(orig_image, confidences, boxes, net_config):
                                              net_config["grid_height"],
                                              net_config["grid_width"],
                                              num_rects_per_cell,
-                                             10))
+                                             2))
                                              
     cell_pix_size = 32
     all_rects = [[[] for _ in range(net_config["grid_width"])] for _ in range(net_config["grid_height"])]
