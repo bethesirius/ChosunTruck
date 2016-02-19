@@ -13,26 +13,26 @@ from munkres import Munkres, print_matrix, make_cost_matrix
 
 from stitch_wrapper import stitch_rects
 
-def add_rectangles(orig_image, confidences, boxes, net_config):
+def add_rectangles(orig_image, confidences, boxes, arch):
     image = np.copy(orig_image[0])
-    num_cells = net_config["grid_height"] * net_config["grid_width"]
+    num_cells = arch["grid_height"] * arch["grid_width"]
     num_rects_per_cell = 1
-    boxes_r = np.reshape(boxes, (net_config["batch_size"],
-                                 net_config["grid_height"],
-                                 net_config["grid_width"],
+    boxes_r = np.reshape(boxes, (arch["batch_size"],
+                                 arch["grid_height"],
+                                 arch["grid_width"],
                                  num_rects_per_cell,
                                  4))
-    confidences_r = np.reshape(confidences, (net_config["batch_size"],
-                                             net_config["grid_height"],
-                                             net_config["grid_width"],
+    confidences_r = np.reshape(confidences, (arch["batch_size"],
+                                             arch["grid_height"],
+                                             arch["grid_width"],
                                              num_rects_per_cell,
                                              2))
                                              
     cell_pix_size = 32
-    all_rects = [[[] for _ in range(net_config["grid_width"])] for _ in range(net_config["grid_height"])]
+    all_rects = [[[] for _ in range(arch["grid_width"])] for _ in range(arch["grid_height"])]
     for n in range(num_rects_per_cell):
-        for y in range(net_config["grid_height"]):
-            for x in range(net_config["grid_width"]):
+        for y in range(arch["grid_height"]):
+            for x in range(arch["grid_width"]):
                 bbox = boxes_r[0, y, x, n, :]
                 conf = confidences_r[0, y, x, n, 1]
                 abs_cx = int(bbox[0]) + cell_pix_size/2 + cell_pix_size * x

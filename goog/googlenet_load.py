@@ -88,7 +88,7 @@ def model(x, weights_dict, input_op, reuse_ops, H):
         if is_early_loss(op.name):
             continue
         elif op.name == 'avgpool0':
-            pool_op = tf.nn.avg_pool(T['mixed5b'], ksize=[1,H['net']['grid_height'],H['net']['grid_width'],1], strides=[1,1,1,1], padding='VALID', name=op.name)
+            pool_op = tf.nn.avg_pool(T['mixed5b'], ksize=[1,H['arch']['grid_height'],H['arch']['grid_width'],1], strides=[1,1,1,1], padding='VALID', name=op.name)
             T[op.name] = pool_op
 
         else:
@@ -104,7 +104,7 @@ def model(x, weights_dict, input_op, reuse_ops, H):
     
 
     cnn_feat = T['mixed5b']
-    cnn_feat_r = tf.reshape(cnn_feat, [H['net']['batch_size'] * H['net']['grid_width'] * H['net']['grid_height'], 1024])
+    cnn_feat_r = tf.reshape(cnn_feat, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
 
     Z = cnn_feat_r
 

@@ -24,17 +24,16 @@ def _hungarian_grad(op, *args):
     return map(array_ops.zeros_like, op.inputs)
 
 def build_lstm(lstm_input, H):
-    lstm_size = H['net']['lstm_size']
+    lstm_size = H['arch']['lstm_size']
     lstm = rnn_cell.BasicLSTMCell(lstm_size, forget_bias=0.0)
-    batch_size = H['net']['batch_size'] * H['net']['grid_height'] * H['net']['grid_width']
+    batch_size = H['arch']['batch_size'] * H['arch']['grid_height'] * H['arch']['grid_width']
     state = tf.zeros([batch_size, lstm.state_size])
 
-    ip = tf.get_variable('ip', [lstm_size, 1], initializer=tf.random_uniform_initializer(0.1))
-    rnn_len = H['net']['rnn_len']
+    #ip = tf.get_variable('ip', [lstm_size, 1], initializer=tf.random_uniform_initializer(0.1))
 
     outputs = []
     with tf.variable_scope('RNN'):
-        for time_step in range(H['net']['rnn_len']):
+        for time_step in range(H['arch']['rnn_len']):
             if time_step > 0: tf.get_variable_scope().reuse_variables()
             output, state = lstm(lstm_input, state)
             outputs.append(output)
@@ -45,21 +44,25 @@ def build(H, q):
     #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
     gpu_options = tf.GPUOptions()
     config = tf.ConfigProto(gpu_options=gpu_options)
-    net_config = H['net']
+    arch = H['arch']
+    solver = H["solver"]
 
     k = 2
     W, B, weight_tensors, reuse_ops, input_op, W_norm = googlenet_load.setup(config, k)
-    num_threads = 6
     input_mean = 117.
-    #opt = tf.train.RMSPropOptimizer(learning_rate=H['learning_rate'], decay=0.9, epsilon=H['epsilon'])
-    opt = tf.train.GradientDescentOptimizer(learning_rate=H['learning_rate'])
-    files, loss, accuracy = {}, {}, {}
+    if solver['opt'] == 'RMS':
+        opt = tf.train.RMSPropOptimizer(learning_rate=solver['learning_rate'], decay=0.9, epsilon=solver['epsilon'])
+    elif solver['opt'] == 'SGD':
+        opt = tf.train.GradientDescentOptimizer(learning_rate=solver['learning_rate'])
+    else:
+        raise ValueError('Unrecognized opt type')
+    loss, accuracy = {}, {}
     for phase in ['train', 'test']:
-        x, confidences, boxes, box_flags = q[phase].dequeue_many(net_config['batch_size'])
+        x, confidences, boxes, box_flags = q[phase].dequeue_many(arch['batch_size'])
 
         if phase == 'train':
             y_density = tf.cast(tf.argmax(confidences, 2), 'uint8')
-            y_density_image = tf.reshape(y_density[0, :], [1, H['net']['grid_height'], H['net']['grid_width'], 1])
+            y_density_image = tf.reshape(y_density[0, :], [1, H['arch']['grid_height'], H['arch']['grid_width'], 1])
 
             tf.image_summary('train_label', y_density_image)
             tf.image_summary('train_image', x[0:1, :, :, :])
@@ -73,22 +76,22 @@ def build(H, q):
 
         Z = googlenet_load.model(x, weight_tensors, input_op, reuse_ops, H)
 
-        if H['use_dropout'] and phase == 'train':
+        if arch['use_dropout'] and phase == 'train':
             Z = tf.nn.dropout(Z, 0.5)
-        grid_size = H['net']['grid_width'] * H['net']['grid_height']
+        grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
         scale_down = 0.01
-        lstm_input = tf.reshape(Z * scale_down, (H['net']['batch_size'] * grid_size, 1024))
+        lstm_input = tf.reshape(Z * scale_down, (H['arch']['batch_size'] * grid_size, 1024))
         with tf.variable_scope('decoder', reuse={'train': None, 'test': True}[phase]):
             lstm_outputs = build_lstm(lstm_input, H)
             #pred = tf.matmul(output, ip)
 
             pred_boxes = []
             pred_confs = []
-            for i in range(H['net']['rnn_len']):
+            for i in range(H['arch']['rnn_len']):
                 output = lstm_outputs[i]
-                box_weights = tf.get_variable('box_ip%d' % i, shape=(H['net']['lstm_size'], 4),
+                box_weights = tf.get_variable('box_ip%d' % i, shape=(H['arch']['lstm_size'], 4),
                     initializer=tf.random_uniform_initializer(0.1))
-                conf_weights = tf.get_variable('conf_ip%d' % i, shape=(H['net']['lstm_size'], 2),
+                conf_weights = tf.get_variable('conf_ip%d' % i, shape=(H['arch']['lstm_size'], 2),
                     initializer=tf.random_uniform_initializer(0.1))
                 pred_boxes.append(tf.matmul(output, box_weights) * 50)
                 pred_confs.append(tf.matmul(output, conf_weights))
@@ -101,14 +104,14 @@ def build(H, q):
                 #train_op = opt.minimize(loss)
 
         pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
-              [H['net']['batch_size'] * grid_size, k])
+              [H['arch']['batch_size'] * grid_size, k])
         pred_confidences = tf.nn.softmax(pred_logits)
 
         pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1], name=phase+'/logits_1'), 
-              [H['net']['batch_size'] * grid_size, 4]) * 100
+              [H['arch']['batch_size'] * grid_size, 4]) * 100
 
-        confidences = tf.cast(tf.reshape(confidences, [H['net']['batch_size'] * grid_size, k]), 'float32')
-        boxes = tf.cast(tf.reshape(boxes, [H['net']['batch_size'] * grid_size, 4]), 'float32')
+        confidences = tf.cast(tf.reshape(confidences, [H['arch']['batch_size'] * grid_size, k]), 'float32')
+        boxes = tf.cast(tf.reshape(boxes, [H['arch']['batch_size'] * grid_size, 4]), 'float32')
         if phase == 'test':
             test_pred_confidences = pred_confidences
             test_pred_confidences = confidences
@@ -116,7 +119,7 @@ def build(H, q):
 
 
         if phase == 'train':
-            sm = tf.nn.softmax(pred_logits)
+            #sm = tf.nn.softmax(pred_logits)
             #pred_logits = tf.Print(pred_logits, [pred_logits, sm], "Pred_logits: ", summarize=30000)
             #confidences = tf.Print(confidences, [confidences], "Confidences: ", summarize=30000)
             cross_entropy = -tf.reduce_sum(confidences*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
@@ -124,21 +127,21 @@ def build(H, q):
             #cross_entropy = tf.Print(cross_entropy, [cross_entropy], "Cross-entropy: ", summarize=3000)
 
 
-            L = (H['head_weights'][0] * cross_entropy,
+            L = (solver['head_weights'][0] * cross_entropy,
             #L = (H['head_weights'][0] * 0,
                  #)
-                 H['head_weights'][1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences[:, 1], 1))
+                 solver['head_weights'][1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences[:, 1], 1))
 
-            confidences_loss = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['net']['batch_size'] * grid_size)
-            boxes_loss = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['net']['batch_size'] * grid_size)
+            confidences_loss = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
+            boxes_loss = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['arch']['batch_size'] * grid_size)
             tf.scalar_summary("%s/confidences_loss" % phase, confidences_loss)
             tf.scalar_summary("%s/regression_loss" % phase, boxes_loss)
 
             L = 0.
-            if H['head_weights'][0] > 0.:
+            if solver['head_weights'][0] > 0.:
                 print('using confidences loss')
                 L += confidences_loss
-            if H['head_weights'][1] > 0.:
+            if solver['head_weights'][1] > 0.:
                 print('using box loss')
                 L += boxes_loss
 
@@ -173,14 +176,16 @@ def main():
         H = json.load(f)
     assert 'gpu' not in H
     H['gpu'] = args.gpu
-    H['save_dir'] = 'log/%s_%s' % (H['logging']['logdir'],
+    exp_name = args.config.split('/')[-1].replace('.json', '')
+    H['save_dir'] = 'output/%s_%s' % (exp_name,
         datetime.datetime.now().strftime('%Y_%m_%d_%H.%M'))
     if not os.path.exists(H['save_dir']): os.makedirs(H['save_dir'])
 
     ckpt_file = H['save_dir'] + '/save.ckpt'
     with open(H['save_dir'] + '/hypes.json', 'w') as f:
         json.dump(H, f, indent=4)
-    net_config = H['net']
+    arch = H['arch']
+    solver = H['solver']
 
     x_in = tf.placeholder(tf.float32)
     confs_in = tf.placeholder(tf.float32)
@@ -190,12 +195,12 @@ def main():
     enqueue_op = {}
     for phase in ['train', 'test']:
         dtypes = [tf.float32, tf.float32, tf.float32, tf.float32]
-        grid_size = net_config['grid_width'] * net_config['grid_height']
+        grid_size = arch['grid_width'] * arch['grid_height']
         shapes = (
-            [net_config['image_height'], net_config['image_width'], 3],
+            [arch['image_height'], arch['image_width'], 3],
             [grid_size, 2],
-            [grid_size, net_config['rnn_len'], 4],
-            [grid_size, net_config['rnn_len']],
+            [grid_size, arch['rnn_len'], 4],
+            [grid_size, arch['rnn_len']],
             )
         q[phase] = tf.FIFOQueue(capacity=30, dtypes=dtypes, shapes=shapes)
         enqueue_op[phase] = q[phase].enqueue((x_in, confs_in, boxes_in, flags_in))
@@ -206,7 +211,6 @@ def main():
     def MyLoop(sess, enqueue_op, phase, gen):
         for d in gen:
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
-    val_or_test = 'val'
 
     config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step = build(H, q)
     #check_op = tf.add_check_numerics_ops()
@@ -216,65 +220,63 @@ def main():
         logdir=H['save_dir'], 
         flush_secs=10
     )
-    writer.add_graph(tf.get_default_graph().as_graph_def())
 
-    test_image_to_log = tf.placeholder(tf.uint8, [net_config['image_height'], net_config['image_width'], 3])
+    test_image_to_log = tf.placeholder(tf.uint8, [arch['image_height'], arch['image_width'], 3])
     log_image = tf.image_summary('test_image_to_log', tf.expand_dims(test_image_to_log, 0))
 
 
     with tf.Session(config=config) as sess:
+        #writer.add_graph(sess.graph_def)
         # enqueue once manually to avoid thread start delay
         for phase in ['train', 'test']:
-            gen = train_utils.load_data_gen(H, phase, val_or_test)
+            gen = train_utils.load_data_gen(H, phase, jitter=solver['use_jitter'])
             d = gen.next()
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
             thread = tf.train.threading.Thread(target=MyLoop, args=(sess, enqueue_op, phase, gen))
             thread.start()
 
-        tf.set_random_seed(0)
+        tf.set_random_seed(solver['rnd_seed'])
         sess.run(tf.initialize_all_variables())
 
         if args.weights is not None:
+            print('Restoring from: %s' % args.weights)
             saver.restore(sess, args.weights)
 
         for i in xrange(10000000):
-            try:
-                display_iter = 10
-                if i % display_iter == 0:
-                    if i > 0:
-                        dt = (time.time() - start) / (H['net']['batch_size'] * display_iter)
-                    start = time.time()
-                    (batch_loss_train, test_accuracy, weights_norm, 
-                        summary_str, np_test_image, np_test_boxes, np_test_confidences,
-                        _, _) = sess.run([loss['train'], accuracy['test'], W_norm, 
-                            summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op])
-                    test_output_to_log = add_rectangles(np_test_image, np_test_confidences, np_test_boxes, H["net"])
-                    feed = {test_image_to_log: test_output_to_log}
-                    test_image_summary_str = sess.run(log_image, feed_dict=feed)
-                    assert test_output_to_log.shape == (net_config['image_height'], net_config['image_width'], 3)
-                    writer.add_summary(test_image_summary_str, global_step=global_step.eval())
-                    writer.add_summary(summary_str, global_step=global_step.eval())
-                    print_str = string.join([
-                        'Step: %d',
-                        'Train Loss: %.2f',
-                        'Test Accuracy: %.1f%%',
-                        'Time/image (ms): %.1f'
-                    ], ', ')
-                    print(print_str % (
-                        i,
-                        batch_loss_train,
-                        test_accuracy * 100,
-                        dt * 1000 if i > 0 else 0
-                    ))
-                else:
-                    (batch_loss_train,
-                        _) = sess.run([loss['train'],
-                            train_op])
+            display_iter = 10
+            if i % display_iter == 0:
+                if i > 0:
+                    dt = (time.time() - start) / (H['arch']['batch_size'] * display_iter)
+                start = time.time()
+                (batch_loss_train, test_accuracy, weights_norm, 
+                    summary_str, np_test_image, np_test_boxes, np_test_confidences,
+                    _, _) = sess.run([loss['train'], accuracy['test'], W_norm, 
+                        summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op])
+                test_output_to_log = add_rectangles(np_test_image, np_test_confidences, np_test_boxes, H["arch"])
+                feed = {test_image_to_log: test_output_to_log}
+                test_image_summary_str = sess.run(log_image, feed_dict=feed)
+                assert test_output_to_log.shape == (arch['image_height'], arch['image_width'], 3)
+                writer.add_summary(test_image_summary_str, global_step=global_step.eval())
+                writer.add_summary(summary_str, global_step=global_step.eval())
+                print_str = string.join([
+                    'Step: %d',
+                    'Train Loss: %.2f',
+                    'Test Accuracy: %.1f%%',
+                    'Time/image (ms): %.1f'
+                ], ', ')
+                print(print_str % (
+                    i,
+                    batch_loss_train,
+                    test_accuracy * 100,
+                    dt * 1000 if i > 0 else 0
+                ))
+            else:
+                (batch_loss_train,
+                    _) = sess.run([loss['train'],
+                        train_op])
 
-                if global_step.eval() % 1000 == 0: 
-                    saver.save(sess, ckpt_file, global_step=global_step)
-            except Exception as ex:
-                import ipdb; ipdb.set_trace()
+            if global_step.eval() % 1000 == 0: 
+                saver.save(sess, ckpt_file, global_step=global_step)
 
 
 

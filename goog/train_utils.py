@@ -26,45 +26,47 @@ def make_sparse(n, d):
     v[n] = 1.
     return v
 
-def load_idl_tf(idlfile, net_config, jitter):
+def load_idl_tf(idlfile, H, jitter):
     """Take the idlfile and net configuration and create a generator
     that outputs a jittered version of a random image from the annolist
     that is mean corrected."""
 
+    arch = H['arch']
     annolist = al.parse(idlfile)
     annos = [x for x in annolist]
     for anno in annos:
         anno.imageName = os.path.join(
             os.path.dirname(os.path.realpath(idlfile)), anno.imageName)
     random.seed(0)
+    if H['data']['truncate_data']:
+        annos = annos[:10]
     while True:
         random.shuffle(annos)
         for anno in annos:
-            I = rescale_boxes(anno, net_config["image_width"], net_config["image_height"])
+            I = rescale_boxes(anno, arch["image_width"], arch["image_height"])
             if jitter:
                 jit_image, jit_anno = annotation_jitter(I,
-                    anno, target_width=net_config["image_width"],
-                    target_height=net_config["image_height"])
+                    anno, target_width=arch["image_width"],
+                    target_height=arch["image_height"])
             else:
                 jit_image = I
                 jit_anno = anno
             boxes, box_flags = annotation_to_h5(
-                anno, net_config["grid_width"], net_config["grid_height"],
-                net_config["region_size"], net_config["rnn_len"])
+                anno, arch["grid_width"], arch["grid_height"],
+                arch["region_size"], arch["rnn_len"])
             yield {"imname": anno.imageName, "raw": [], "image": jit_image,
                    "boxes": boxes, "box_flags": box_flags}
 
-def load_data_gen(H, phase, val_or_test):
-    net_config = H["net"]
-    grid_size = net_config['grid_width'] * net_config['grid_height']
+def load_data_gen(H, phase, jitter):
+    arch = H["arch"]
+    grid_size = arch['grid_width'] * arch['grid_height']
 
-    data = load_idl_tf('%s/data/brainwash/brainwash_%s.idl' % (
-        os.path.dirname(os.path.realpath(__file__)), val_or_test), net_config, jitter={'train': True, 'test': False}[phase])
+    data = load_idl_tf(H["data"]['%s_idl' % phase], H, jitter={'train': jitter, 'test': False}[phase])
 
     for d in data:
         output = {}
         
-        rnn_len = net_config["rnn_len"]
+        rnn_len = arch["rnn_len"]
         box_flags = d['box_flags'][0,:,0,0:rnn_len,0]
         boxes = np.transpose(d['boxes'][0,:,:,0:rnn_len,0], (0,2,1))
         assert(box_flags.shape == (grid_size, rnn_len))
