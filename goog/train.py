@@ -113,9 +113,12 @@ def build(H, q):
         confidences = tf.cast(tf.reshape(confidences, [H['arch']['batch_size'] * grid_size, k]), 'float32')
         boxes = tf.cast(tf.reshape(boxes, [H['arch']['batch_size'] * grid_size, 4]), 'float32')
         if phase == 'test':
-            test_pred_confidences = pred_confidences
-            test_pred_confidences = confidences
-            test_pred_boxes = pred_boxes
+            if False:
+                test_pred_confidences = confidences
+                test_pred_boxes = boxes
+            else:
+                test_pred_confidences = pred_confidences
+                test_pred_boxes = pred_boxes
 
 
         if phase == 'train':

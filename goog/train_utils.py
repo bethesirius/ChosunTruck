@@ -43,16 +43,17 @@ def load_idl_tf(idlfile, H, jitter):
     while True:
         random.shuffle(annos)
         for anno in annos:
-            I = rescale_boxes(anno, arch["image_width"], arch["image_height"])
             if jitter:
+                I = imread(anno.imageName)
                 jit_image, jit_anno = annotation_jitter(I,
                     anno, target_width=arch["image_width"],
                     target_height=arch["image_height"])
             else:
+                I = imread(anno.imageName)
                 jit_image = I
                 jit_anno = anno
             boxes, box_flags = annotation_to_h5(
-                anno, arch["grid_width"], arch["grid_height"],
+                jit_anno, arch["grid_width"], arch["grid_height"],
                 arch["region_size"], arch["rnn_len"])
             yield {"imname": anno.imageName, "raw": [], "image": jit_image,
                    "boxes": boxes, "box_flags": box_flags}
