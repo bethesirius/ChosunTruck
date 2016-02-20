@@ -119,13 +119,13 @@ def build(H, q):
                   [H['arch']['batch_size'] * grid_size, k])
             pred_confidences = tf.nn.softmax(pred_logits)
             pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1], name=phase+'/logits_1'), 
-                  [H['arch']['batch_size'] * grid_size, 4]) * 100
+                  [H['arch']['batch_size'] * grid_size, 1, 4]) * 100
 
             boxes = tf.cast(tf.reshape(boxes, [H['arch']['batch_size'] * grid_size, 4]), 'float32')
             cross_entropy = -tf.reduce_sum(confidences_r*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
 
             L = (solver['head_weights'][0] * cross_entropy,
-                 solver['head_weights'][1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences_r[:, 1], 1))
+                 solver['head_weights'][1] * tf.abs(pred_boxes[:, 0, :] - boxes) * tf.expand_dims(confidences_r[:, 1], 1))
             confidences_loss[phase] = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
             boxes_loss[phase] = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['arch']['batch_size'] * grid_size)
             loss[phase] = confidences_loss[phase] + boxes_loss[phase]
@@ -153,15 +153,12 @@ def build(H, q):
                 tf.scalar_summary("%s/regression_loss/smooth" % p,
                     moving_avg.average(boxes_loss[p]))
 
-            if False: #debug
+            if False: # show ground truth
                 test_pred_confidences = confidences_r
                 test_pred_boxes = boxes_r
-            elif arch['use_lstm']: # show predictions
-                test_pred_confidences = pred_confidences
-                test_pred_boxes = pred_boxes[:, 0, :]
             else: # show predictions
                 test_pred_confidences = pred_confidences
-                test_pred_boxes = pred_boxes
+                test_pred_boxes = pred_boxes[:, 0, :]
 
         if phase == 'train':
             global_step = tf.Variable(0, trainable=False)
