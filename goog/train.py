@@ -50,13 +50,14 @@ def build(H, q):
     k = 2
     W, B, weight_tensors, reuse_ops, input_op, W_norm = googlenet_load.setup(config, k)
     input_mean = 117.
+    learning_rate = tf.placeholder(tf.float32)
     if solver['opt'] == 'RMS':
-        opt = tf.train.RMSPropOptimizer(learning_rate=solver['learning_rate'], decay=0.9, epsilon=solver['epsilon'])
+        opt = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=0.9, epsilon=solver['epsilon'])
     elif solver['opt'] == 'SGD':
-        opt = tf.train.GradientDescentOptimizer(learning_rate=solver['learning_rate'])
+        opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
     else:
         raise ValueError('Unrecognized opt type')
-    loss, accuracy = {}, {}
+    loss, accuracy, confidences_loss, boxes_loss = {}, {}, {}, {}
     for phase in ['train', 'test']:
         x, confidences, boxes, box_flags = q[phase].dequeue_many(arch['batch_size'])
 
@@ -121,34 +122,15 @@ def build(H, q):
                 test_pred_boxes = pred_boxes
 
 
-        if phase == 'train':
-            #sm = tf.nn.softmax(pred_logits)
-            #pred_logits = tf.Print(pred_logits, [pred_logits, sm], "Pred_logits: ", summarize=30000)
-            #confidences = tf.Print(confidences, [confidences], "Confidences: ", summarize=30000)
-            cross_entropy = -tf.reduce_sum(confidences*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
-            #cross_entropy = tf.nn.softmax_cross_entropy_with_logits(pred_logits, confidences)
-            #cross_entropy = tf.Print(cross_entropy, [cross_entropy], "Cross-entropy: ", summarize=3000)
+        cross_entropy = -tf.reduce_sum(confidences*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
 
+        L = (solver['head_weights'][0] * cross_entropy,
+             solver['head_weights'][1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences[:, 1], 1))
 
-            L = (solver['head_weights'][0] * cross_entropy,
-            #L = (H['head_weights'][0] * 0,
-                 #)
-                 solver['head_weights'][1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences[:, 1], 1))
+        confidences_loss[phase] = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
+        boxes_loss[phase] = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['arch']['batch_size'] * grid_size)
 
-            confidences_loss = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
-            boxes_loss = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['arch']['batch_size'] * grid_size)
-            tf.scalar_summary("%s/confidences_loss" % phase, confidences_loss)
-            tf.scalar_summary("%s/regression_loss" % phase, boxes_loss)
-
-            L = 0.
-            if solver['head_weights'][0] > 0.:
-                print('using confidences loss')
-                L += confidences_loss
-            if solver['head_weights'][1] > 0.:
-                print('using box loss')
-                L += boxes_loss
-
-            loss[phase] = L
+        loss[phase] = confidences_loss[phase] + boxes_loss[phase]
 
         a = tf.equal(tf.argmax(confidences, 1), tf.argmax(pred_confidences, 1))
         a = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
@@ -157,16 +139,27 @@ def build(H, q):
 
         if phase == 'test':
             moving_avg = tf.train.ExponentialMovingAverage(0.95)
-            smooth_op = moving_avg.apply([a])
+            smooth_op = moving_avg.apply([a,
+                                          confidences_loss['train'], boxes_loss['train'],
+                                          confidences_loss['test'], boxes_loss['test'],
+                                          ])
             tf.scalar_summary(a.op.name + '/smooth', moving_avg.average(a))
+
+            for p in ['train', 'test']:
+                tf.scalar_summary("%s/confidences_loss" % p, confidences_loss[p])
+                tf.scalar_summary("%s/regression_loss" % p, boxes_loss[p])
+                tf.scalar_summary("%s/confidences_loss/smooth" % p,
+                    moving_avg.average(confidences_loss[p]))
+                tf.scalar_summary("%s/regression_loss/smooth" % p,
+                    moving_avg.average(boxes_loss[p]))
 
         if phase == 'train':
             global_step = tf.Variable(0, trainable=False)
-            train_op = opt.minimize(L, global_step=global_step)
+            train_op = opt.minimize(loss['train'], global_step=global_step)
 
     summary_op = tf.merge_all_summaries()
 
-    return config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step
+    return config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step, learning_rate
 
 def main():
     parser = argparse.ArgumentParser()
@@ -209,13 +202,13 @@ def main():
         enqueue_op[phase] = q[phase].enqueue((x_in, confs_in, boxes_in, flags_in))
 
     def make_feed(d):
-        return {x_in: d['image'], confs_in: d['confs'], boxes_in: d['boxes'], flags_in: d['flags']}
+        return {x_in: d['image'], confs_in: d['confs'], boxes_in: d['boxes'], flags_in: d['flags'], learning_rate: solver['learning_rate']}
 
     def MyLoop(sess, enqueue_op, phase, gen):
         for d in gen:
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
 
-    config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step = build(H, q)
+    config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step, learning_rate = build(H, q)
     #check_op = tf.add_check_numerics_ops()
 
     saver = tf.train.Saver(max_to_keep=None)
@@ -247,14 +240,18 @@ def main():
 
         for i in xrange(10000000):
             display_iter = 10
+            adjusted_lr = solver['learning_rate'] * 0.5 ** max(0, (i / solver['learning_rate_step']) - 2)
+            lr_feed = {learning_rate: adjusted_lr}
             if i % display_iter == 0:
                 if i > 0:
                     dt = (time.time() - start) / (H['arch']['batch_size'] * display_iter)
                 start = time.time()
                 (batch_loss_train, test_accuracy, weights_norm, 
                     summary_str, np_test_image, np_test_boxes, np_test_confidences,
-                    _, _) = sess.run([loss['train'], accuracy['test'], W_norm, 
-                        summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op])
+                    _, _) = sess.run(
+                        [loss['train'], accuracy['test'], W_norm, 
+                        summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op],
+                        feed_dict=lr_feed)
                 test_output_to_log = add_rectangles(np_test_image, np_test_confidences, np_test_boxes, H["arch"])
                 feed = {test_image_to_log: test_output_to_log}
                 test_image_summary_str = sess.run(log_image, feed_dict=feed)
@@ -263,20 +260,20 @@ def main():
                 writer.add_summary(summary_str, global_step=global_step.eval())
                 print_str = string.join([
                     'Step: %d',
+                    'lr: %f',
                     'Train Loss: %.2f',
                     'Test Accuracy: %.1f%%',
                     'Time/image (ms): %.1f'
                 ], ', ')
                 print(print_str % (
                     i,
+                    adjusted_lr,
                     batch_loss_train,
                     test_accuracy * 100,
                     dt * 1000 if i > 0 else 0
                 ))
             else:
-                (batch_loss_train,
-                    _) = sess.run([loss['train'],
-                        train_op])
+                batch_loss_train, _ = sess.run([loss['train'], train_op], feed_dict=lr_feed)
 
             if global_step.eval() % 1000 == 0: 
                 saver.save(sess, ckpt_file, global_step=global_step)

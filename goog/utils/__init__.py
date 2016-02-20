@@ -75,7 +75,8 @@ def image_to_h5(I, data_mean, image_scaling = 1.0):
     h5_image = np.transpose(I, (2,0,1)).reshape(data_shape) 
     return h5_image
 
-def annotation_to_h5(a, cell_width, cell_height, region_size, max_len):
+def annotation_to_h5(a, cell_width, cell_height, max_len):
+    region_size = 32
     cell_regions = get_cell_grid(cell_width, cell_height, region_size)
 
     cells_per_image = len(cell_regions)
@@ -97,6 +98,7 @@ def annotation_to_h5(a, cell_width, cell_height, region_size, max_len):
         cell_ox = 0.5*(cell_regions[cidx].x1 + cell_regions[cidx].x2)
         cell_oy = 0.5*(cell_regions[cidx].y1 + cell_regions[cidx].y2)
 
+        unsorted_boxes = []
         for bidx in xrange(cur_num_boxes):
 
             # relative box position with respect to cell
@@ -106,7 +108,10 @@ def annotation_to_h5(a, cell_width, cell_height, region_size, max_len):
             width = abs(box_list[cidx][bidx].x2 - box_list[cidx][bidx].x1)
             height= abs(box_list[cidx][bidx].y2 - box_list[cidx][bidx].y1)
 
-            boxes[0, cidx, :, bidx, 0] = np.array([ox, oy, width, height], dtype=np.float)
+            unsorted_boxes.append(np.array([ox, oy, width, height], dtype=np.float))
+
+        for box in sorted(unsorted_boxes, key=lambda x: x[0]**2 + x[1]**2):
+            boxes[0, cidx, :, bidx, 0] = box
 
     return boxes, box_flags
 

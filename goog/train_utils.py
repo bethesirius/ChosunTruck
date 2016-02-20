@@ -54,7 +54,7 @@ def load_idl_tf(idlfile, H, jitter):
                 jit_anno = anno
             boxes, box_flags = annotation_to_h5(
                 jit_anno, arch["grid_width"], arch["grid_height"],
-                arch["region_size"], arch["rnn_len"])
+                arch["rnn_len"])
             yield {"imname": anno.imageName, "raw": [], "image": jit_image,
                    "boxes": boxes, "box_flags": box_flags}
 
