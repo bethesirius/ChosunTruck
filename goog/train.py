@@ -29,8 +29,6 @@ def build_lstm(lstm_input, H):
     batch_size = H['arch']['batch_size'] * H['arch']['grid_height'] * H['arch']['grid_width']
     state = tf.zeros([batch_size, lstm.state_size])
 
-    #ip = tf.get_variable('ip', [lstm_size, 1], initializer=tf.random_uniform_initializer(0.1))
-
     outputs = []
     with tf.variable_scope('RNN'):
         for time_step in range(H['arch']['rnn_len']):
@@ -40,12 +38,13 @@ def build_lstm(lstm_input, H):
     return outputs
 
 def build(H, q):
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(H['gpu'])
+    arch = H['arch']
+    solver = H["solver"]
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(solver['gpu'])
     #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
     gpu_options = tf.GPUOptions()
     config = tf.ConfigProto(gpu_options=gpu_options)
-    arch = H['arch']
-    solver = H["solver"]
 
     k = 2
     W, B, weight_tensors, reuse_ops, input_op, W_norm = googlenet_load.setup(config, k)
@@ -119,55 +118,38 @@ def build(H, q):
             pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
                   [H['arch']['batch_size'] * grid_size, k])
             pred_confidences = tf.nn.softmax(pred_logits)
-
             pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1], name=phase+'/logits_1'), 
                   [H['arch']['batch_size'] * grid_size, 4]) * 100
 
             boxes = tf.cast(tf.reshape(boxes, [H['arch']['batch_size'] * grid_size, 4]), 'float32')
-
             cross_entropy = -tf.reduce_sum(confidences_r*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
 
             L = (solver['head_weights'][0] * cross_entropy,
                  solver['head_weights'][1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences_r[:, 1], 1))
-
             confidences_loss[phase] = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
             boxes_loss[phase] = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['arch']['batch_size'] * grid_size)
-
             loss[phase] = confidences_loss[phase] + boxes_loss[phase]
-
-
-
-
-            #cross_entropy = -tf.reduce_sum(confidences*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
-
-            #confidences_loss[phase] = tf.reduce_sum(solver['head_weights'][0] * cross_entropy,
-                #name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
-            #pre_boxes_loss = (solver['head_weights'][1] * tf.abs(pred_boxes - boxes) *
-                              #tf.expand_dims(confidences_r[:, 1], 1))
-            #boxes_loss[phase] = (tf.reduce_sum(pre_boxes_loss, name=phase+'/boxes_loss') / 
-                                 #(H['arch']['batch_size'] * grid_size))
-
-            #loss[phase] = confidences_loss[phase] + boxes_loss[phase]
-
 
         a = tf.equal(tf.argmax(confidences_r, 1), tf.argmax(pred_confidences, 1))
         a = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
-        tf.scalar_summary(a.op.name, a)
         accuracy[phase] = a
 
         if phase == 'test':
-            moving_avg = tf.train.ExponentialMovingAverage(0.95)
-            smooth_op = moving_avg.apply([a,
+            moving_avg = tf.train.ExponentialMovingAverage(0.99)
+            #smooth_op = moving_avg.apply([accuracy['train'], accuracy['test'], # TODO: comment in
+            smooth_op = moving_avg.apply([accuracy['test'],
                                           confidences_loss['train'], boxes_loss['train'],
                                           confidences_loss['test'], boxes_loss['test'],
                                           ])
-            tf.scalar_summary(a.op.name + '/smooth', moving_avg.average(a))
 
             for p in ['train', 'test']:
+                if p != 'train': # TODO: comment out
+                    tf.scalar_summary('%s/accuracy' % p, accuracy[p])
+                    tf.scalar_summary('%s/accuracy/smooth' % p, moving_avg.average(accuracy[p]))
                 tf.scalar_summary("%s/confidences_loss" % p, confidences_loss[p])
-                tf.scalar_summary("%s/regression_loss" % p, boxes_loss[p])
                 tf.scalar_summary("%s/confidences_loss/smooth" % p,
                     moving_avg.average(confidences_loss[p]))
+                tf.scalar_summary("%s/regression_loss" % p, boxes_loss[p])
                 tf.scalar_summary("%s/regression_loss/smooth" % p,
                     moving_avg.average(boxes_loss[p]))
 
@@ -189,20 +171,31 @@ def build(H, q):
 
     return config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step, learning_rate
 
-def main():
+def parse_args():
+    '''
+    Parse command line arguments and return the hyperparameter dictionary H.
+    H first loads the --config config.json file and is further updated with
+    additional arguments as needed.
+    '''
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', default=None, type=str)
-    parser.add_argument('--load_fast', action='store_true')
-    parser.add_argument('--gpu', default=0, type=int)
-    parser.add_argument('--config', required=True, type=str)
+    parser.add_argument('--gpu', default=None, type=int)
+    parser.add_argument('--hypes', required=True, type=str)
+    parser.add_argument('--outputdir', default='output', type=str)
     args = parser.parse_args()
-    with open(args.config, 'r') as f:
+    with open(args.hypes, 'r') as f:
         H = json.load(f)
-    assert 'gpu' not in H
-    H['gpu'] = args.gpu
-    exp_name = args.config.split('/')[-1].replace('.json', '')
-    H['save_dir'] = 'output/%s_%s' % (exp_name,
+    if args.gpu is not None:
+        H['solver']['gpu'] = args.gpu
+    exp_name = args.hypes.split('/')[-1].replace('.json', '')
+    H['save_dir'] = args.outputdir + '/%s_%s' % (exp_name,
         datetime.datetime.now().strftime('%Y_%m_%d_%H.%M'))
+    if args.weights is not None:
+        H['solver']['weights'] = args.weights
+    return H
+
+def main():
+    H = parse_args()
     if not os.path.exists(H['save_dir']): os.makedirs(H['save_dir'])
 
     ckpt_file = H['save_dir'] + '/save.ckpt'
@@ -262,9 +255,10 @@ def main():
         tf.set_random_seed(solver['rnd_seed'])
         sess.run(tf.initialize_all_variables())
 
-        if args.weights is not None:
-            print('Restoring from: %s' % args.weights)
-            saver.restore(sess, args.weights)
+        weights_str = H['solver']['weights']
+        if len(weights_str) > 0:
+            print('Restoring from: %s' % weights_str)
+            saver.restore(sess, weights_str)
 
         for i in xrange(10000000):
             display_iter = 10

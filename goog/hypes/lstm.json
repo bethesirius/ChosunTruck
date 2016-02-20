@@ -5,7 +5,7 @@
         "truncate_data": false
     },
     "arch": {
-        "use_lstm": false,
+        "use_lstm": true,
         "use_dropout": true, 
         "image_width": 640, 
         "image_height": 480,
@@ -14,7 +14,7 @@
         "batch_size": 1, 
         "region_size": 32,
         "lstm_size": 200,
-        "rnn_len": 1
+        "rnn_len": 2
     }, 
     "logging": {
     },
@@ -25,6 +25,7 @@
         "epsilon": 0.00001, 
         "learning_rate": 0.001, 
         "learning_rate_step": 7500, 
+        "weights": "",
         "head_weights": [1.0, 0.1]
     }
 }
