@@ -81,58 +81,76 @@ def build(H, q):
             Z = tf.nn.dropout(Z, 0.5)
         grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
         scale_down = 0.01
-        lstm_input = tf.reshape(Z * scale_down, (H['arch']['batch_size'] * grid_size, 1024))
-        with tf.variable_scope('decoder', reuse={'train': None, 'test': True}[phase]):
-            lstm_outputs = build_lstm(lstm_input, H)
-            #pred = tf.matmul(output, ip)
+        confidences_r = tf.cast(
+            tf.reshape(confidences, [H['arch']['batch_size'] * grid_size, k]), 'float32')
+        boxes_r = tf.cast(
+            tf.reshape(boxes[:, :, 0, :], [H['arch']['batch_size'] * grid_size, 4]), 'float32')
+        if arch['use_lstm']:
+            lstm_input = tf.reshape(Z * scale_down, (H['arch']['batch_size'] * grid_size, 1024))
+            with tf.variable_scope('decoder', reuse={'train': None, 'test': True}[phase]):
+                lstm_outputs = build_lstm(lstm_input, H)
 
-            pred_boxes = []
-            pred_confs = []
-            for i in range(H['arch']['rnn_len']):
-                output = lstm_outputs[i]
-                box_weights = tf.get_variable('box_ip%d' % i, shape=(H['arch']['lstm_size'], 4),
-                    initializer=tf.random_uniform_initializer(0.1))
-                conf_weights = tf.get_variable('conf_ip%d' % i, shape=(H['arch']['lstm_size'], 2),
-                    initializer=tf.random_uniform_initializer(0.1))
-                pred_boxes.append(tf.matmul(output, box_weights) * 50)
-                pred_confs.append(tf.matmul(output, conf_weights))
-            #assignments, classes, perm_truth, pred_mask = tf.user_ops.hungarian(pred_boxes, boxes, tf.cast(box_flags, 'int32'))
-            #tf.user_ops.hungarian(pred_boxes, boxes, tf.cast(box_flags, 'int32'))
+                pred_boxes = []
+                pred_logit = []
+                outer_size = grid_size * arch['batch_size']
+                for i in range(H['arch']['rnn_len']):
+                    output = lstm_outputs[i]
+                    box_weights = tf.get_variable('box_ip%d' % i, shape=(H['arch']['lstm_size'], 4),
+                        initializer=tf.random_uniform_initializer(0.1))
+                    conf_weights = tf.get_variable('conf_ip%d' % i, shape=(H['arch']['lstm_size'], 2),
+                        initializer=tf.random_uniform_initializer(0.1))
+                    pred_boxes.append(tf.reshape(tf.matmul(output, box_weights) * 50,
+                                                 [outer_size, 1, 4]))
+                    pred_logit.append(tf.reshape(tf.matmul(output, conf_weights),
+                                                 [outer_size, 1, 2]))
+                pred_boxes = tf.concat(1, pred_boxes)
+                outer_boxes = tf.reshape(boxes, [outer_size, arch['rnn_len'], 4])
+                outer_flags = tf.cast(tf.reshape(box_flags, [outer_size, arch['rnn_len']]), 'int32')
+                assignments, classes, perm_truth, pred_mask = tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags)
+                pred_logit = tf.concat(1, pred_logit)
+                pred_confidences = tf.nn.softmax(pred_logit[:, 0, :])
+                true_classes = tf.reshape(tf.cast(tf.greater(classes, 0), 'int64'), [outer_size * arch['rnn_len']])
+                pred_logit_r = tf.reshape(pred_logit, [outer_size * arch['rnn_len'], 2])
+                confidences_loss[phase] = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(pred_logit_r, true_classes)) / outer_size * solver['head_weights'][0]
+                residual = tf.reshape(pred_boxes * pred_mask - perm_truth, [outer_size, arch['rnn_len'], 4])
+                boxes_loss[phase] = tf.reduce_sum(tf.abs(residual)) / outer_size * solver['head_weights'][1]
+                loss[phase] = confidences_loss[phase] + boxes_loss[phase]
+        else:
+            pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
+                  [H['arch']['batch_size'] * grid_size, k])
+            pred_confidences = tf.nn.softmax(pred_logits)
 
-                #loss = tf.reduce_sum(tf.pow(tf.reduce_sum(value, 1) - pred[:, 0], 2))
-                #lr = tf.placeholder(tf.float32)
-                #opt = tf.train.GradientDescentOptimizer(lr)
-                #train_op = opt.minimize(loss)
+            pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1], name=phase+'/logits_1'), 
+                  [H['arch']['batch_size'] * grid_size, 4]) * 100
 
-        pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
-              [H['arch']['batch_size'] * grid_size, k])
-        pred_confidences = tf.nn.softmax(pred_logits)
+            boxes = tf.cast(tf.reshape(boxes, [H['arch']['batch_size'] * grid_size, 4]), 'float32')
 
-        pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1], name=phase+'/logits_1'), 
-              [H['arch']['batch_size'] * grid_size, 4]) * 100
+            cross_entropy = -tf.reduce_sum(confidences_r*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
 
-        confidences = tf.cast(tf.reshape(confidences, [H['arch']['batch_size'] * grid_size, k]), 'float32')
-        boxes = tf.cast(tf.reshape(boxes, [H['arch']['batch_size'] * grid_size, 4]), 'float32')
-        if phase == 'test':
-            if False:
-                test_pred_confidences = confidences
-                test_pred_boxes = boxes
-            else:
-                test_pred_confidences = pred_confidences
-                test_pred_boxes = pred_boxes
+            L = (solver['head_weights'][0] * cross_entropy,
+                 solver['head_weights'][1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences_r[:, 1], 1))
+
+            confidences_loss[phase] = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
+            boxes_loss[phase] = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['arch']['batch_size'] * grid_size)
+
+            loss[phase] = confidences_loss[phase] + boxes_loss[phase]
 
 
-        cross_entropy = -tf.reduce_sum(confidences*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
 
-        L = (solver['head_weights'][0] * cross_entropy,
-             solver['head_weights'][1] * tf.abs(pred_boxes - boxes) * tf.expand_dims(confidences[:, 1], 1))
 
-        confidences_loss[phase] = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
-        boxes_loss[phase] = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['arch']['batch_size'] * grid_size)
+            #cross_entropy = -tf.reduce_sum(confidences*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
 
-        loss[phase] = confidences_loss[phase] + boxes_loss[phase]
+            #confidences_loss[phase] = tf.reduce_sum(solver['head_weights'][0] * cross_entropy,
+                #name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
+            #pre_boxes_loss = (solver['head_weights'][1] * tf.abs(pred_boxes - boxes) *
+                              #tf.expand_dims(confidences_r[:, 1], 1))
+            #boxes_loss[phase] = (tf.reduce_sum(pre_boxes_loss, name=phase+'/boxes_loss') / 
+                                 #(H['arch']['batch_size'] * grid_size))
 
-        a = tf.equal(tf.argmax(confidences, 1), tf.argmax(pred_confidences, 1))
+            #loss[phase] = confidences_loss[phase] + boxes_loss[phase]
+
+
+        a = tf.equal(tf.argmax(confidences_r, 1), tf.argmax(pred_confidences, 1))
         a = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
         tf.scalar_summary(a.op.name, a)
         accuracy[phase] = a
@@ -152,6 +170,16 @@ def build(H, q):
                     moving_avg.average(confidences_loss[p]))
                 tf.scalar_summary("%s/regression_loss/smooth" % p,
                     moving_avg.average(boxes_loss[p]))
+
+            if False: #debug
+                test_pred_confidences = confidences_r
+                test_pred_boxes = boxes_r
+            elif arch['use_lstm']: # show predictions
+                test_pred_confidences = pred_confidences
+                test_pred_boxes = pred_boxes[:, 0, :]
+            else: # show predictions
+                test_pred_confidences = pred_confidences
+                test_pred_boxes = pred_boxes
 
         if phase == 'train':
             global_step = tf.Variable(0, trainable=False)
