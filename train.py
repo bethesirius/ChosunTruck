@@ -17,7 +17,6 @@ np.random.seed(0)
 from utils import train_utils
 from utils import googlenet_load
 
-
 @ops.RegisterGradient("Hungarian")
 def _hungarian_grad(op, *args):
     return map(array_ops.zeros_like, op.inputs)
@@ -69,21 +68,19 @@ def build(H, q):
         x -= input_mean
 
         if phase == 'test':
-            test_boxes = boxes
             test_image = x + input_mean
-            test_confidences = confidences
 
-        Z = googlenet_load.model(x, weight_tensors, input_op, reuse_ops, H)
-
-        if arch['use_dropout'] and phase == 'train':
-            Z = tf.nn.dropout(Z, 0.5)
         grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
         scale_down = 0.01
         confidences_r = tf.cast(
             tf.reshape(confidences, [H['arch']['batch_size'] * grid_size, k]), 'float32')
         boxes_r = tf.cast(
             tf.reshape(boxes[:, :, 0, :], [H['arch']['batch_size'] * grid_size, 4]), 'float32')
+
+        Z = googlenet_load.model(x, weight_tensors, input_op, reuse_ops, H)
         if arch['use_lstm']:
+            if arch['early_dropout'] and phase == 'train':
+                Z = tf.nn.dropout(Z, 0.5)
             lstm_input = tf.reshape(Z * scale_down, (H['arch']['batch_size'] * grid_size, 1024))
             with tf.variable_scope('decoder', reuse={'train': None, 'test': True}[phase]):
                 lstm_outputs = build_lstm(lstm_input, H)
@@ -93,6 +90,8 @@ def build(H, q):
                 outer_size = grid_size * arch['batch_size']
                 for i in range(H['arch']['rnn_len']):
                     output = lstm_outputs[i]
+                    if arch['late_dropout'] and phase == 'train':
+                        output = tf.nn.dropout(output, 0.5)
                     box_weights = tf.get_variable('box_ip%d' % i, shape=(H['arch']['lstm_size'], 4),
                         initializer=tf.random_uniform_initializer(0.1))
                     conf_weights = tf.get_variable('conf_ip%d' % i, shape=(H['arch']['lstm_size'], 2),
@@ -114,6 +113,8 @@ def build(H, q):
                 boxes_loss[phase] = tf.reduce_sum(tf.abs(residual)) / outer_size * solver['head_weights'][1]
                 loss[phase] = confidences_loss[phase] + boxes_loss[phase]
         else:
+            if arch['use_dropout'] and phase == 'train':
+                Z = tf.nn.dropout(Z, 0.5)
             pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
                   [H['arch']['batch_size'] * grid_size, k])
             pred_confidences = tf.nn.softmax(pred_logits)
@@ -130,21 +131,18 @@ def build(H, q):
             loss[phase] = confidences_loss[phase] + boxes_loss[phase]
 
         a = tf.equal(tf.argmax(confidences_r, 1), tf.argmax(pred_confidences, 1))
-        a = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
-        accuracy[phase] = a
+        accuracy[phase] = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
 
         if phase == 'test':
             moving_avg = tf.train.ExponentialMovingAverage(0.99)
-            #smooth_op = moving_avg.apply([accuracy['train'], accuracy['test'], # TODO: comment in
-            smooth_op = moving_avg.apply([accuracy['test'],
+            smooth_op = moving_avg.apply([accuracy['train'], accuracy['test'],
                                           confidences_loss['train'], boxes_loss['train'],
                                           confidences_loss['test'], boxes_loss['test'],
                                           ])
 
             for p in ['train', 'test']:
-                if p != 'train': # TODO: comment out
-                    tf.scalar_summary('%s/accuracy' % p, accuracy[p])
-                    tf.scalar_summary('%s/accuracy/smooth' % p, moving_avg.average(accuracy[p]))
+                tf.scalar_summary('%s/accuracy' % p, accuracy[p])
+                tf.scalar_summary('%s/accuracy/smooth' % p, moving_avg.average(accuracy[p]))
                 tf.scalar_summary("%s/confidences_loss" % p, confidences_loss[p])
                 tf.scalar_summary("%s/confidences_loss/smooth" % p,
                     moving_avg.average(confidences_loss[p]))
@@ -165,33 +163,10 @@ def build(H, q):
 
     summary_op = tf.merge_all_summaries()
 
-    return config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step, learning_rate
+    return config, loss, accuracy, summary_op, train_op, W_norm, test_image, test_pred_boxes, test_pred_confidences, smooth_op, global_step, learning_rate
 
-def parse_args():
-    '''
-    Parse command line arguments and return the hyperparameter dictionary H.
-    H first loads the --config config.json file and is further updated with
-    additional arguments as needed.
-    '''
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', default=None, type=str)
-    parser.add_argument('--gpu', default=None, type=int)
-    parser.add_argument('--hypes', required=True, type=str)
-    parser.add_argument('--outputdir', default='output', type=str)
-    args = parser.parse_args()
-    with open(args.hypes, 'r') as f:
-        H = json.load(f)
-    if args.gpu is not None:
-        H['solver']['gpu'] = args.gpu
-    exp_name = args.hypes.split('/')[-1].replace('.json', '')
-    H['save_dir'] = args.outputdir + '/%s_%s' % (exp_name,
-        datetime.datetime.now().strftime('%Y_%m_%d_%H.%M'))
-    if args.weights is not None:
-        H['solver']['weights'] = args.weights
-    return H
 
-def main():
-    H = parse_args()
+def run(H, test_images):
     if not os.path.exists(H['save_dir']): os.makedirs(H['save_dir'])
 
     ckpt_file = H['save_dir'] + '/save.ckpt'
@@ -225,8 +200,9 @@ def main():
         for d in gen:
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
 
-    config, loss, accuracy, W_norm, summary_op, train_op, test_image, test_boxes, test_confidences, test_pred_boxes, test_pred_confidences, smooth_op, global_step, learning_rate = build(H, q)
-    #check_op = tf.add_check_numerics_ops()
+    (config, loss, accuracy, summary_op, train_op, W_norm,
+     test_image, test_pred_boxes,
+     test_pred_confidences, smooth_op, global_step, learning_rate) = build(H, q)
 
     saver = tf.train.Saver(max_to_keep=None)
     writer = tf.train.SummaryWriter(
@@ -237,16 +213,16 @@ def main():
     test_image_to_log = tf.placeholder(tf.uint8, [arch['image_height'], arch['image_width'], 3])
     log_image = tf.image_summary('test_image_to_log', tf.expand_dims(test_image_to_log, 0))
 
-
     with tf.Session(config=config) as sess:
         #writer.add_graph(sess.graph_def)
         # enqueue once manually to avoid thread start delay
+        threads = []
         for phase in ['train', 'test']:
             gen = train_utils.load_data_gen(H, phase, jitter=solver['use_jitter'])
             d = gen.next()
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
-            thread = tf.train.threading.Thread(target=MyLoop, args=(sess, enqueue_op, phase, gen))
-            thread.start()
+            threads.append(tf.train.threading.Thread(target=MyLoop, args=(sess, enqueue_op, phase, gen)))
+            threads[-1].start()
 
         tf.set_random_seed(solver['rnd_seed'])
         sess.run(tf.initialize_all_variables())
@@ -256,7 +232,8 @@ def main():
             print('Restoring from: %s' % weights_str)
             saver.restore(sess, weights_str)
 
-        for i in xrange(10000000):
+        # train model for N iterations
+        for i in xrange(solver['max_iter']):
             display_iter = 10
             adjusted_lr = solver['learning_rate'] * 0.5 ** max(0, (i / solver['learning_rate_step']) - 2)
             lr_feed = {learning_rate: adjusted_lr}
@@ -265,14 +242,13 @@ def main():
                     dt = (time.time() - start) / (H['arch']['batch_size'] * display_iter)
                 start = time.time()
                 (batch_loss_train, test_accuracy, weights_norm, 
-                    summary_str, np_test_image, np_test_boxes, np_test_confidences,
+                    summary_str, np_test_image, np_test_pred_boxes, np_test_pred_confidences,
                     _, _) = sess.run(
                         [loss['train'], accuracy['test'], W_norm, 
                         summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op],
                         feed_dict=lr_feed)
-                test_output_to_log = train_utils.add_rectangles(np_test_image, np_test_confidences, np_test_boxes, H["arch"])
-                feed = {test_image_to_log: test_output_to_log}
-                test_image_summary_str = sess.run(log_image, feed_dict=feed)
+                test_output_to_log = train_utils.add_rectangles(np_test_image, np_test_pred_confidences, np_test_pred_boxes, H["arch"])
+                test_image_summary_str = sess.run(log_image, feed_dict={test_image_to_log: test_output_to_log})
                 assert test_output_to_log.shape == (arch['image_height'], arch['image_width'], 3)
                 writer.add_summary(test_image_summary_str, global_step=global_step.eval())
                 writer.add_summary(summary_str, global_step=global_step.eval())
@@ -283,13 +259,8 @@ def main():
                     'Test Accuracy: %.1f%%',
                     'Time/image (ms): %.1f'
                 ], ', ')
-                print(print_str % (
-                    i,
-                    adjusted_lr,
-                    batch_loss_train,
-                    test_accuracy * 100,
-                    dt * 1000 if i > 0 else 0
-                ))
+                print(print_str % 
+                      (i, adjusted_lr, batch_loss_train, test_accuracy * 100, dt * 1000 if i > 0 else 0))
             else:
                 batch_loss_train, _ = sess.run([loss['train'], train_op], feed_dict=lr_feed)
 
@@ -297,6 +268,30 @@ def main():
                 saver.save(sess, ckpt_file, global_step=global_step)
 
 
+
+def main():
+    '''
+    Parse command line arguments and return the hyperparameter dictionary H.
+    H first loads the --hypes hypes.json file and is further updated with
+    additional arguments as needed.
+    '''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--weights', default=None, type=str)
+    parser.add_argument('--gpu', default=None, type=int)
+    parser.add_argument('--hypes', required=True, type=str)
+    parser.add_argument('--outputdir', default='output', type=str)
+    args = parser.parse_args()
+    with open(args.hypes, 'r') as f:
+        H = json.load(f)
+    if args.gpu is not None:
+        H['solver']['gpu'] = args.gpu
+    if len(H.get('exp_name', '')) == 0:
+        H['exp_name'] = args.hypes.split('/')[-1].replace('.json', '')
+    H['save_dir'] = args.outputdir + '/%s_%s' % (H['exp_name'],
+        datetime.datetime.now().strftime('%Y_%m_%d_%H.%M'))
+    if args.weights is not None:
+        H['solver']['weights'] = args.weights
+    run(H, test_images=[])
 
 if __name__ == '__main__':
     main()
