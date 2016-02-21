@@ -35,42 +35,48 @@ def build_lstm_inner(lstm_input, H):
             outputs.append(output)
     return outputs
 
-def build_lstm_forward(H, x, googlenet, phase):
+def build_lstm_forward(H, x, googlenet, phase, reuse):
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
     input_mean = 117.
     x -= input_mean
-    scale_down = 0.01
     Z = googlenet_load.model(x, googlenet, H)
-    if H['arch']['early_dropout'] and phase == 'train':
-        Z = tf.nn.dropout(Z, 0.5)
-    lstm_input = tf.reshape(Z * scale_down, (H['arch']['batch_size'] * grid_size, 1024))
-    lstm_outputs = build_lstm_inner(lstm_input, H)
+    with tf.variable_scope('decoder', reuse=reuse):
+        scale_down = 0.01
+        if H['arch']['early_dropout'] and phase == 'train':
+            Z = tf.nn.dropout(Z, 0.5)
+        lstm_input = tf.reshape(Z * scale_down, (H['arch']['batch_size'] * grid_size, 1024))
+        lstm_outputs = build_lstm_inner(lstm_input, H)
 
-    pred_boxes = []
-    pred_logits = []
-    for i in range(H['arch']['rnn_len']):
-        output = lstm_outputs[i]
-        if H['arch']['late_dropout'] and phase == 'train':
-            output = tf.nn.dropout(output, 0.5)
-        box_weights = tf.get_variable('box_ip%d' % i, shape=(H['arch']['lstm_size'], 4),
-            initializer=tf.random_uniform_initializer(0.1))
-        conf_weights = tf.get_variable('conf_ip%d' % i, shape=(H['arch']['lstm_size'], 2),
-            initializer=tf.random_uniform_initializer(0.1))
-        pred_boxes.append(tf.reshape(tf.matmul(output, box_weights) * 50,
-                                     [outer_size, 1, 4]))
-        pred_logits.append(tf.reshape(tf.matmul(output, conf_weights),
-                                     [outer_size, 1, 2]))
-    pred_boxes = tf.concat(1, pred_boxes)
-    pred_logits = tf.concat(1, pred_logits)
-    pred_confidences = tf.nn.softmax(pred_logits[:, 0, :])
+        pred_boxes = []
+        pred_logits = []
+        for i in range(H['arch']['rnn_len']):
+            output = lstm_outputs[i]
+            if H['arch']['late_dropout'] and phase == 'train':
+                output = tf.nn.dropout(output, 0.5)
+            box_weights = tf.get_variable('box_ip%d' % i, shape=(H['arch']['lstm_size'], 4),
+                initializer=tf.random_uniform_initializer(0.1))
+            conf_weights = tf.get_variable('conf_ip%d' % i, shape=(H['arch']['lstm_size'], 2),
+                initializer=tf.random_uniform_initializer(0.1))
+            pred_boxes.append(tf.reshape(tf.matmul(output, box_weights) * 50,
+                                         [outer_size, 1, 4]))
+            pred_logits.append(tf.reshape(tf.matmul(output, conf_weights),
+                                         [outer_size, 1, 2]))
+        pred_boxes = tf.concat(1, pred_boxes)
+        pred_logits = tf.concat(1, pred_logits)
+        pred_logits_squash = tf.reshape(pred_logits,
+                                        [outer_size * H['arch']['rnn_len'], 2])
+        pred_confidences_squash = tf.nn.softmax(pred_logits_squash)
+        pred_confidences = tf.reshape(pred_confidences_squash,
+                                      [outer_size, H['arch']['rnn_len'], 2])
     return pred_boxes, pred_logits, pred_confidences
 
 def build_lstm(H, x, googlenet, phase, boxes, box_flags):
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
+    reuse = {'train': None, 'test': True}[phase]
+    pred_boxes, pred_logits, pred_confidences = build_lstm_forward(H, x, googlenet, phase, reuse)
     with tf.variable_scope('decoder', reuse={'train': None, 'test': True}[phase]):
-        pred_boxes, pred_logits, pred_confidences = build_lstm_forward(H, x, googlenet, phase)
         outer_boxes = tf.reshape(boxes, [outer_size, H['arch']['rnn_len'], 4])
         outer_flags = tf.cast(tf.reshape(box_flags, [outer_size, H['arch']['rnn_len']]), 'int32')
         assignments, classes, perm_truth, pred_mask = (
@@ -131,7 +137,11 @@ def build(H, q):
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(solver['gpu'])
 
-    googlenet = googlenet_load.init(H)
+    #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+    gpu_options = tf.GPUOptions()
+    config = tf.ConfigProto(gpu_options=gpu_options)
+
+    googlenet = googlenet_load.init(H, config)
     learning_rate = tf.placeholder(tf.float32)
     if solver['opt'] == 'RMS':
         opt = tf.train.RMSPropOptimizer(learning_rate=learning_rate,
@@ -166,6 +176,7 @@ def build(H, q):
             (pred_boxes, pred_confidences,
              loss[phase], confidences_loss[phase],
              boxes_loss[phase]) = build_lstm(H, x, googlenet, phase, boxes, box_flags)
+            pred_confidences = pred_confidences[:, 0, :]
         else:
             (pred_boxes, pred_confidences,
              loss[phase], confidences_loss[phase],

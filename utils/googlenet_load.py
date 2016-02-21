@@ -2,7 +2,11 @@ import tensorflow as tf
 import os
 import numpy as np
 
-def init(H):
+def init(H, config=None):
+    if config is None:
+        gpu_options = tf.GPUOptions()
+        config = tf.ConfigProto(gpu_options=gpu_options)
+
     k = H['arch']['num_classes']
     features_dim = 1024
     input_layer = 'input'
