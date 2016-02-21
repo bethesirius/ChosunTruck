@@ -1,4 +1,5 @@
 import tensorflow as tf
+import os
 import numpy as np
 
 def setup(config, k):
@@ -7,7 +8,7 @@ def setup(config, k):
 
     features_layers = ['output/confidences', 'output/boxes']
 
-    graph_def_orig_file = 'graphs/googlenet.pb'
+    graph_def_orig_file = '%s/../graphs/googlenet.pb' % os.path.dirname(os.path.realpath(__file__))
 
     dense_layer_num_output = [k, 4]
 

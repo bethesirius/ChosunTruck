@@ -14,9 +14,8 @@ from tensorflow.models.rnn import rnn_cell
 random.seed(0)
 np.random.seed(0)
 
-import train_utils
-from utils import add_rectangles
-import googlenet_load
+from utils import train_utils
+from utils import googlenet_load
 
 
 @ops.RegisterGradient("Hungarian")
@@ -271,7 +270,7 @@ def main():
                         [loss['train'], accuracy['test'], W_norm, 
                         summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op],
                         feed_dict=lr_feed)
-                test_output_to_log = add_rectangles(np_test_image, np_test_confidences, np_test_boxes, H["arch"])
+                test_output_to_log = train_utils.add_rectangles(np_test_image, np_test_confidences, np_test_boxes, H["arch"])
                 feed = {test_image_to_log: test_output_to_log}
                 test_image_summary_str = sess.run(log_image, feed_dict=feed)
                 assert test_output_to_log.shape == (arch['image_height'], arch['image_width'], 3)

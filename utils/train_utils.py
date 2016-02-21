@@ -2,11 +2,14 @@ import numpy as np
 import random
 import json
 import os
-from scipy.misc import imread, imresize
-from utils import (annotation_jitter, image_to_h5,
-                   annotation_to_h5, load_data_mean)
+import cv2
+from scipy.misc import imread
+
+from data_utils import (annotation_jitter, image_to_h5,
+                   annotation_to_h5)
 from utils.annolist import AnnotationLib as al
-from itertools import islice
+from rect import Rect
+from stitch_wrapper import stitch_rects
 
 def rescale_boxes(anno, target_width, target_height):
     I = imread(anno.imageName)
@@ -80,3 +83,42 @@ def load_data_gen(H, phase, jitter):
         
         yield output
 
+def add_rectangles(orig_image, confidences, boxes, arch):
+    image = np.copy(orig_image[0])
+    num_cells = arch["grid_height"] * arch["grid_width"]
+    num_rects_per_cell = 1
+    boxes_r = np.reshape(boxes, (arch["batch_size"],
+                                 arch["grid_height"],
+                                 arch["grid_width"],
+                                 num_rects_per_cell,
+                                 4))
+    confidences_r = np.reshape(confidences, (arch["batch_size"],
+                                             arch["grid_height"],
+                                             arch["grid_width"],
+                                             num_rects_per_cell,
+                                             2))
+                                             
+    cell_pix_size = 32
+    all_rects = [[[] for _ in range(arch["grid_width"])] for _ in range(arch["grid_height"])]
+    for n in range(num_rects_per_cell):
+        for y in range(arch["grid_height"]):
+            for x in range(arch["grid_width"]):
+                bbox = boxes_r[0, y, x, n, :]
+                conf = confidences_r[0, y, x, n, 1]
+                abs_cx = int(bbox[0]) + cell_pix_size/2 + cell_pix_size * x
+                abs_cy = int(bbox[1]) + cell_pix_size/2 + cell_pix_size * y
+                w = bbox[2]
+                h = bbox[3]
+                all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
+
+    acc_rects = [r for row in all_rects for cell in row for r in cell]
+
+    for rect in acc_rects:
+        if rect.confidence > 0.5:
+            cv2.rectangle(image, 
+                (rect.cx-int(rect.width/2), rect.cy-int(rect.height/2)), 
+                (rect.cx+int(rect.width/2), rect.cy+int(rect.height/2)), 
+                (255,0,0),
+                2)
+
+    return image
