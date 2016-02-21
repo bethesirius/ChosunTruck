@@ -1,4 +1,5 @@
 *.pyc
 *.swp
+*.so
 inception/*
 hypes/*.json
