@@ -75,14 +75,25 @@ def setup(config, k):
     W_norm = tf.reduce_sum(tf.pack(W_norm), name='weights_norm')
     tf.scalar_summary(W_norm.op.name, W_norm)
 
-    return W, B, weight_tensors, reuse_ops, input_op, W_norm
+    googlenet = {
+        "W": W,
+        "B": B,
+        "weight_tensors": weight_tensors,
+        "reuse_ops": reuse_ops,
+        "input_op": input_op,
+        "W_norm": W_norm,
+        }
+    return googlenet
 
-def model(x, weights_dict, input_op, reuse_ops, H):
+def model(x, googlenet, H):
+    weight_tensors = googlenet["weight_tensors"]
+    input_op = googlenet["input_op"]
+    reuse_ops = googlenet["reuse_ops"]
     def is_early_loss(name):
         early_loss_layers = ['head0', 'nn0', 'softmax0', 'head1', 'nn1', 'softmax1', 'output1']
         return any(name.startswith(prefix) for prefix in early_loss_layers)
 
-    T = weights_dict
+    T = weight_tensors
     T[input_op.name] = x
 
     for op in reuse_ops:

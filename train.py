@@ -21,7 +21,7 @@ from utils import googlenet_load
 def _hungarian_grad(op, *args):
     return map(array_ops.zeros_like, op.inputs)
 
-def build_lstm(lstm_input, H):
+def build_lstm_inner(lstm_input, H):
     lstm_size = H['arch']['lstm_size']
     lstm = rnn_cell.BasicLSTMCell(lstm_size, forget_bias=0.0)
     batch_size = H['arch']['batch_size'] * H['arch']['grid_height'] * H['arch']['grid_width']
@@ -35,6 +35,81 @@ def build_lstm(lstm_input, H):
             outputs.append(output)
     return outputs
 
+def build_lstm_forward(H, x, googlenet, phase):
+    grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
+    outer_size = grid_size * H['arch']['batch_size']
+    input_mean = 117.
+    x -= input_mean
+    scale_down = 0.01
+    Z = googlenet_load.model(x, googlenet, H)
+    if H['arch']['early_dropout'] and phase == 'train':
+        Z = tf.nn.dropout(Z, 0.5)
+    lstm_input = tf.reshape(Z * scale_down, (H['arch']['batch_size'] * grid_size, 1024))
+    lstm_outputs = build_lstm_inner(lstm_input, H)
+
+    pred_boxes = []
+    pred_logits = []
+    for i in range(H['arch']['rnn_len']):
+        output = lstm_outputs[i]
+        if H['arch']['late_dropout'] and phase == 'train':
+            output = tf.nn.dropout(output, 0.5)
+        box_weights = tf.get_variable('box_ip%d' % i, shape=(H['arch']['lstm_size'], 4),
+            initializer=tf.random_uniform_initializer(0.1))
+        conf_weights = tf.get_variable('conf_ip%d' % i, shape=(H['arch']['lstm_size'], 2),
+            initializer=tf.random_uniform_initializer(0.1))
+        pred_boxes.append(tf.reshape(tf.matmul(output, box_weights) * 50,
+                                     [outer_size, 1, 4]))
+        pred_logits.append(tf.reshape(tf.matmul(output, conf_weights),
+                                     [outer_size, 1, 2]))
+    pred_boxes = tf.concat(1, pred_boxes)
+    pred_logits = tf.concat(1, pred_logits)
+    pred_confidences = tf.nn.softmax(pred_logits[:, 0, :])
+    return pred_boxes, pred_logits, pred_confidences
+
+def build_lstm(H, x, googlenet, phase, boxes, box_flags):
+    grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
+    outer_size = grid_size * H['arch']['batch_size']
+    with tf.variable_scope('decoder', reuse={'train': None, 'test': True}[phase]):
+        pred_boxes, pred_logits, pred_confidences = build_lstm_forward(H, x, googlenet, phase)
+        outer_boxes = tf.reshape(boxes, [outer_size, H['arch']['rnn_len'], 4])
+        outer_flags = tf.cast(tf.reshape(box_flags, [outer_size, H['arch']['rnn_len']]), 'int32')
+        assignments, classes, perm_truth, pred_mask = tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags)
+        true_classes = tf.reshape(tf.cast(tf.greater(classes, 0), 'int64'), [outer_size * H['arch']['rnn_len']])
+        pred_logit_r = tf.reshape(pred_logits, [outer_size * H['arch']['rnn_len'], 2])
+        confidences_loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(pred_logit_r, true_classes)) / outer_size * H['solver']['head_weights'][0]
+        residual = tf.reshape(pred_boxes * pred_mask - perm_truth, [outer_size, H['arch']['rnn_len'], 4])
+        boxes_loss = tf.reduce_sum(tf.abs(residual)) / outer_size * H['solver']['head_weights'][1]
+        loss = confidences_loss + boxes_loss
+    return pred_boxes, pred_confidences, loss, confidences_loss, boxes_loss
+
+def build_overfeat_forward(H, x, googlenet, phase):
+    input_mean = 117.
+    x -= input_mean
+    Z = googlenet_load.model(x, googlenet, H)
+    grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
+    if H['arch']['use_dropout'] and phase == 'train':
+        Z = tf.nn.dropout(Z, 0.5)
+    pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, googlenet['W'][0], googlenet['B'][0], name=phase+'/logits_0'), 
+          [H['arch']['batch_size'] * grid_size, H['arch']['num_classes']])
+    pred_confidences = tf.nn.softmax(pred_logits)
+    pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, googlenet['W'][1], googlenet['B'][1], name=phase+'/logits_1'), 
+          [H['arch']['batch_size'] * grid_size, 1, 4]) * 100
+    return pred_boxes, pred_logits, pred_confidences
+
+def build_overfeat(H, x, googlenet, phase, boxes, confidences_r):
+    pred_boxes, pred_logits, pred_confidences = build_overfeat_forward(H, x, googlenet, phase)
+
+    grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
+    boxes = tf.cast(tf.reshape(boxes, [H['arch']['batch_size'] * grid_size, 4]), 'float32')
+    cross_entropy = -tf.reduce_sum(confidences_r*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
+
+    L = (H['solver']['head_weights'][0] * cross_entropy,
+         H['solver']['head_weights'][1] * tf.abs(pred_boxes[:, 0, :] - boxes) * tf.expand_dims(confidences_r[:, 1], 1))
+    confidences_loss = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
+    boxes_loss = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['arch']['batch_size'] * grid_size)
+    loss = confidences_loss + boxes_loss
+    return pred_boxes, pred_confidences, loss, confidences_loss, boxes_loss
+
 def build(H, q):
     arch = H['arch']
     solver = H["solver"]
@@ -44,9 +119,7 @@ def build(H, q):
     gpu_options = tf.GPUOptions()
     config = tf.ConfigProto(gpu_options=gpu_options)
 
-    k = 2
-    W, B, weight_tensors, reuse_ops, input_op, W_norm = googlenet_load.setup(config, k)
-    input_mean = 117.
+    googlenet = googlenet_load.setup(config, arch['num_classes'])
     learning_rate = tf.placeholder(tf.float32)
     if solver['opt'] == 'RMS':
         opt = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=0.9, epsilon=solver['epsilon'])
@@ -64,71 +137,22 @@ def build(H, q):
 
             tf.image_summary('train_label', y_density_image)
             tf.image_summary('train_image', x[0:1, :, :, :])
-
-        x -= input_mean
-
         if phase == 'test':
-            test_image = x + input_mean
+            test_image = x
+
 
         grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
-        scale_down = 0.01
         confidences_r = tf.cast(
-            tf.reshape(confidences, [H['arch']['batch_size'] * grid_size, k]), 'float32')
+            tf.reshape(confidences, [H['arch']['batch_size'] * grid_size, arch['num_classes']]), 'float32')
         boxes_r = tf.cast(
             tf.reshape(boxes[:, :, 0, :], [H['arch']['batch_size'] * grid_size, 4]), 'float32')
 
-        Z = googlenet_load.model(x, weight_tensors, input_op, reuse_ops, H)
         if arch['use_lstm']:
-            if arch['early_dropout'] and phase == 'train':
-                Z = tf.nn.dropout(Z, 0.5)
-            lstm_input = tf.reshape(Z * scale_down, (H['arch']['batch_size'] * grid_size, 1024))
-            with tf.variable_scope('decoder', reuse={'train': None, 'test': True}[phase]):
-                lstm_outputs = build_lstm(lstm_input, H)
-
-                pred_boxes = []
-                pred_logit = []
-                outer_size = grid_size * arch['batch_size']
-                for i in range(H['arch']['rnn_len']):
-                    output = lstm_outputs[i]
-                    if arch['late_dropout'] and phase == 'train':
-                        output = tf.nn.dropout(output, 0.5)
-                    box_weights = tf.get_variable('box_ip%d' % i, shape=(H['arch']['lstm_size'], 4),
-                        initializer=tf.random_uniform_initializer(0.1))
-                    conf_weights = tf.get_variable('conf_ip%d' % i, shape=(H['arch']['lstm_size'], 2),
-                        initializer=tf.random_uniform_initializer(0.1))
-                    pred_boxes.append(tf.reshape(tf.matmul(output, box_weights) * 50,
-                                                 [outer_size, 1, 4]))
-                    pred_logit.append(tf.reshape(tf.matmul(output, conf_weights),
-                                                 [outer_size, 1, 2]))
-                pred_boxes = tf.concat(1, pred_boxes)
-                outer_boxes = tf.reshape(boxes, [outer_size, arch['rnn_len'], 4])
-                outer_flags = tf.cast(tf.reshape(box_flags, [outer_size, arch['rnn_len']]), 'int32')
-                assignments, classes, perm_truth, pred_mask = tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags)
-                pred_logit = tf.concat(1, pred_logit)
-                pred_confidences = tf.nn.softmax(pred_logit[:, 0, :])
-                true_classes = tf.reshape(tf.cast(tf.greater(classes, 0), 'int64'), [outer_size * arch['rnn_len']])
-                pred_logit_r = tf.reshape(pred_logit, [outer_size * arch['rnn_len'], 2])
-                confidences_loss[phase] = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(pred_logit_r, true_classes)) / outer_size * solver['head_weights'][0]
-                residual = tf.reshape(pred_boxes * pred_mask - perm_truth, [outer_size, arch['rnn_len'], 4])
-                boxes_loss[phase] = tf.reduce_sum(tf.abs(residual)) / outer_size * solver['head_weights'][1]
-                loss[phase] = confidences_loss[phase] + boxes_loss[phase]
+            (pred_boxes, pred_confidences,
+             loss[phase], confidences_loss[phase], boxes_loss[phase]) = build_lstm(H, x, googlenet, phase, boxes, box_flags)
         else:
-            if arch['use_dropout'] and phase == 'train':
-                Z = tf.nn.dropout(Z, 0.5)
-            pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'), 
-                  [H['arch']['batch_size'] * grid_size, k])
-            pred_confidences = tf.nn.softmax(pred_logits)
-            pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1], name=phase+'/logits_1'), 
-                  [H['arch']['batch_size'] * grid_size, 1, 4]) * 100
-
-            boxes = tf.cast(tf.reshape(boxes, [H['arch']['batch_size'] * grid_size, 4]), 'float32')
-            cross_entropy = -tf.reduce_sum(confidences_r*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
-
-            L = (solver['head_weights'][0] * cross_entropy,
-                 solver['head_weights'][1] * tf.abs(pred_boxes[:, 0, :] - boxes) * tf.expand_dims(confidences_r[:, 1], 1))
-            confidences_loss[phase] = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
-            boxes_loss[phase] = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['arch']['batch_size'] * grid_size)
-            loss[phase] = confidences_loss[phase] + boxes_loss[phase]
+            (pred_boxes, pred_confidences,
+             loss[phase], confidences_loss[phase], boxes_loss[phase]) = build_overfeat(H, x, googlenet, phase, boxes, confidences_r)
 
         a = tf.equal(tf.argmax(confidences_r, 1), tf.argmax(pred_confidences, 1))
         accuracy[phase] = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
@@ -163,17 +187,15 @@ def build(H, q):
 
     summary_op = tf.merge_all_summaries()
 
-    return config, loss, accuracy, summary_op, train_op, W_norm, test_image, test_pred_boxes, test_pred_confidences, smooth_op, global_step, learning_rate
+    return config, loss, accuracy, summary_op, train_op, googlenet['W_norm'], test_image, test_pred_boxes, test_pred_confidences, smooth_op, global_step, learning_rate
 
 
-def run(H, test_images):
+def train(H, test_images):
     if not os.path.exists(H['save_dir']): os.makedirs(H['save_dir'])
 
     ckpt_file = H['save_dir'] + '/save.ckpt'
     with open(H['save_dir'] + '/hypes.json', 'w') as f:
         json.dump(H, f, indent=4)
-    arch = H['arch']
-    solver = H['solver']
 
     x_in = tf.placeholder(tf.float32)
     confs_in = tf.placeholder(tf.float32)
@@ -183,18 +205,18 @@ def run(H, test_images):
     enqueue_op = {}
     for phase in ['train', 'test']:
         dtypes = [tf.float32, tf.float32, tf.float32, tf.float32]
-        grid_size = arch['grid_width'] * arch['grid_height']
+        grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
         shapes = (
-            [arch['image_height'], arch['image_width'], 3],
+            [H['arch']['image_height'], H['arch']['image_width'], 3],
             [grid_size, 2],
-            [grid_size, arch['rnn_len'], 4],
-            [grid_size, arch['rnn_len']],
+            [grid_size, H['arch']['rnn_len'], 4],
+            [grid_size, H['arch']['rnn_len']],
             )
         q[phase] = tf.FIFOQueue(capacity=30, dtypes=dtypes, shapes=shapes)
         enqueue_op[phase] = q[phase].enqueue((x_in, confs_in, boxes_in, flags_in))
 
     def make_feed(d):
-        return {x_in: d['image'], confs_in: d['confs'], boxes_in: d['boxes'], flags_in: d['flags'], learning_rate: solver['learning_rate']}
+        return {x_in: d['image'], confs_in: d['confs'], boxes_in: d['boxes'], flags_in: d['flags'], learning_rate: H['solver']['learning_rate']}
 
     def MyLoop(sess, enqueue_op, phase, gen):
         for d in gen:
@@ -210,7 +232,7 @@ def run(H, test_images):
         flush_secs=10
     )
 
-    test_image_to_log = tf.placeholder(tf.uint8, [arch['image_height'], arch['image_width'], 3])
+    test_image_to_log = tf.placeholder(tf.uint8, [H['arch']['image_height'], H['arch']['image_width'], 3])
     log_image = tf.image_summary('test_image_to_log', tf.expand_dims(test_image_to_log, 0))
 
     with tf.Session(config=config) as sess:
@@ -218,13 +240,13 @@ def run(H, test_images):
         # enqueue once manually to avoid thread start delay
         threads = []
         for phase in ['train', 'test']:
-            gen = train_utils.load_data_gen(H, phase, jitter=solver['use_jitter'])
+            gen = train_utils.load_data_gen(H, phase, jitter=H['solver']['use_jitter'])
             d = gen.next()
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
             threads.append(tf.train.threading.Thread(target=MyLoop, args=(sess, enqueue_op, phase, gen)))
             threads[-1].start()
 
-        tf.set_random_seed(solver['rnd_seed'])
+        tf.set_random_seed(H['solver']['rnd_seed'])
         sess.run(tf.initialize_all_variables())
 
         weights_str = H['solver']['weights']
@@ -233,9 +255,9 @@ def run(H, test_images):
             saver.restore(sess, weights_str)
 
         # train model for N iterations
-        for i in xrange(solver['max_iter']):
+        for i in xrange(10000000):
             display_iter = 10
-            adjusted_lr = solver['learning_rate'] * 0.5 ** max(0, (i / solver['learning_rate_step']) - 2)
+            adjusted_lr = H['solver']['learning_rate'] * 0.5 ** max(0, (i / H['solver']['learning_rate_step']) - 2)
             lr_feed = {learning_rate: adjusted_lr}
             if i % display_iter == 0:
                 if i > 0:
@@ -249,7 +271,7 @@ def run(H, test_images):
                         feed_dict=lr_feed)
                 test_output_to_log = train_utils.add_rectangles(np_test_image, np_test_pred_confidences, np_test_pred_boxes, H["arch"])
                 test_image_summary_str = sess.run(log_image, feed_dict={test_image_to_log: test_output_to_log})
-                assert test_output_to_log.shape == (arch['image_height'], arch['image_width'], 3)
+                assert test_output_to_log.shape == (H['arch']['image_height'], H['arch']['image_width'], 3)
                 writer.add_summary(test_image_summary_str, global_step=global_step.eval())
                 writer.add_summary(summary_str, global_step=global_step.eval())
                 print_str = string.join([
@@ -279,7 +301,7 @@ def main():
     parser.add_argument('--weights', default=None, type=str)
     parser.add_argument('--gpu', default=None, type=int)
     parser.add_argument('--hypes', required=True, type=str)
-    parser.add_argument('--outputdir', default='output', type=str)
+    parser.add_argument('--outdir', default='output', type=str)
     args = parser.parse_args()
     with open(args.hypes, 'r') as f:
         H = json.load(f)
@@ -287,11 +309,12 @@ def main():
         H['solver']['gpu'] = args.gpu
     if len(H.get('exp_name', '')) == 0:
         H['exp_name'] = args.hypes.split('/')[-1].replace('.json', '')
-    H['save_dir'] = args.outputdir + '/%s_%s' % (H['exp_name'],
+    H['save_dir'] = args.outdir + '/%s_%s' % (H['exp_name'],
         datetime.datetime.now().strftime('%Y_%m_%d_%H.%M'))
     if args.weights is not None:
         H['solver']['weights'] = args.weights
-    run(H, test_images=[])
+    H['arch']['num_classes'] = 2
+    train(H, test_images=[])
 
 if __name__ == '__main__':
     main()
