@@ -2,7 +2,8 @@ import tensorflow as tf
 import os
 import numpy as np
 
-def setup(config, k):
+def init(H):
+    k = H['arch']['num_classes']
     features_dim = 1024
     input_layer = 'input'
 

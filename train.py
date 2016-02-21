@@ -73,11 +73,17 @@ def build_lstm(H, x, googlenet, phase, boxes, box_flags):
         pred_boxes, pred_logits, pred_confidences = build_lstm_forward(H, x, googlenet, phase)
         outer_boxes = tf.reshape(boxes, [outer_size, H['arch']['rnn_len'], 4])
         outer_flags = tf.cast(tf.reshape(box_flags, [outer_size, H['arch']['rnn_len']]), 'int32')
-        assignments, classes, perm_truth, pred_mask = tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags)
-        true_classes = tf.reshape(tf.cast(tf.greater(classes, 0), 'int64'), [outer_size * H['arch']['rnn_len']])
-        pred_logit_r = tf.reshape(pred_logits, [outer_size * H['arch']['rnn_len'], 2])
-        confidences_loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(pred_logit_r, true_classes)) / outer_size * H['solver']['head_weights'][0]
-        residual = tf.reshape(pred_boxes * pred_mask - perm_truth, [outer_size, H['arch']['rnn_len'], 4])
+        assignments, classes, perm_truth, pred_mask = (
+            tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags))
+        true_classes = tf.reshape(tf.cast(tf.greater(classes, 0), 'int64'),
+                                  [outer_size * H['arch']['rnn_len']])
+        pred_logit_r = tf.reshape(pred_logits,
+                                  [outer_size * H['arch']['rnn_len'], 2])
+        confidences_loss = (tf.reduce_sum(
+            tf.nn.sparse_softmax_cross_entropy_with_logits(pred_logit_r, true_classes))
+            ) / outer_size * H['solver']['head_weights'][0]
+        residual = tf.reshape(pred_boxes * pred_mask - perm_truth,
+                              [outer_size, H['arch']['rnn_len'], 4])
         boxes_loss = tf.reduce_sum(tf.abs(residual)) / outer_size * H['solver']['head_weights'][1]
         loss = confidences_loss + boxes_loss
     return pred_boxes, pred_confidences, loss, confidences_loss, boxes_loss
@@ -89,11 +95,13 @@ def build_overfeat_forward(H, x, googlenet, phase):
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     if H['arch']['use_dropout'] and phase == 'train':
         Z = tf.nn.dropout(Z, 0.5)
-    pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, googlenet['W'][0], googlenet['B'][0], name=phase+'/logits_0'), 
-          [H['arch']['batch_size'] * grid_size, H['arch']['num_classes']])
+    pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, googlenet['W'][0], googlenet['B'][0],
+                                             name=phase+'/logits_0'), 
+                             [H['arch']['batch_size'] * grid_size, H['arch']['num_classes']])
     pred_confidences = tf.nn.softmax(pred_logits)
-    pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, googlenet['W'][1], googlenet['B'][1], name=phase+'/logits_1'), 
-          [H['arch']['batch_size'] * grid_size, 1, 4]) * 100
+    pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, googlenet['W'][1], googlenet['B'][1],
+                                            name=phase+'/logits_1'), 
+                            [H['arch']['batch_size'] * grid_size, 1, 4]) * 100
     return pred_boxes, pred_logits, pred_confidences
 
 def build_overfeat(H, x, googlenet, phase, boxes, confidences_r):
@@ -104,25 +112,30 @@ def build_overfeat(H, x, googlenet, phase, boxes, confidences_r):
     cross_entropy = -tf.reduce_sum(confidences_r*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
 
     L = (H['solver']['head_weights'][0] * cross_entropy,
-         H['solver']['head_weights'][1] * tf.abs(pred_boxes[:, 0, :] - boxes) * tf.expand_dims(confidences_r[:, 1], 1))
-    confidences_loss = tf.reduce_sum(L[0], name=phase+'/confidences_loss') / (H['arch']['batch_size'] * grid_size)
-    boxes_loss = tf.reduce_sum(L[1], name=phase+'/boxes_loss') / (H['arch']['batch_size'] * grid_size)
+         H['solver']['head_weights'][1] * tf.abs(pred_boxes[:, 0, :] - boxes) * 
+             tf.expand_dims(confidences_r[:, 1], 1))
+    confidences_loss = (tf.reduce_sum(L[0], name=phase+'/confidences_loss') /
+                        (H['arch']['batch_size'] * grid_size))
+    boxes_loss = (tf.reduce_sum(L[1], name=phase+'/boxes_loss') /
+                  (H['arch']['batch_size'] * grid_size))
     loss = confidences_loss + boxes_loss
     return pred_boxes, pred_confidences, loss, confidences_loss, boxes_loss
 
 def build(H, q):
+    '''
+    Build full model for training, including forward / backward passes,
+    optimizers, and summary statistics.
+    '''
     arch = H['arch']
     solver = H["solver"]
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(solver['gpu'])
-    #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
-    gpu_options = tf.GPUOptions()
-    config = tf.ConfigProto(gpu_options=gpu_options)
 
-    googlenet = googlenet_load.setup(config, arch['num_classes'])
+    googlenet = googlenet_load.init(H)
     learning_rate = tf.placeholder(tf.float32)
     if solver['opt'] == 'RMS':
-        opt = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=0.9, epsilon=solver['epsilon'])
+        opt = tf.train.RMSPropOptimizer(learning_rate=learning_rate,
+                                        decay=0.9, epsilon=solver['epsilon'])
     elif solver['opt'] == 'SGD':
         opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
     else:
@@ -133,7 +146,8 @@ def build(H, q):
 
         if phase == 'train':
             y_density = tf.cast(tf.argmax(confidences, 2), 'uint8')
-            y_density_image = tf.reshape(y_density[0, :], [1, H['arch']['grid_height'], H['arch']['grid_width'], 1])
+            y_density_image = tf.reshape(y_density[0, :],
+                                         [1, H['arch']['grid_height'], H['arch']['grid_width'], 1])
 
             tf.image_summary('train_label', y_density_image)
             tf.image_summary('train_image', x[0:1, :, :, :])
@@ -143,16 +157,19 @@ def build(H, q):
 
         grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
         confidences_r = tf.cast(
-            tf.reshape(confidences, [H['arch']['batch_size'] * grid_size, arch['num_classes']]), 'float32')
-        boxes_r = tf.cast(
-            tf.reshape(boxes[:, :, 0, :], [H['arch']['batch_size'] * grid_size, 4]), 'float32')
+            tf.reshape(confidences,
+                       [H['arch']['batch_size'] * grid_size, arch['num_classes']]), 'float32')
+        boxes_r = tf.cast(tf.reshape(boxes[:, :, 0, :], [H['arch']['batch_size'] * grid_size, 4]),
+                          'float32')
 
         if arch['use_lstm']:
             (pred_boxes, pred_confidences,
-             loss[phase], confidences_loss[phase], boxes_loss[phase]) = build_lstm(H, x, googlenet, phase, boxes, box_flags)
+             loss[phase], confidences_loss[phase],
+             boxes_loss[phase]) = build_lstm(H, x, googlenet, phase, boxes, box_flags)
         else:
             (pred_boxes, pred_confidences,
-             loss[phase], confidences_loss[phase], boxes_loss[phase]) = build_overfeat(H, x, googlenet, phase, boxes, confidences_r)
+             loss[phase], confidences_loss[phase],
+             boxes_loss[phase]) = build_overfeat(H, x, googlenet, phase, boxes, confidences_r)
 
         a = tf.equal(tf.argmax(confidences_r, 1), tf.argmax(pred_confidences, 1))
         accuracy[phase] = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
@@ -187,7 +204,9 @@ def build(H, q):
 
     summary_op = tf.merge_all_summaries()
 
-    return config, loss, accuracy, summary_op, train_op, googlenet['W_norm'], test_image, test_pred_boxes, test_pred_confidences, smooth_op, global_step, learning_rate
+    return (config, loss, accuracy, summary_op, train_op, googlenet['W_norm'],
+            test_image, test_pred_boxes, test_pred_confidences, smooth_op,
+            global_step, learning_rate)
 
 
 def train(H, test_images):
@@ -216,7 +235,8 @@ def train(H, test_images):
         enqueue_op[phase] = q[phase].enqueue((x_in, confs_in, boxes_in, flags_in))
 
     def make_feed(d):
-        return {x_in: d['image'], confs_in: d['confs'], boxes_in: d['boxes'], flags_in: d['flags'], learning_rate: H['solver']['learning_rate']}
+        return {x_in: d['image'], confs_in: d['confs'], boxes_in: d['boxes'],
+                flags_in: d['flags'], learning_rate: H['solver']['learning_rate']}
 
     def MyLoop(sess, enqueue_op, phase, gen):
         for d in gen:
@@ -232,18 +252,19 @@ def train(H, test_images):
         flush_secs=10
     )
 
-    test_image_to_log = tf.placeholder(tf.uint8, [H['arch']['image_height'], H['arch']['image_width'], 3])
+    test_image_to_log = tf.placeholder(tf.uint8,
+                                       [H['arch']['image_height'], H['arch']['image_width'], 3])
     log_image = tf.image_summary('test_image_to_log', tf.expand_dims(test_image_to_log, 0))
 
     with tf.Session(config=config) as sess:
-        #writer.add_graph(sess.graph_def)
-        # enqueue once manually to avoid thread start delay
         threads = []
         for phase in ['train', 'test']:
+            # enqueue once manually to avoid thread start delay
             gen = train_utils.load_data_gen(H, phase, jitter=H['solver']['use_jitter'])
             d = gen.next()
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
-            threads.append(tf.train.threading.Thread(target=MyLoop, args=(sess, enqueue_op, phase, gen)))
+            threads.append(tf.train.threading.Thread(target=MyLoop,
+                                                     args=(sess, enqueue_op, phase, gen)))
             threads[-1].start()
 
         tf.set_random_seed(H['solver']['rnd_seed'])
@@ -257,21 +278,27 @@ def train(H, test_images):
         # train model for N iterations
         for i in xrange(10000000):
             display_iter = 10
-            adjusted_lr = H['solver']['learning_rate'] * 0.5 ** max(0, (i / H['solver']['learning_rate_step']) - 2)
+            adjusted_lr = (H['solver']['learning_rate'] *
+                           0.5 ** max(0, (i / H['solver']['learning_rate_step']) - 2))
             lr_feed = {learning_rate: adjusted_lr}
             if i % display_iter == 0:
                 if i > 0:
                     dt = (time.time() - start) / (H['arch']['batch_size'] * display_iter)
                 start = time.time()
                 (batch_loss_train, test_accuracy, weights_norm, 
-                    summary_str, np_test_image, np_test_pred_boxes, np_test_pred_confidences,
-                    _, _) = sess.run(
-                        [loss['train'], accuracy['test'], W_norm, 
-                        summary_op, test_image, test_pred_boxes, test_pred_confidences, train_op, smooth_op],
-                        feed_dict=lr_feed)
-                test_output_to_log = train_utils.add_rectangles(np_test_image, np_test_pred_confidences, np_test_pred_boxes, H["arch"])
-                test_image_summary_str = sess.run(log_image, feed_dict={test_image_to_log: test_output_to_log})
-                assert test_output_to_log.shape == (H['arch']['image_height'], H['arch']['image_width'], 3)
+                    summary_str, np_test_image, np_test_pred_boxes,
+                    np_test_pred_confidences, _, _) = sess.run([
+                         loss['train'], accuracy['test'], W_norm, 
+                         summary_op, test_image, test_pred_boxes,
+                         test_pred_confidences, train_op, smooth_op
+                        ], feed_dict=lr_feed)
+                test_output_to_log = train_utils.add_rectangles(np_test_image,
+                                                                np_test_pred_confidences,
+                                                                np_test_pred_boxes, H["arch"])
+                test_image_summary_str = sess.run(log_image,
+                                                  feed_dict={test_image_to_log: test_output_to_log})
+                assert test_output_to_log.shape == (H['arch']['image_height'],
+                                                    H['arch']['image_width'], 3)
                 writer.add_summary(test_image_summary_str, global_step=global_step.eval())
                 writer.add_summary(summary_str, global_step=global_step.eval())
                 print_str = string.join([
@@ -282,13 +309,13 @@ def train(H, test_images):
                     'Time/image (ms): %.1f'
                 ], ', ')
                 print(print_str % 
-                      (i, adjusted_lr, batch_loss_train, test_accuracy * 100, dt * 1000 if i > 0 else 0))
+                      (i, adjusted_lr, batch_loss_train,
+                       test_accuracy * 100, dt * 1000 if i > 0 else 0))
             else:
                 batch_loss_train, _ = sess.run([loss['train'], train_op], feed_dict=lr_feed)
 
             if global_step.eval() % 1000 == 0: 
                 saver.save(sess, ckpt_file, global_step=global_step)
-
 
 
 def main():
