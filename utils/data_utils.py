@@ -54,7 +54,7 @@ def annotation_to_h5(a, cell_width, cell_height, max_len):
 
             unsorted_boxes.append(np.array([ox, oy, width, height], dtype=np.float))
 
-        for box in sorted(unsorted_boxes, key=lambda x: x[0]**2 + x[1]**2):
+        for bidx, box in enumerate(sorted(unsorted_boxes, key=lambda x: x[0]**2 + x[1]**2)):
             boxes[0, cidx, :, bidx, 0] = box
 
     return boxes, box_flags
