@@ -16,7 +16,7 @@
         "region_size": 32,
         "lstm_size": 500,
         "num_classes": 2,
-        "rnn_len": 2
+        "rnn_len": 5
     }, 
     "logging": {
     },
