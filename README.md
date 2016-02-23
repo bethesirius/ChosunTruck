@@ -10,7 +10,7 @@ algorithm, achieving state-of-the-art detection results on the TUD crossing and 
 Special thanks to [Brett Kuprel](http://stanford.edu/~kuprel/) of Sebastian Thrun's group for providing the initial code
 to hack into and finetune Google's pretrained ImageNet weights.
 
-## Overfeat Installation & Training
+## OverFeat Installation & Training
 First, [install tensorflow from source or pip](https://www.tensorflow.org/versions/r0.7/get_started/os_setup.html#pip-installation)
     
     $ git clone http://github.com/russell91/tensordetect
@@ -40,5 +40,6 @@ See <a href="http://arxiv.org/abs/1506.04878" target="_blank">the paper</a> for 
     $ cp /path/to/tensordetect/data/lstm/hungarian.cc /path/to/tensorflow/tensorflow/core/user_ops/
     # Proceed with the GPU installation of tensorflow from source...
     # (see https://www.tensorflow.org/versions/r0.7/get_started/os_setup.html#installing-from-sources)
+
     $ cd /path/to/tensordetect/utils && make && cd ..
     $ python train.py --hypes hypes/lstm.json --gpu 0 --logdir output
