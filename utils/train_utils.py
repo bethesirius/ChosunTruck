@@ -9,7 +9,6 @@ from data_utils import (annotation_jitter, image_to_h5,
                    annotation_to_h5)
 from utils.annolist import AnnotationLib as al
 from rect import Rect
-from stitch_wrapper import stitch_rects
 
 def rescale_boxes(anno, target_width, target_height):
     I = imread(anno.imageName)
@@ -119,6 +118,7 @@ def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rn
                 all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
 
     if use_stitching:
+        from stitch_wrapper import stitch_rects
         acc_rects = stitch_rects(all_rects)
     else:
         acc_rects = [r for row in all_rects for cell in row for r in cell]
