@@ -92,7 +92,7 @@ def load_data_gen(H, phase, jitter):
         
         yield output
 
-def add_rectangles(orig_image, confidences, boxes, arch, rnn_len=1):
+def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.5):
     image = np.copy(orig_image[0])
     num_cells = arch["grid_height"] * arch["grid_width"]
     boxes_r = np.reshape(boxes, (arch["batch_size"],
@@ -105,7 +105,6 @@ def add_rectangles(orig_image, confidences, boxes, arch, rnn_len=1):
                                              arch["grid_width"],
                                              rnn_len,
                                              2))
-                                             
     cell_pix_size = 32
     all_rects = [[[] for _ in range(arch["grid_width"])] for _ in range(arch["grid_height"])]
     for n in range(rnn_len):
@@ -119,14 +118,18 @@ def add_rectangles(orig_image, confidences, boxes, arch, rnn_len=1):
                 h = bbox[3]
                 all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
 
-    acc_rects = [r for row in all_rects for cell in row for r in cell]
+    if use_stitching:
+        acc_rects = stitch_rects(all_rects)
+    else:
+        acc_rects = [r for row in all_rects for cell in row for r in cell]
+
 
     for rect in acc_rects:
-        if rect.confidence > 0.5:
-            cv2.rectangle(image, 
-                (rect.cx-int(rect.width/2), rect.cy-int(rect.height/2)), 
-                (rect.cx+int(rect.width/2), rect.cy+int(rect.height/2)), 
-                (255,0,0),
+        if rect.confidence > min_conf:
+            cv2.rectangle(image,
+                (rect.cx-int(rect.width/2), rect.cy-int(rect.height/2)),
+                (rect.cx+int(rect.width/2), rect.cy+int(rect.height/2)),
+                (0,255,0),
                 2)
 
     return image
