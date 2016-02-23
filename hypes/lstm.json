@@ -6,14 +6,16 @@
     },
     "arch": {
         "use_lstm": true,
-        "use_dropout": true, 
+        "early_dropout": false, 
+        "late_dropout": true, 
         "image_width": 640, 
         "image_height": 480,
         "grid_height": 15, 
         "grid_width": 20,
         "batch_size": 1, 
         "region_size": 32,
-        "lstm_size": 200,
+        "lstm_size": 500,
+        "num_classes": 2,
         "rnn_len": 2
     }, 
     "logging": {
@@ -24,7 +26,7 @@
         "rnd_seed": 1,
         "epsilon": 0.00001, 
         "learning_rate": 0.001, 
-        "learning_rate_step": 7500, 
+        "learning_rate_step": 100000, 
         "weights": "",
         "head_weights": [1.0, 0.1]
     }
