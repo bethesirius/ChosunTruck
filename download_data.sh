@@ -7,12 +7,13 @@ cd $DIR
 echo "Downloading..."
 
 mkdir -p data && cd data
-wget http://russellsstewart.com/s/tfreinspect/googlenet.pb
+wget http://russellsstewart.com/s/tensordetect/googlenet.pb
 mkdir -p lstm && cd lstm
-wget http://russellsstewart.com/s/tfreinspect/lstm/save.ckpt-320000
-wget http://russellsstewart.com/s/tfreinspect/lstm/hungarian.cc
+wget http://russellsstewart.com/s/tensordetect/lstm/save.ckpt-320000
+wget http://russellsstewart.com/s/tensordetect/lstm/hungarian.cc
 cd ..
-wget http://russellsstewart.com/s/tfreinspect/brainwash.tar.gz
-tar xf brainwash.tar
+wget http://russellsstewart.com/s/tensordetect/brainwash.tar.gz
+echo "Extracting..."
+tar xf brainwash.tar.gz
 
 echo "Done."
