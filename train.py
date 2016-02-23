@@ -7,19 +7,15 @@ import argparse
 import os
 import tensorflow as tf
 import numpy as np
+from tensorflow.models.rnn import rnn_cell
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import array_ops
-from tensorflow.models.rnn import rnn_cell
 
 random.seed(0)
 np.random.seed(0)
 
 from utils import train_utils
 from utils import googlenet_load
-
-@ops.RegisterGradient("Hungarian")
-def _hungarian_grad(op, *args):
-    return map(array_ops.zeros_like, op.inputs)
 
 def build_lstm_inner(lstm_input, H):
     lstm_size = H['arch']['lstm_size']
@@ -70,6 +66,10 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
         pred_confidences = tf.reshape(pred_confidences_squash,
                                       [outer_size, H['arch']['rnn_len'], 2])
     return pred_boxes, pred_logits, pred_confidences
+
+@ops.RegisterGradient("Hungarian")
+def _hungarian_grad(op, *args):
+    return map(array_ops.zeros_like, op.inputs)
 
 def build_lstm(H, x, googlenet, phase, boxes, box_flags):
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
@@ -152,25 +152,14 @@ def build(H, q):
         raise ValueError('Unrecognized opt type')
     loss, accuracy, confidences_loss, boxes_loss = {}, {}, {}, {}
     for phase in ['train', 'test']:
+        # generate predictions and losses from forward pass
         x, confidences, boxes, box_flags = q[phase].dequeue_many(arch['batch_size'])
-
-        if phase == 'train':
-            y_density = tf.cast(tf.argmax(confidences, 2), 'uint8')
-            y_density_image = tf.reshape(y_density[0, :],
-                                         [1, H['arch']['grid_height'], H['arch']['grid_width'], 1])
-
-            tf.image_summary('train_label', y_density_image)
-            tf.image_summary('train_image', x[0:1, :, :, :])
-        if phase == 'test':
-            test_image = x
 
 
         grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
         confidences_r = tf.cast(
             tf.reshape(confidences,
                        [H['arch']['batch_size'] * grid_size, arch['num_classes']]), 'float32')
-        boxes_r = tf.cast(tf.reshape(boxes[:, :, 0, :], [H['arch']['batch_size'] * grid_size, 4]),
-                          'float32')
 
         if arch['use_lstm']:
             (pred_boxes, pred_confidences,
@@ -182,10 +171,23 @@ def build(H, q):
              loss[phase], confidences_loss[phase],
              boxes_loss[phase]) = build_overfeat(H, x, googlenet, phase, boxes, confidences_r)
 
+
+        # Set up summary operations for tensorboard
         a = tf.equal(tf.argmax(confidences_r, 1), tf.argmax(pred_confidences, 1))
         accuracy[phase] = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
 
-        if phase == 'test':
+        if phase == 'train':
+            global_step = tf.Variable(0, trainable=False)
+            train_op = opt.minimize(loss['train'], global_step=global_step)
+
+            y_density = tf.cast(tf.argmax(confidences, 2), 'uint8')
+            y_density_image = tf.reshape(y_density[0, :],
+                                         [1, H['arch']['grid_height'], H['arch']['grid_width'], 1])
+
+            tf.image_summary('train_label', y_density_image)
+            tf.image_summary('train_image', x[0:1, :, :, :])
+        elif phase == 'test':
+            test_image = x
             moving_avg = tf.train.ExponentialMovingAverage(0.99)
             smooth_op = moving_avg.apply([accuracy['train'], accuracy['test'],
                                           confidences_loss['train'], boxes_loss['train'],
@@ -202,16 +204,14 @@ def build(H, q):
                 tf.scalar_summary("%s/regression_loss/smooth" % p,
                     moving_avg.average(boxes_loss[p]))
 
-            if False: # show ground truth
+            if False:
+                # show ground truth to verify labels are correct
                 test_pred_confidences = confidences_r
                 test_pred_boxes = boxes_r
-            else: # show predictions
+            else:
+                # show predictions to visualize training progress
                 test_pred_confidences = pred_confidences
                 test_pred_boxes = pred_boxes[:, 0, :]
-
-        if phase == 'train':
-            global_step = tf.Variable(0, trainable=False)
-            train_op = opt.minimize(loss['train'], global_step=global_step)
 
     summary_op = tf.merge_all_summaries()
 
@@ -339,7 +339,7 @@ def main():
     parser.add_argument('--weights', default=None, type=str)
     parser.add_argument('--gpu', default=None, type=int)
     parser.add_argument('--hypes', required=True, type=str)
-    parser.add_argument('--outdir', default='output', type=str)
+    parser.add_argument('--logdir', default='output', type=str)
     args = parser.parse_args()
     with open(args.hypes, 'r') as f:
         H = json.load(f)
@@ -347,7 +347,7 @@ def main():
         H['solver']['gpu'] = args.gpu
     if len(H.get('exp_name', '')) == 0:
         H['exp_name'] = args.hypes.split('/')[-1].replace('.json', '')
-    H['save_dir'] = args.outdir + '/%s_%s' % (H['exp_name'],
+    H['save_dir'] = args.logdir + '/%s_%s' % (H['exp_name'],
         datetime.datetime.now().strftime('%Y_%m_%d_%H.%M'))
     if args.weights is not None:
         H['solver']['weights'] = args.weights
