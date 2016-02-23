@@ -118,10 +118,13 @@ def model(x, googlenet, H):
             )
 
             T[op.name] = copied_op.outputs[0]
+            #T[op.name] = tf.Print(copied_op.outputs[0], [tf.shape(copied_op.outputs[0]), tf.constant(op.name)])
     
 
     cnn_feat = T['mixed5b']
     cnn_feat_r = tf.reshape(cnn_feat, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
+    finegrain = T['mixed3b']
+    finegrain_r = tf.reshape(cnn_feat, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'] * 4 * 4, 64])
 
     Z = cnn_feat_r
 
