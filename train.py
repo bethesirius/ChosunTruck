@@ -179,13 +179,6 @@ def build(H, q):
         if phase == 'train':
             global_step = tf.Variable(0, trainable=False)
             train_op = opt.minimize(loss['train'], global_step=global_step)
-
-            y_density = tf.cast(tf.argmax(confidences, 2), 'uint8')
-            y_density_image = tf.reshape(y_density[0, :],
-                                         [1, H['arch']['grid_height'], H['arch']['grid_width'], 1])
-
-            tf.image_summary('train_label', y_density_image)
-            tf.image_summary('train_image', x[0:1, :, :, :])
         elif phase == 'test':
             test_image = x
             moving_avg = tf.train.ExponentialMovingAverage(0.99)
@@ -204,19 +197,19 @@ def build(H, q):
                 tf.scalar_summary("%s/regression_loss/smooth" % p,
                     moving_avg.average(boxes_loss[p]))
 
-            if False:
-                # show ground truth to verify labels are correct
-                test_pred_confidences = confidences_r
-                test_pred_boxes = boxes_r
-            else:
-                # show predictions to visualize training progress
-                test_pred_confidences = pred_confidences
-                test_pred_boxes = pred_boxes[:, 0, :]
+            # show ground truth to verify labels are correct
+            test_true_confidences = confidences_r
+            test_true_boxes = boxes[0, :, 0, :]
+
+            # show predictions to visualize training progress
+            test_pred_confidences = pred_confidences
+            test_pred_boxes = pred_boxes[:, 0, :]
 
     summary_op = tf.merge_all_summaries()
 
     return (config, loss, accuracy, summary_op, train_op, googlenet['W_norm'],
-            test_image, test_pred_boxes, test_pred_confidences, smooth_op,
+            test_image, test_pred_boxes, test_pred_confidences,
+            test_true_boxes, test_true_confidences, smooth_op,
             global_step, learning_rate)
 
 
@@ -254,8 +247,9 @@ def train(H, test_images):
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
 
     (config, loss, accuracy, summary_op, train_op, W_norm,
-     test_image, test_pred_boxes,
-     test_pred_confidences, smooth_op, global_step, learning_rate) = build(H, q)
+     test_image, test_pred_boxes, test_pred_confidences,
+     test_true_boxes, test_true_confidences,
+     smooth_op, global_step, learning_rate) = build(H, q)
 
     saver = tf.train.Saver(max_to_keep=None)
     writer = tf.train.SummaryWriter(
@@ -265,7 +259,8 @@ def train(H, test_images):
 
     test_image_to_log = tf.placeholder(tf.uint8,
                                        [H['arch']['image_height'], H['arch']['image_width'], 3])
-    log_image = tf.image_summary('test_image_to_log', tf.expand_dims(test_image_to_log, 0))
+    log_image_name = tf.placeholder(tf.string)
+    log_image = tf.image_summary(log_image_name, tf.expand_dims(test_image_to_log, 0))
 
     with tf.Session(config=config) as sess:
         threads = []
@@ -298,19 +293,26 @@ def train(H, test_images):
                 start = time.time()
                 (batch_loss_train, test_accuracy, weights_norm, 
                     summary_str, np_test_image, np_test_pred_boxes,
-                    np_test_pred_confidences, _, _) = sess.run([
+                    np_test_pred_confidences, np_test_true_boxes,
+                    np_test_true_confidences, _, _) = sess.run([
                          loss['train'], accuracy['test'], W_norm, 
                          summary_op, test_image, test_pred_boxes,
-                         test_pred_confidences, train_op, smooth_op
+                         test_pred_confidences, test_true_boxes, test_true_confidences,
+                         train_op, smooth_op,
                         ], feed_dict=lr_feed)
-                test_output_to_log = train_utils.add_rectangles(np_test_image,
-                                                                np_test_pred_confidences,
-                                                                np_test_pred_boxes, H["arch"])
-                test_image_summary_str = sess.run(log_image,
-                                                  feed_dict={test_image_to_log: test_output_to_log})
-                assert test_output_to_log.shape == (H['arch']['image_height'],
-                                                    H['arch']['image_width'], 3)
-                writer.add_summary(test_image_summary_str, global_step=global_step.eval())
+                pred_true = [("pred_output", np_test_pred_boxes, np_test_pred_confidences),
+                             ("true_output", np_test_true_boxes, np_test_true_confidences)]
+
+                for name, boxes, confidences in pred_true:
+                    test_output_to_log = train_utils.add_rectangles(np_test_image,
+                                                                    confidences,
+                                                                    boxes,
+                                                                    H["arch"])
+                    assert test_output_to_log.shape == (H['arch']['image_height'],
+                                                        H['arch']['image_width'], 3)
+                    feed = {test_image_to_log: test_output_to_log, log_image_name: name}
+                    test_image_summary_str = sess.run(log_image, feed_dict=feed)
+                    writer.add_summary(test_image_summary_str, global_step=global_step.eval())
                 writer.add_summary(summary_str, global_step=global_step.eval())
                 print_str = string.join([
                     'Step: %d',
