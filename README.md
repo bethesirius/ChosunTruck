@@ -25,7 +25,7 @@ to get results on your test set.
 
 ## ReInspect Installation & Training
 
-ReInspect, [initially implemented](https://github.com/Russell91/ReInspect/edit/master/README.md) in Caffe,
+ReInspect, [initially implemented](https://github.com/Russell91/ReInspect) in Caffe,
 is a neural network extension to Overfeat-GoogLeNet in Tensorflow.
 It is designed for high performance object detection in images with heavily overlapping instances.
 See <a href="http://arxiv.org/abs/1506.04878" target="_blank">the paper</a> for details or the <a href="https://www.youtube.com/watch?v=QeWl0h3kQ24" target="_blank">video</a> for a demonstration.
