@@ -300,8 +300,8 @@ def train(H, test_images):
                          test_pred_confidences, test_true_boxes, test_true_confidences,
                          train_op, smooth_op,
                         ], feed_dict=lr_feed)
-                pred_true = [("pred_output", np_test_pred_boxes, np_test_pred_confidences),
-                             ("true_output", np_test_true_boxes, np_test_true_confidences)]
+                pred_true = [("%d_pred_output" % (i % 3), np_test_pred_boxes, np_test_pred_confidences),
+                             ("%d_true_output" % (i % 3), np_test_true_boxes, np_test_true_confidences)]
 
                 for name, boxes, confidences in pred_true:
                     test_output_to_log = train_utils.add_rectangles(np_test_image,
