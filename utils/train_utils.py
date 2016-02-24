@@ -94,12 +94,12 @@ def load_data_gen(H, phase, jitter):
 def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.5):
     image = np.copy(orig_image[0])
     num_cells = arch["grid_height"] * arch["grid_width"]
-    boxes_r = np.reshape(boxes, (arch["batch_size"],
+    boxes_r = np.reshape(boxes, (-1,
                                  arch["grid_height"],
                                  arch["grid_width"],
                                  rnn_len,
                                  4))
-    confidences_r = np.reshape(confidences, (arch["batch_size"],
+    confidences_r = np.reshape(confidences, (-1,
                                              arch["grid_height"],
                                              arch["grid_width"],
                                              rnn_len,
