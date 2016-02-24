@@ -18,7 +18,7 @@ First, [install tensorflow from source or pip](https://www.tensorflow.org/versio
     $ ./download_data.sh
     $ python train.py --hypes hypes/default.json --gpu 0 --logdir output
 
-Note that running on your own dataset should only require modifyngi the `hypes/default.json` file. 
+Note that running on your own dataset should only require modifying the `hypes/default.json` file. 
 When finished training, you can use code from the provided 
 [ipython notebook](https://github.com/Russell91/tensordetect/blob/master/evaluate.ipynb)
 to get results on your test set.
@@ -43,3 +43,17 @@ See <a href="http://arxiv.org/abs/1506.04878" target="_blank">the paper</a> for 
 
     $ cd /path/to/tensordetect/utils && make && cd ..
     $ python train.py --hypes hypes/lstm.json --gpu 0 --logdir output
+
+## Tensorboard
+
+You can visualize the progress of your experiments during training using Tensorboard.
+
+    $ cd /path/to/tensordetect
+    $ tensorboard --logdir output
+    # (optional, start an ssh tunnel if not experimenting locally)
+    $ ssh myserver -N -L localhost:6006:localhost:6006
+    # open localhost:6006 in your browser
+    
+For example, the following is a screenshot of a Tensorboard comparing two different experiments with learning rate decays that kick in at different points. The learning rate drops in half at 60k iterations for the green experiment and 300k iterations for red experiment.
+    
+<img src=http://russellsstewart.com/s/tensordetect/tensorboard_loss.png></img>
