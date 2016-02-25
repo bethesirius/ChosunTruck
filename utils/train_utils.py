@@ -3,15 +3,14 @@ import random
 import json
 import os
 import cv2
-from scipy.misc import imread
+from scipy.misc import imread, imresize
 
 from data_utils import (annotation_jitter, image_to_h5,
                    annotation_to_h5)
 from utils.annolist import AnnotationLib as al
 from rect import Rect
 
-def rescale_boxes(anno, target_width, target_height):
-    I = imread(anno.imageName)
+def rescale_boxes(I, anno, target_height, target_width):
     x_scale = target_width / float(I.shape[1])
     y_scale = target_height / float(I.shape[0])
     for r in anno.rects:
@@ -21,19 +20,14 @@ def rescale_boxes(anno, target_width, target_height):
         assert r.x1 < r.x2
         r.y1 *= y_scale
         r.y2 *= y_scale
-    return I
-
-def make_sparse(n, d):
-    v = np.zeros((d,), dtype=np.float32)
-    v[n] = 1.
-    return v
+    I_r = imresize(I, (target_height, target_width), interp='cubic')
+    return I_r, anno
 
 def load_idl_tf(idlfile, H, jitter):
     """Take the idlfile and net configuration and create a generator
     that outputs a jittered version of a random image from the annolist
     that is mean corrected."""
 
-    arch = H['arch']
     annolist = al.parse(idlfile)
     annos = [x for x in annolist]
     for anno in annos:
@@ -45,50 +39,56 @@ def load_idl_tf(idlfile, H, jitter):
     while True:
         random.shuffle(annos)
         for anno in annos:
-            if arch["image_width"] != 640 or arch["image_height"] != 480:
-                rescale_boxes(anno, arch["image_width"], arch["image_height"])
             I = imread(anno.imageName)
+            if I.shape[0] != H["arch"]["image_height"] or I.shape[1] != H["arch"]["image_width"]:
+                I, anno = rescale_boxes(I, anno, H["arch"]["image_height"], H["arch"]["image_width"])
+            
             if jitter:
-                jit_image, jit_anno = annotation_jitter(I,
-                    anno, target_width=arch["image_width"],
-                    target_height=arch["image_height"])
+                jitter_scale_min=0.9
+                jitter_scale_max=1.1
+                jitter_offset=16
             else:
-                I = imread(anno.imageName)
-                try:
-                    jit_image, jit_anno = annotation_jitter(I,
-                        anno, target_width=arch["image_width"],
-                        target_height=arch["image_height"],
-                        jitter_scale_min=1.0, jitter_scale_max=1.0, jitter_offset=0)
-                except:
-                    import traceback
-                    print(traceback.format_exc())
-                    continue
-            boxes, box_flags = annotation_to_h5(
-                jit_anno, arch["grid_width"], arch["grid_height"],
-                arch["rnn_len"])
-            yield {"imname": anno.imageName, "raw": [], "image": jit_image,
-                   "boxes": boxes, "box_flags": box_flags}
+                jitter_scale_min=1.0
+                jitter_scale_max=1.0
+                jitter_offset=0
+
+            jit_image, jit_anno = annotation_jitter(I,
+                                                    anno, target_width=H["arch"]["image_width"],
+                                                    target_height=H["arch"]["image_height"],
+                                                    jitter_scale_min=jitter_scale_min,
+                                                    jitter_scale_max=jitter_scale_max,
+                                                    jitter_offset=jitter_offset)
+
+            boxes, flags = annotation_to_h5(jit_anno, H["arch"]["grid_width"],
+                                                H["arch"]["grid_height"], H["arch"]["rnn_len"])
+            yield {"image": jit_image, "boxes": boxes, "flags": flags}
+
+def make_sparse(n, d):
+    v = np.zeros((d,), dtype=np.float32)
+    v[n] = 1.
+    return v
 
 def load_data_gen(H, phase, jitter):
-    arch = H["arch"]
-    grid_size = arch['grid_width'] * arch['grid_height']
+    grid_size = H["arch"]['grid_width'] * H["arch"]['grid_height']
 
     data = load_idl_tf(H["data"]['%s_idl' % phase], H, jitter={'train': jitter, 'test': False}[phase])
 
     for d in data:
         output = {}
         
-        rnn_len = arch["rnn_len"]
-        box_flags = d['box_flags'][0,:,0,0:rnn_len,0]
+        rnn_len = H["arch"]["rnn_len"]
+        flags = d['flags'][0,:,0,0:rnn_len,0]
         boxes = np.transpose(d['boxes'][0,:,:,0:rnn_len,0], (0,2,1))
-        assert(box_flags.shape == (grid_size, rnn_len))
+        assert(flags.shape == (grid_size, rnn_len))
         assert(boxes.shape == (grid_size, rnn_len, 4))
 
         output['image'] = d['image']
-        output['confs'] = np.array([make_sparse(row[0], d=2) for row in box_flags])
+        output['confs'] = np.array([[make_sparse(detection, d=2) for detection in cell] for cell in flags])
         output['boxes'] = boxes
-        output['flags'] = box_flags
+        output['flags'] = flags
         
+        print('confs: %s' % str(output['confs'].shape))
+        print('flags: %s' % str(output['flags'].shape))
         yield output
 
 def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.5):
