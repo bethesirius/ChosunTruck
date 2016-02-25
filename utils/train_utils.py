@@ -87,8 +87,6 @@ def load_data_gen(H, phase, jitter):
         output['boxes'] = boxes
         output['flags'] = flags
         
-        print('confs: %s' % str(output['confs'].shape))
-        print('flags: %s' % str(output['flags'].shape))
         yield output
 
 def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.5):
