@@ -71,14 +71,14 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
 def _hungarian_grad(op, *args):
     return map(array_ops.zeros_like, op.inputs)
 
-def build_lstm(H, x, googlenet, phase, boxes, box_flags):
+def build_lstm(H, x, googlenet, phase, boxes, flags):
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
     reuse = {'train': None, 'test': True}[phase]
     pred_boxes, pred_logits, pred_confidences = build_lstm_forward(H, x, googlenet, phase, reuse)
     with tf.variable_scope('decoder', reuse={'train': None, 'test': True}[phase]):
         outer_boxes = tf.reshape(boxes, [outer_size, H['arch']['rnn_len'], 4])
-        outer_flags = tf.cast(tf.reshape(box_flags, [outer_size, H['arch']['rnn_len']]), 'int32')
+        outer_flags = tf.cast(tf.reshape(flags, [outer_size, H['arch']['rnn_len']]), 'int32')
         assignments, classes, perm_truth, pred_mask = (
             tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags))
         true_classes = tf.reshape(tf.cast(tf.greater(classes, 0), 'int64'),
@@ -153,18 +153,19 @@ def build(H, q):
     loss, accuracy, confidences_loss, boxes_loss = {}, {}, {}, {}
     for phase in ['train', 'test']:
         # generate predictions and losses from forward pass
-        x, confidences, boxes, box_flags = q[phase].dequeue_many(arch['batch_size'])
+        x, confidences, boxes = q[phase].dequeue_many(arch['batch_size'])
+        flags = tf.argmax(confidences, 3)
 
 
         grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
         confidences_r = tf.cast(
-            tf.reshape(confidences,
+            tf.reshape(confidences[:, :, 0, :],
                        [H['arch']['batch_size'] * grid_size, arch['num_classes']]), 'float32')
 
         if arch['use_lstm']:
             (pred_boxes, pred_confidences,
              loss[phase], confidences_loss[phase],
-             boxes_loss[phase]) = build_lstm(H, x, googlenet, phase, boxes, box_flags)
+             boxes_loss[phase]) = build_lstm(H, x, googlenet, phase, boxes, flags)
             pred_confidences = pred_confidences[:, 0, :]
         else:
             (pred_boxes, pred_confidences,
@@ -223,7 +224,6 @@ def train(H, test_images):
     x_in = tf.placeholder(tf.float32)
     confs_in = tf.placeholder(tf.float32)
     boxes_in = tf.placeholder(tf.float32)
-    flags_in = tf.placeholder(tf.float32)
     q = {}
     enqueue_op = {}
     for phase in ['train', 'test']:
@@ -231,16 +231,15 @@ def train(H, test_images):
         grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
         shapes = (
             [H['arch']['image_height'], H['arch']['image_width'], 3],
-            [grid_size, 2],
+            [grid_size, H['arch']['rnn_len'], H['arch']['num_classes']],
             [grid_size, H['arch']['rnn_len'], 4],
-            [grid_size, H['arch']['rnn_len']],
             )
         q[phase] = tf.FIFOQueue(capacity=30, dtypes=dtypes, shapes=shapes)
-        enqueue_op[phase] = q[phase].enqueue((x_in, confs_in, boxes_in, flags_in))
+        enqueue_op[phase] = q[phase].enqueue((x_in, confs_in, boxes_in))
 
     def make_feed(d):
         return {x_in: d['image'], confs_in: d['confs'], boxes_in: d['boxes'],
-                flags_in: d['flags'], learning_rate: H['solver']['learning_rate']}
+                learning_rate: H['solver']['learning_rate']}
 
     def MyLoop(sess, enqueue_op, phase, gen):
         for d in gen:
@@ -307,7 +306,7 @@ def train(H, test_images):
                     test_output_to_log = train_utils.add_rectangles(np_test_image,
                                                                     confidences,
                                                                     boxes,
-                                                                    H["arch"])
+                                                                    H["arch"])[0]
                     assert test_output_to_log.shape == (H['arch']['image_height'],
                                                         H['arch']['image_width'], 3)
                     feed = {test_image_to_log: test_output_to_log, log_image_name: name}

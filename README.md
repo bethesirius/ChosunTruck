@@ -5,7 +5,7 @@ Training requires a text file (see [here](http://russellsstewart.com/s/tensorbox
 of paths to images on disk and the corresponding object locations in each image.
 The basic model implements the simple and robust GoogLeNet-OverFeat algorithm. We additionally provide an implementation of the 
 [ReInspect](https://github.com/Russell91/ReInspect/)
-algorithm, achieving state-of-the-art detection results on the TUD crossing and brainwash datasets. 
+algorithm, reproducing state-of-the-art detection results on the highly occluded TUD crossing and brainwash datasets. 
 
 Special thanks to [Brett Kuprel](http://stanford.edu/~kuprel/) of Sebastian Thrun's group for providing the initial code
 to hack into Google's pretrained ImageNet weights for finetuning.
