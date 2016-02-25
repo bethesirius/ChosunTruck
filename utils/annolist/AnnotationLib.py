@@ -9,7 +9,8 @@ import numpy as np;
 
 from collections import MutableSequence
 
-import AnnoList_pb2
+#import AnnoList_pb2
+import PalLib;
 
 import xml.dom.minidom
 from xml.dom.minidom import Node
@@ -698,7 +699,7 @@ def parseXML(filename):
 	return annotations
 
 
-def parse(filename):
+def parse(filename, abs_path=False):
 	#print "Parsing: ", filename
 	name, ext = os.path.splitext(filename)
 	
@@ -706,15 +707,20 @@ def parse(filename):
 		name, ext = os.path.splitext(name)
 	
 	if(ext == ".idl"):
-		return parseIDL(filename)
-		
-	if(ext == ".al"):
-		return parseXML(filename)
-	
-	if(ext == ".pal"):
-		return PalLib.pal2al(PalLib.loadPal(filename));
+		annolist = parseIDL(filename)
+        elif(ext == ".al"):
+		annolist = parseXML(filename)
+        elif(ext == ".pal"):
+		annolist = PalLib.pal2al(PalLib.loadPal(filename));
+        else:
+                annolist = AnnoList([]);
 
-	return []
+        if abs_path:
+                basedir = os.path.dirname(os.path.abspath(filename))
+                for a in annolist:
+                        a.imageName = basedir + "/" + os.path.basename(a.imageName)
+
+	return annolist
 
 
 def parseIDL(filename):
