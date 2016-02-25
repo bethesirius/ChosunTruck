@@ -227,7 +227,7 @@ def train(H, test_images):
     q = {}
     enqueue_op = {}
     for phase in ['train', 'test']:
-        dtypes = [tf.float32, tf.float32, tf.float32, tf.float32]
+        dtypes = [tf.float32, tf.float32, tf.float32]
         grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
         shapes = (
             [H['arch']['image_height'], H['arch']['image_width'], 3],
