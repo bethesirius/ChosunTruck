@@ -132,4 +132,14 @@ def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rn
                 (0,255,0),
                 2)
 
-    return image
+    rects = []
+    for rect in acc_rects:
+        r = al.AnnoRect()
+        r.x1 = rect.cx - rect.width/2.
+        r.x2 = rect.cx + rect.width/2.
+        r.y1 = rect.cy - rect.height/2.
+        r.y2 = rect.cy + rect.height/2.
+        r.score = rect.true_confidence
+        rects.append(r)
+
+    return image, rects

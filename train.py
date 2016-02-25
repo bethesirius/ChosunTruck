@@ -306,7 +306,7 @@ def train(H, test_images):
                     test_output_to_log = train_utils.add_rectangles(np_test_image,
                                                                     confidences,
                                                                     boxes,
-                                                                    H["arch"])
+                                                                    H["arch"])[0]
                     assert test_output_to_log.shape == (H['arch']['image_height'],
                                                         H['arch']['image_width'], 3)
                     feed = {test_image_to_log: test_output_to_log, log_image_name: name}
