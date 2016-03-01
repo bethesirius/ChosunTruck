@@ -47,21 +47,19 @@ def load_idl_tf(idlfile, H, jitter):
                 jitter_scale_min=0.9
                 jitter_scale_max=1.1
                 jitter_offset=16
-            else:
-                jitter_scale_min=1.0
-                jitter_scale_max=1.0
-                jitter_offset=0
+                I, anno = annotation_jitter(I,
+                                            anno, target_width=H["arch"]["image_width"],
+                                            target_height=H["arch"]["image_height"],
+                                            jitter_scale_min=jitter_scale_min,
+                                            jitter_scale_max=jitter_scale_max,
+                                            jitter_offset=jitter_offset)
 
-            jit_image, jit_anno = annotation_jitter(I,
-                                                    anno, target_width=H["arch"]["image_width"],
-                                                    target_height=H["arch"]["image_height"],
-                                                    jitter_scale_min=jitter_scale_min,
-                                                    jitter_scale_max=jitter_scale_max,
-                                                    jitter_offset=jitter_offset)
+            boxes, flags = annotation_to_h5(anno,
+                                            H["arch"]["grid_width"],
+                                            H["arch"]["grid_height"],
+                                            H["arch"]["rnn_len"])
 
-            boxes, flags = annotation_to_h5(jit_anno, H["arch"]["grid_width"],
-                                                H["arch"]["grid_height"], H["arch"]["rnn_len"])
-            yield {"image": jit_image, "boxes": boxes, "flags": flags}
+            yield {"image": I, "boxes": boxes, "flags": flags}
 
 def make_sparse(n, d):
     v = np.zeros((d,), dtype=np.float32)
