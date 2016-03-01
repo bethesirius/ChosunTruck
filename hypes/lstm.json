@@ -6,6 +6,7 @@
     },
     "arch": {
         "use_lstm": true,
+        "use_reinspect": false,
         "early_dropout": false, 
         "late_dropout": true, 
         "image_width": 640, 
@@ -19,6 +20,8 @@
         "rnn_len": 5
     }, 
     "logging": {
+        "display_iter": 50,
+        "save_iter": 10000
     },
     "solver": {
         "opt": "RMS",

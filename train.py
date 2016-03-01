@@ -252,7 +252,7 @@ def train(H, test_images):
 
     saver = tf.train.Saver(max_to_keep=None)
     writer = tf.train.SummaryWriter(
-        logdir=H['save_dir'], 
+        logdir=H['save_dir'],
         flush_secs=10
     )
 
@@ -282,7 +282,7 @@ def train(H, test_images):
 
         # train model for N iterations
         for i in xrange(10000000):
-            display_iter = 10
+            display_iter = H['logging']['display_iter']
             adjusted_lr = (H['solver']['learning_rate'] *
                            0.5 ** max(0, (i / H['solver']['learning_rate_step']) - 2))
             lr_feed = {learning_rate: adjusted_lr}
@@ -290,11 +290,11 @@ def train(H, test_images):
                 if i > 0:
                     dt = (time.time() - start) / (H['arch']['batch_size'] * display_iter)
                 start = time.time()
-                (batch_loss_train, test_accuracy, weights_norm, 
+                (batch_loss_train, test_accuracy, weights_norm,
                     summary_str, np_test_image, np_test_pred_boxes,
                     np_test_pred_confidences, np_test_true_boxes,
                     np_test_true_confidences, _, _) = sess.run([
-                         loss['train'], accuracy['test'], W_norm, 
+                         loss['train'], accuracy['test'], W_norm,
                          summary_op, test_image, test_pred_boxes,
                          test_pred_confidences, test_true_boxes, test_true_confidences,
                          train_op, smooth_op,
@@ -320,13 +320,13 @@ def train(H, test_images):
                     'Test Accuracy: %.1f%%',
                     'Time/image (ms): %.1f'
                 ], ', ')
-                print(print_str % 
+                print(print_str %
                       (i, adjusted_lr, batch_loss_train,
                        test_accuracy * 100, dt * 1000 if i > 0 else 0))
             else:
                 batch_loss_train, _ = sess.run([loss['train'], train_op], feed_dict=lr_feed)
 
-            if global_step.eval() % 1000 == 0: 
+            if global_step.eval() % H['logging']['save_iter'] == 0:
                 saver.save(sess, ckpt_file, global_step=global_step)
 
 

@@ -18,6 +18,8 @@
         "rnn_len": 1
     }, 
     "logging": {
+        "display_iter": 50,
+        "save_iter": 10000
     },
     "solver": {
         "opt": "RMS",
