@@ -51,9 +51,9 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
             if H['arch']['late_dropout'] and phase == 'train':
                 output = tf.nn.dropout(output, 0.5)
             box_weights = tf.get_variable('box_ip%d' % i, shape=(H['arch']['lstm_size'], 4),
-                initializer=tf.random_uniform_initializer(0.1))
+                initializer=tf.random_uniform_initializer(-0.1, 0.1))
             conf_weights = tf.get_variable('conf_ip%d' % i, shape=(H['arch']['lstm_size'], 2),
-                initializer=tf.random_uniform_initializer(0.1))
+                initializer=tf.random_uniform_initializer(-0.1, 0.1))
             pred_boxes.append(tf.reshape(tf.matmul(output, box_weights) * 50,
                                          [outer_size, 1, 4]))
             pred_logits.append(tf.reshape(tf.matmul(output, conf_weights),
