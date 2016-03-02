@@ -174,10 +174,10 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
                 delta_features = tf.concat(1, [lstm_outputs[k], reinspect_features[:, k, :] / 1000.])
                 delta_weights = tf.get_variable(
                                     'delta_ip%d' % k,
-                                    shape=[H['arch']['lstm_size'] + early_feat_channels, 4],
+                                    shape=[H['arch']['lstm_size'] + early_feat_channels, 2],
                                     initializer=initializer)
                 pred_boxes_deltas.append(tf.reshape(tf.matmul(delta_features, delta_weights) * 50,
-                                                    [outer_size, 1, 4]))
+                                                    [outer_size, 1, 2]))
             pred_boxes_deltas = tf.concat(1, pred_boxes_deltas)
             return pred_boxes, pred_logits, pred_confidences, pred_boxes_deltas
 
@@ -212,19 +212,36 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
                               [outer_size, H['arch']['rnn_len'], 4])
         boxes_loss = tf.reduce_sum(tf.abs(residual)) / outer_size * H['solver']['head_weights'][1]
         if H['arch']['use_reinspect']:
-            delta_residual = tf.reshape(perm_truth - (pred_boxes + pred_boxes_deltas) * pred_mask,
-                                        [outer_size, H['arch']['rnn_len'], 4])
-            tf.histogram_summary(phase + '/delta_hist0', pred_boxes_deltas[:, 0, :])
-            tf.histogram_summary(phase + '/delta_hist0_w', pred_boxes_deltas[:, 0, 2])
-            tf.histogram_summary(phase + '/delta_hist0_x', pred_boxes_deltas[:, 0, 0])
-            tf.histogram_summary(phase + '/boxes_hist0', pred_boxes[:, 0, :])
-            tf.histogram_summary(phase + '/early_feats', early_feat)
-            deltas_loss = (tf.reduce_sum(tf.abs(delta_residual)) / 
-                           outer_size * H['solver']['head_weights'][2])
-            loss = confidences_loss + boxes_loss + deltas_loss
+            square_error = tf.reduce_sum(tf.square(perm_truth[:, :, 0:2] - pred_boxes[:, :, 0:2]), 2)
+            inside = tf.reshape(tf.to_int64(tf.logical_and(tf.less(square_error, 5**2), tf.greater(classes, 0))), [-1])
+            new_confs = tf.reshape(pred_boxes_deltas, [outer_size * H['arch']['rnn_len'], 2])
+            delta_loss = tf.reduce_sum(
+                tf.nn.sparse_softmax_cross_entropy_with_logits(new_confs, inside)) / outer_size * H['solver']['head_weights'][0] * 0.1
+
+            tf.histogram_summary(phase + '/new_confs', new_confs)
+            tf.histogram_summary(phase + '/inside', inside)
+            loss = confidences_loss + boxes_loss + delta_loss
             # TODO: remove this
-            boxes_loss = deltas_loss
-            pred_boxes = pred_boxes + pred_boxes_deltas
+            confidences_loss = delta_loss
+            pred_logits_squash = tf.reshape(new_confs,
+                                            [outer_size * H['arch']['rnn_len'], 2])
+            pred_confidences_squash = tf.nn.softmax(pred_logits_squash)
+            pred_confidences = tf.reshape(pred_confidences_squash,
+                                      [outer_size, H['arch']['rnn_len'], 2])
+
+            #delta_residual = tf.reshape(perm_truth - (pred_boxes + pred_boxes_deltas) * pred_mask,
+                                        #[outer_size, H['arch']['rnn_len'], 4])
+            #tf.histogram_summary(phase + '/delta_hist0', pred_boxes_deltas[:, 0, :])
+            #tf.histogram_summary(phase + '/delta_hist0_w', pred_boxes_deltas[:, 0, 2])
+            #tf.histogram_summary(phase + '/delta_hist0_x', pred_boxes_deltas[:, 0, 0])
+            #tf.histogram_summary(phase + '/boxes_hist0', pred_boxes[:, 0, :])
+            #tf.histogram_summary(phase + '/early_feats', early_feat)
+            #deltas_loss = (tf.reduce_sum(tf.abs(delta_residual)) / 
+                           #outer_size * H['solver']['head_weights'][2])
+            #loss = confidences_loss + boxes_loss + deltas_loss
+            ## TODO: remove this
+            #boxes_loss = deltas_loss
+            #pred_boxes = pred_boxes + pred_boxes_deltas
         else:
             loss = confidences_loss + boxes_loss
 

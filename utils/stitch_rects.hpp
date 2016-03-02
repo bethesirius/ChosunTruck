@@ -45,7 +45,7 @@ class Rect {
     } else if (fabs(cy_ - other.cy_) > (height_ + other.height_) / 2.0) {
       return false;
     } else {
-      return true;
+      return iou(other) > 0.25;
     }
   }
 
