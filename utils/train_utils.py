@@ -40,6 +40,8 @@ def load_idl_tf(idlfile, H, jitter):
         random.shuffle(annos)
         for anno in annos:
             I = imread(anno.imageName)
+            if I.shape[2] == 4:
+                I = I[:, :, :3]
             if I.shape[0] != H["arch"]["image_height"] or I.shape[1] != H["arch"]["image_width"]:
                 I, anno = rescale_boxes(I, anno, H["arch"]["image_height"], H["arch"]["image_width"])
             
@@ -106,11 +108,14 @@ def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rn
         for y in range(arch["grid_height"]):
             for x in range(arch["grid_width"]):
                 bbox = boxes_r[0, y, x, n, :]
-                conf = confidences_r[0, y, x, n, 1]
                 abs_cx = int(bbox[0]) + cell_pix_size/2 + cell_pix_size * x
                 abs_cy = int(bbox[1]) + cell_pix_size/2 + cell_pix_size * y
                 w = bbox[2]
                 h = bbox[3]
+                if w > 0. and h > 0.:
+                    conf = confidences_r[0, y, x, n, 1]
+                else:
+                    conf = 0.
                 all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
 
     if use_stitching:

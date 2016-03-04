@@ -52,7 +52,8 @@ def annotation_to_h5(a, cell_width, cell_height, max_len):
             width = abs(box_list[cidx][bidx].x2 - box_list[cidx][bidx].x1)
             height= abs(box_list[cidx][bidx].y2 - box_list[cidx][bidx].y1)
 
-            unsorted_boxes.append(np.array([ox, oy, width, height], dtype=np.float))
+            if ox < 40. and oy < 40.:
+                unsorted_boxes.append(np.array([ox, oy, width, height], dtype=np.float))
 
         for bidx, box in enumerate(sorted(unsorted_boxes, key=lambda x: x[0]**2 + x[1]**2)):
             boxes[0, cidx, :, bidx, 0] = box
