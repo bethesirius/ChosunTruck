@@ -311,23 +311,24 @@ def build(H, q):
 
 
         grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
-        confidences_r = tf.cast(
-            tf.reshape(confidences[:, :, 0, :],
-                       [H['arch']['batch_size'] * grid_size, arch['num_classes']]), 'float32')
 
         if arch['use_lstm']:
             (pred_boxes, pred_confidences,
              loss[phase], confidences_loss[phase],
              boxes_loss[phase]) = build_lstm(H, x, googlenet, phase, boxes, flags)
-            pred_confidences = pred_confidences[:, 0, :]
         else:
+            confidences_r = tf.cast(
+                tf.reshape(confidences[:, :, 0, :],
+                           [H['arch']['batch_size'] * grid_size, arch['num_classes']]), 'float32')
             (pred_boxes, pred_confidences,
              loss[phase], confidences_loss[phase],
              boxes_loss[phase]) = build_overfeat(H, x, googlenet, phase, boxes, confidences_r)
+        pred_confidences_r = tf.reshape(pred_confidences, [H['arch']['batch_size'], grid_size, H['arch']['rnn_len'], arch['num_classes']])
+        pred_boxes_r = tf.reshape(pred_boxes, [H['arch']['batch_size'], grid_size, H['arch']['rnn_len'], 4])
 
 
         # Set up summary operations for tensorboard
-        a = tf.equal(tf.argmax(confidences_r, 1), tf.argmax(pred_confidences, 1))
+        a = tf.equal(tf.argmax(confidences[:, :, 0, :], 2), tf.argmax(pred_confidences_r[:, :, 0, :], 2))
         accuracy[phase] = tf.reduce_mean(tf.cast(a, 'float32'), name=phase+'/accuracy')
 
         if phase == 'train':
@@ -352,12 +353,12 @@ def build(H, q):
                     moving_avg.average(boxes_loss[p]))
 
             # show ground truth to verify labels are correct
-            test_true_confidences = confidences_r
-            test_true_boxes = boxes[0, :, 0, :]
+            test_true_confidences = confidences[0, :, :, :]
+            test_true_boxes = boxes[0, :, :, :]
 
             # show predictions to visualize training progress
-            test_pred_confidences = pred_confidences
-            test_pred_boxes = pred_boxes[:, 0, :]
+            test_pred_confidences = pred_confidences_r[0, :, :, :]
+            test_pred_boxes = pred_boxes_r[0, :, :, :]
 
     summary_op = tf.merge_all_summaries()
 
@@ -459,7 +460,9 @@ def train(H, test_images):
                     test_output_to_log = train_utils.add_rectangles(np_test_image,
                                                                     confidences,
                                                                     boxes,
-                                                                    H["arch"])[0]
+                                                                    H["arch"],
+                                                                    use_stitching=H['arch']['use_lstm'],
+                                                                    rnn_len=H['arch']['rnn_len'])[0]
                     assert test_output_to_log.shape == (H['arch']['image_height'],
                                                         H['arch']['image_width'], 3)
                     feed = {test_image_to_log: test_output_to_log, log_image_name: name}
