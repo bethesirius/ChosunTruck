@@ -25,7 +25,7 @@
         "use_jitter": false,
         "rnd_seed": 1,
         "epsilon": 0.00001, 
-        "learning_rate": 0.001, 
+        "learning_rate": 0.0003, 
         "learning_rate_step": 100000, 
         "weights": "",
         "head_weights": [1.0, 0.1]
