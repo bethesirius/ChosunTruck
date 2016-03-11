@@ -37,7 +37,7 @@ See <a href="http://arxiv.org/abs/1506.04878" target="_blank">the paper</a> for 
     $ # Install tensorflow from source
     $ git clone --recurse-submodules https://github.com/tensorflow/tensorflow
     $ # Add code for the custom hungarian layer user_op
-    $ cp /path/to/tensorbox/data/lstm/hungarian.cc /path/to/tensorflow/tensorflow/core/user_ops/
+    $ cp /path/to/tensorbox/utils/hungarian/hungarian.cc /path/to/tensorflow/tensorflow/core/user_ops/
     $ # Proceed with the GPU installation of tensorflow from source...
     $ # (see https://www.tensorflow.org/versions/r0.7/get_started/os_setup.html#installing-from-sources)
 
