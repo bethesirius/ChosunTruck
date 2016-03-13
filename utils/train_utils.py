@@ -3,6 +3,7 @@ import random
 import json
 import os
 import cv2
+import itertools
 from scipy.misc import imread, imresize
 
 from data_utils import (annotation_jitter, image_to_h5,
@@ -10,9 +11,9 @@ from data_utils import (annotation_jitter, image_to_h5,
 from utils.annolist import AnnotationLib as al
 from rect import Rect
 
-def rescale_boxes(I, anno, target_height, target_width):
-    x_scale = target_width / float(I.shape[1])
-    y_scale = target_height / float(I.shape[0])
+def rescale_boxes(current_shape, anno, target_height, target_width):
+    x_scale = target_width / float(current_shape[1])
+    y_scale = target_height / float(current_shape[0])
     for r in anno.rects:
         assert r.x1 < r.x2
         r.x1 *= x_scale
@@ -20,8 +21,7 @@ def rescale_boxes(I, anno, target_height, target_width):
         assert r.x1 < r.x2
         r.y1 *= y_scale
         r.y2 *= y_scale
-    I_r = imresize(I, (target_height, target_width), interp='cubic')
-    return I_r, anno
+    return anno
 
 def load_idl_tf(idlfile, H, jitter):
     """Take the idlfile and net configuration and create a generator
@@ -29,20 +29,24 @@ def load_idl_tf(idlfile, H, jitter):
     that is mean corrected."""
 
     annolist = al.parse(idlfile)
-    annos = [x for x in annolist]
-    for anno in annos:
+    annos = []
+    for anno in annolist:
         anno.imageName = os.path.join(
             os.path.dirname(os.path.realpath(idlfile)), anno.imageName)
+        annos.append(anno)
     random.seed(0)
     if H['data']['truncate_data']:
         annos = annos[:10]
-    while True:
+    for epoch in itertools.count():
         random.shuffle(annos)
         for anno in annos:
             I = imread(anno.imageName)
+            if I.shape[2] == 4:
+                I = I[:, :, :3]
             if I.shape[0] != H["arch"]["image_height"] or I.shape[1] != H["arch"]["image_width"]:
-                I, anno = rescale_boxes(I, anno, H["arch"]["image_height"], H["arch"]["image_width"])
-            
+                if epoch == 0:
+                    anno = rescale_boxes(I.shape, anno, H["arch"]["image_height"], H["arch"]["image_width"])
+                I = imresize(I, (H["arch"]["image_height"], H["arch"]["image_width"]), interp='cubic')
             if jitter:
                 jitter_scale_min=0.9
                 jitter_scale_max=1.1
