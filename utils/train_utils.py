@@ -3,16 +3,17 @@ import random
 import json
 import os
 import cv2
+import itertools
 from scipy.misc import imread, imresize
+import tensorflow as tf
 
-from data_utils import (annotation_jitter, image_to_h5,
-                   annotation_to_h5)
+from data_utils import (annotation_jitter, annotation_to_h5)
 from utils.annolist import AnnotationLib as al
 from rect import Rect
 
-def rescale_boxes(I, anno, target_height, target_width):
-    x_scale = target_width / float(I.shape[1])
-    y_scale = target_height / float(I.shape[0])
+def rescale_boxes(current_shape, anno, target_height, target_width):
+    x_scale = target_width / float(current_shape[1])
+    y_scale = target_height / float(current_shape[0])
     for r in anno.rects:
         assert r.x1 < r.x2
         r.x1 *= x_scale
@@ -20,8 +21,7 @@ def rescale_boxes(I, anno, target_height, target_width):
         assert r.x1 < r.x2
         r.y1 *= y_scale
         r.y2 *= y_scale
-    I_r = imresize(I, (target_height, target_width), interp='cubic')
-    return I_r, anno
+    return anno
 
 def load_idl_tf(idlfile, H, jitter):
     """Take the idlfile and net configuration and create a generator
@@ -29,22 +29,24 @@ def load_idl_tf(idlfile, H, jitter):
     that is mean corrected."""
 
     annolist = al.parse(idlfile)
-    annos = [x for x in annolist]
-    for anno in annos:
+    annos = []
+    for anno in annolist:
         anno.imageName = os.path.join(
             os.path.dirname(os.path.realpath(idlfile)), anno.imageName)
+        annos.append(anno)
     random.seed(0)
     if H['data']['truncate_data']:
         annos = annos[:10]
-    while True:
+    for epoch in itertools.count():
         random.shuffle(annos)
         for anno in annos:
             I = imread(anno.imageName)
             if I.shape[2] == 4:
                 I = I[:, :, :3]
             if I.shape[0] != H["arch"]["image_height"] or I.shape[1] != H["arch"]["image_width"]:
-                I, anno = rescale_boxes(I, anno, H["arch"]["image_height"], H["arch"]["image_width"])
-            
+                if epoch == 0:
+                    anno = rescale_boxes(I.shape, anno, H["arch"]["image_height"], H["arch"]["image_width"])
+                I = imresize(I, (H["arch"]["image_height"], H["arch"]["image_width"]), interp='cubic')
             if jitter:
                 jitter_scale_min=0.9
                 jitter_scale_max=1.1
@@ -56,7 +58,8 @@ def load_idl_tf(idlfile, H, jitter):
                                             jitter_scale_max=jitter_scale_max,
                                             jitter_offset=jitter_offset)
 
-            boxes, flags = annotation_to_h5(anno,
+            boxes, flags = annotation_to_h5(H,
+                                            anno,
                                             H["arch"]["grid_width"],
                                             H["arch"]["grid_height"],
                                             H["arch"]["rnn_len"])
@@ -89,7 +92,7 @@ def load_data_gen(H, phase, jitter):
         
         yield output
 
-def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.5):
+def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.1, show_removed=True):
     image = np.copy(orig_image[0])
     num_cells = arch["grid_height"] * arch["grid_width"]
     boxes_r = np.reshape(boxes, (-1,
@@ -102,7 +105,7 @@ def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rn
                                              arch["grid_width"],
                                              rnn_len,
                                              2))
-    cell_pix_size = 32
+    cell_pix_size = H['arch']['region_size']
     all_rects = [[[] for _ in range(arch["grid_width"])] for _ in range(arch["grid_height"])]
     for n in range(rnn_len):
         for y in range(arch["grid_height"]):
@@ -112,26 +115,26 @@ def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rn
                 abs_cy = int(bbox[1]) + cell_pix_size/2 + cell_pix_size * y
                 w = bbox[2]
                 h = bbox[3]
-                if w > 0. and h > 0.:
-                    conf = confidences_r[0, y, x, n, 1]
-                else:
-                    conf = 0.
+                conf = confidences_r[0, y, x, n, 1]
                 all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
 
+    all_rects_r = [r for row in all_rects for cell in row for r in cell]
     if use_stitching:
         from stitch_wrapper import stitch_rects
         acc_rects = stitch_rects(all_rects)
     else:
-        acc_rects = [r for row in all_rects for cell in row for r in cell]
+        acc_rects = all_rects_r
 
 
-    for rect in acc_rects:
-        if rect.confidence > min_conf:
-            cv2.rectangle(image,
-                (rect.cx-int(rect.width/2), rect.cy-int(rect.height/2)),
-                (rect.cx+int(rect.width/2), rect.cy+int(rect.height/2)),
-                (0,255,0),
-                2)
+    pairs = [(all_rects_r, (255, 0, 0)), (acc_rects, (0, 255, 0))]
+    for rect_set, color in pairs:
+        for rect in rect_set:
+            if rect.confidence > min_conf:
+                cv2.rectangle(image,
+                    (rect.cx-int(rect.width/2), rect.cy-int(rect.height/2)),
+                    (rect.cx+int(rect.width/2), rect.cy+int(rect.height/2)),
+                    color,
+                    2)
 
     rects = []
     for rect in acc_rects:
@@ -144,3 +147,32 @@ def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rn
         rects.append(r)
 
     return image, rects
+
+def to_x1y1x2y2(box):
+    x1 = box[:, 2:3] - box[:, 0:1] / 2
+    x2 = box[:, 2:3] + box[:, 0:1] / 2
+    y1 = box[:, 3:4] - box[:, 1:2] / 2
+    y2 = box[:, 3:4] + box[:, 1:2] / 2
+    return tf.concat(1, [x1, y1, x2, y2])
+
+def intersection(box1, box2):
+    x1_max = tf.maximum(box1[:, 0], box2[:, 0])
+    y1_max = tf.maximum(box1[:, 1], box2[:, 1])
+    x2_min = tf.minimum(box1[:, 2], box2[:, 2])
+    y2_min = tf.minimum(box1[:, 3], box2[:, 3])
+   
+    x_diff = tf.maximum(x2_min - x1_max, 0)
+    y_diff = tf.maximum(y2_min - y1_max, 0)
+    
+    return x_diff * y_diff
+
+def area(box):
+    x_diff = tf.maximum(box[:, 2] - box[:, 0], 0)
+    y_diff = tf.maximum(box[:, 3] - box[:, 1], 0)
+    return x_diff * y_diff
+
+def union(box1, box2):
+    return area(box1) + area(box2) - intersection(box1, box2)
+
+def iou(box1, box2):
+    return intersection(box1, box2) / union(box1, box2)

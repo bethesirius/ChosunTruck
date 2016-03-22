@@ -1,3 +1,11 @@
+# 0.1 initialization on all LSTM
+# average pooling on Z
+# decrease regression multiplier
+# 2 layer lstm
+# TODO:
+# reregression
+# dropout on reclassification
+# 3x3 or 2x3 reclassification
 import json
 import datetime
 import random
@@ -18,13 +26,18 @@ from utils import train_utils
 from utils import googlenet_load
 
 def build_lstm_inner(lstm_input, H):
-    lstm_size = H['arch']['lstm_size']
-    lstm = rnn_cell.BasicLSTMCell(lstm_size, forget_bias=0.0)
+    lstm_cell = rnn_cell.BasicLSTMCell(H['arch']['lstm_size'], forget_bias=0.0)
+    if H['arch']['num_lstm_layers'] > 1:
+        lstm = rnn_cell.MultiRNNCell([lstm_cell] * H['arch']['num_lstm_layers'])
+    else:
+        lstm = lstm_cell
+
     batch_size = H['arch']['batch_size'] * H['arch']['grid_height'] * H['arch']['grid_width']
     state = tf.zeros([batch_size, lstm.state_size])
 
     outputs = []
-    with tf.variable_scope('RNN'):
+    #with tf.variable_scope('RNN'):
+    with tf.variable_scope('RNN', initializer=tf.random_uniform_initializer(-0.1, 0.1)):
         for time_step in range(H['arch']['rnn_len']):
             if time_step > 0: tf.get_variable_scope().reuse_variables()
             output, state = lstm(lstm_input, state)
@@ -85,12 +98,12 @@ def interp(w, i, channel_dim):
     value = (1 - alpha_ud) * upper_value + (alpha_ud) * lower_value
     return value
 
-def reinspect(H, pred_boxes, early_feat, early_feat_channels):
+def reinspect(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset):
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
 
     fine_stride = 8. # pixels per 60x80 grid cell in 480x640 image
-    coarse_stride = 32. # pixels per 15x20 grid cell in 480x640 image
+    coarse_stride = H['arch']['region_size'] # pixels per 15x20 grid cell in 480x640 image
     batch_ids = []
     x_offsets = []
     y_offsets = []
@@ -107,20 +120,18 @@ def reinspect(H, pred_boxes, early_feat, early_feat_channels):
     y_offsets = tf.constant(y_offsets)
 
     pred_boxes_r = tf.reshape(pred_boxes, [outer_size * H['arch']['rnn_len'], 4])
-    scale_factor = 4 # scale difference between 15x20 and 60x80 features
-    pred_x_center = tf.clip_by_value((pred_boxes_r[:, 0:1] + x_offsets) / fine_stride,
-    #pred_x_center = tf.clip_by_value((x_offsets) / fine_stride,
+    scale_factor = coarse_stride / fine_stride # scale difference between 15x20 and 60x80 features
+
+    pred_x_center = (pred_boxes_r[:, 0:1] + w_offset * pred_boxes_r[:, 2:3] + x_offsets) / fine_stride
+    pred_x_center_clip = tf.clip_by_value(pred_x_center,
                                      0,
                                      scale_factor * H['arch']['grid_width'] - 1)
-    pred_y_center = tf.clip_by_value((pred_boxes_r[:, 1:2] + y_offsets) / fine_stride,
-    #pred_y_center = tf.clip_by_value((y_offsets) / fine_stride,
-                                     0,
-                                     scale_factor * H['arch']['grid_height'] - 1)
+    pred_y_center = (pred_boxes_r[:, 1:2] + h_offset * pred_boxes_r[:, 3:4] + y_offsets) / fine_stride
+    pred_y_center_clip = tf.clip_by_value(pred_y_center,
+                                          0,
+                                          scale_factor * H['arch']['grid_height'] - 1)
 
-    #pred_x_center = tf.Print(pred_x_center, [tf.reduce_max(pred_x_center)])
-    #pred_y_center = tf.Print(pred_y_center, [tf.reduce_max(pred_y_center)])
-
-    interp_indices = tf.concat(1, [tf.to_float(batch_ids), pred_y_center, pred_x_center])
+    interp_indices = tf.concat(1, [tf.to_float(batch_ids), pred_y_center_clip, pred_x_center_clip])
     reinspect_features = interp(early_feat, interp_indices, early_feat_channels)
     reinspect_features_r = tf.reshape(reinspect_features,
                                       [outer_size, H['arch']['rnn_len'], early_feat_channels])
@@ -134,6 +145,22 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
     x -= input_mean
     global early_feat
     Z, early_feat, early_feat_channels = googlenet_load.model(x, googlenet, H)
+    if H['arch']['conv_pool_size'] > 1:
+        size = H['arch']['conv_pool_size']
+        stride = H['arch']['conv_pool_stride']
+
+        with tf.variable_scope("", reuse=reuse):
+            w = tf.get_variable('conv_pool_w', shape=[size, size, 1024, 1024],
+                                initializer=tf.random_normal_initializer(stddev=0.01))
+        Z = tf.nn.conv2d(Z, w, strides=[1, stride, stride, 1], padding='SAME')
+
+    if H['arch']['avg_pool_size'] > 1:
+        pool_size = H['arch']['avg_pool_size']
+        Z1 = Z[:, :, :, :700]
+        Z2 = Z[:, :, :, 700:]
+        Z2 = tf.nn.avg_pool(Z2, ksize=[1, pool_size, pool_size, 1], strides=[1, 1, 1, 1], padding='SAME')
+        Z = tf.concat(3, [Z1, Z2])
+    Z = tf.reshape(Z, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
     with tf.variable_scope('decoder', reuse=reuse):
         scale_down = 0.01
         if H['arch']['early_dropout'] and phase == 'train':
@@ -169,14 +196,27 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
 
         if H['arch']['use_reinspect']:
             pred_boxes_deltas = []
-            reinspect_features = reinspect(H, pred_boxes, early_feat, early_feat_channels)
+            w_offsets = [-0.25, 0.25]
+            h_offsets = [-0.25, 0.25]
+            num_offsets = len(w_offsets) * len(h_offsets)
+            reinspect_features = tf.concat(2, [
+                reinspect(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset)
+                for w_offset in w_offsets for h_offset in h_offsets])
             for k in range(H['arch']['rnn_len']):
                 delta_features = tf.concat(1, [lstm_outputs[k], reinspect_features[:, k, :] / 1000.])
-                delta_weights = tf.get_variable(
-                                    'delta_ip%d' % k,
-                                    shape=[H['arch']['lstm_size'] + early_feat_channels, 2],
+                dim = 128
+                delta_weights1 = tf.get_variable(
+                                    'delta_ip1%d' % k,
+                                    shape=[H['arch']['lstm_size'] + early_feat_channels * num_offsets, dim],
                                     initializer=initializer)
-                pred_boxes_deltas.append(tf.reshape(tf.matmul(delta_features, delta_weights) * 50,
+                # TODO: add dropout here ?
+                ip1 = tf.nn.relu(tf.matmul(delta_features, delta_weights1))
+                delta_weights2 = tf.get_variable(
+                                    'delta_ip2%d' % k,
+                                    shape=[dim, 2],
+                                    initializer=initializer)
+
+                pred_boxes_deltas.append(tf.reshape(tf.matmul(ip1, delta_weights2) * 50,
                                                     [outer_size, 1, 2]))
             pred_boxes_deltas = tf.concat(1, pred_boxes_deltas)
             return pred_boxes, pred_logits, pred_confidences, pred_boxes_deltas
@@ -212,8 +252,17 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
                               [outer_size, H['arch']['rnn_len'], 4])
         boxes_loss = tf.reduce_sum(tf.abs(residual)) / outer_size * H['solver']['head_weights'][1]
         if H['arch']['use_reinspect']:
-            square_error = tf.reduce_sum(tf.square(perm_truth[:, :, 0:2] - pred_boxes[:, :, 0:2]), 2)
-            inside = tf.reshape(tf.to_int64(tf.logical_and(tf.less(square_error, 5**2), tf.greater(classes, 0))), [-1])
+            if H['arch']['reinspect_change_loss'] == 'center':
+                error = (perm_truth[:, :, 0:2] - pred_boxes[:, :, 0:2]) / tf.maximum(perm_truth[:, :, 2:4], 1.)
+                square_error = tf.reduce_sum(tf.square(error), 2)
+                inside = tf.reshape(tf.to_int64(tf.logical_and(tf.less(square_error, 0.2**2), tf.greater(classes, 0))), [-1])
+            elif H['arch']['reinspect_change_loss'] == 'iou':
+                iou = train_utils.iou(train_utils.to_x1y1x2y2(tf.reshape(pred_boxes, [-1, 4])),
+                                      train_utils.to_x1y1x2y2(tf.reshape(perm_truth, [-1, 4])))
+                inside = tf.reshape(tf.to_int64(tf.greater(iou, 0.5)), [-1])
+            else:
+                assert H['arch']['reinspect_change_loss'] == False
+                inside = tf.reshape(tf.to_int64((tf.greater(classes, 0))), [-1])
             new_confs = tf.reshape(pred_boxes_deltas, [outer_size * H['arch']['rnn_len'], 2])
             delta_loss = tf.reduce_sum(
                 tf.nn.sparse_softmax_cross_entropy_with_logits(new_confs, inside)) / outer_size * H['solver']['head_weights'][0] * 0.1
@@ -251,6 +300,7 @@ def build_overfeat_forward(H, x, googlenet, phase):
     input_mean = 117.
     x -= input_mean
     Z, _, _ = googlenet_load.model(x, googlenet, H)
+    Z = tf.reshape(Z, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     if H['arch']['use_dropout'] and phase == 'train':
         Z = tf.nn.dropout(Z, 0.5)
@@ -335,8 +385,7 @@ def build(H, q):
             global_step = tf.Variable(0, trainable=False)
             train_op = opt.minimize(loss['train'], global_step=global_step)
         elif phase == 'test':
-            test_image = x
-            moving_avg = tf.train.ExponentialMovingAverage(0.99)
+            moving_avg = tf.train.ExponentialMovingAverage(0.95)
             smooth_op = moving_avg.apply([accuracy['train'], accuracy['test'],
                                           confidences_loss['train'], boxes_loss['train'],
                                           confidences_loss['test'], boxes_loss['test'],
@@ -352,6 +401,8 @@ def build(H, q):
                 tf.scalar_summary("%s/regression_loss/smooth" % p,
                     moving_avg.average(boxes_loss[p]))
 
+        if phase == 'test':
+            test_image = x
             # show ground truth to verify labels are correct
             test_true_confidences = confidences[0, :, :, :]
             test_true_boxes = boxes[0, :, :, :]
@@ -453,18 +504,20 @@ def train(H, test_images):
                          test_pred_confidences, test_true_boxes, test_true_confidences,
                          train_op, smooth_op,
                         ], feed_dict=lr_feed)
-                pred_true = [("%d_pred_output" % (i % 3), np_test_pred_boxes, np_test_pred_confidences),
-                             ("%d_true_output" % (i % 3), np_test_true_boxes, np_test_true_confidences)]
+                num_img_logs = 3
+                pred_true = [("%d_pred_output" % (i % num_img_logs), np_test_pred_boxes, np_test_pred_confidences),
+                             ("%d_true_output" % (i % num_img_logs), np_test_true_boxes, np_test_true_confidences)]
 
                 for name, boxes, confidences in pred_true:
-                    test_output_to_log = train_utils.add_rectangles(np_test_image,
+                    test_output_to_log = train_utils.add_rectangles(H,
+                                                                    np_test_image,
                                                                     confidences,
                                                                     boxes,
                                                                     H["arch"],
                                                                     use_stitching=H['arch']['use_lstm'],
                                                                     rnn_len=H['arch']['rnn_len'])[0]
                     assert test_output_to_log.shape == (H['arch']['image_height'],
-                                                        H['arch']['image_width'], 3)
+                                                        H['arch']['image_width'], num_img_logs)
                     feed = {test_image_to_log: test_output_to_log, log_image_name: name}
                     test_image_summary_str = sess.run(log_image, feed_dict=feed)
                     writer.add_summary(test_image_summary_str, global_step=global_step.eval())

@@ -122,7 +122,6 @@ def model(x, googlenet, H):
     
 
     coarse_feat = T['mixed5b']
-    coarse_feat = tf.reshape(coarse_feat, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
 
     # fine feat can be used to reinspect input
     early_feat = T['mixed3b']
