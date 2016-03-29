@@ -86,13 +86,13 @@ def load_data_gen(H, phase, jitter):
         assert(boxes.shape == (grid_size, rnn_len, 4))
 
         output['image'] = d['image']
-        output['confs'] = np.array([[make_sparse(detection, d=2) for detection in cell] for cell in flags])
+        output['confs'] = np.array([[make_sparse(int(detection), d=2) for detection in cell] for cell in flags])
         output['boxes'] = boxes
         output['flags'] = flags
         
         yield output
 
-def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.1, show_removed=True):
+def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.1, show_removed=True, tau=0.25):
     image = np.copy(orig_image[0])
     num_cells = arch["grid_height"] * arch["grid_width"]
     boxes_r = np.reshape(boxes, (-1,
@@ -121,7 +121,7 @@ def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False,
     all_rects_r = [r for row in all_rects for cell in row for r in cell]
     if use_stitching:
         from stitch_wrapper import stitch_rects
-        acc_rects = stitch_rects(all_rects)
+        acc_rects = stitch_rects(all_rects, tau)
     else:
         acc_rects = all_rects_r
 

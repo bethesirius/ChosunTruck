@@ -39,7 +39,7 @@ def annotation_to_h5(H, a, cell_width, cell_height, max_len):
             width = abs(box_list[cidx][bidx].x2 - box_list[cidx][bidx].x1)
             height= abs(box_list[cidx][bidx].y2 - box_list[cidx][bidx].y1)
             
-            if (abs(ox) < 1.5 * region_size and abs(oy) < 1.5 * region_size and
+            if (abs(ox) < H['arch']['focus_size'] * region_size and abs(oy) < H['arch']['focus_size'] * region_size and
                     width < H['arch']['biggest_box_px'] and height < H['arch']['biggest_box_px']):
                 unsorted_boxes.append(np.array([ox, oy, width, height], dtype=np.float))
 

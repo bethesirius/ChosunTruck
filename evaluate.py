@@ -14,7 +14,7 @@ import cv2
 import argparse
 
 
-def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.5):
+def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.5, tau=0.25):
     from utils.rect import Rect
     from utils.stitch_wrapper import stitch_rects
     import numpy as np
@@ -31,7 +31,7 @@ def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False,
                                              2))
     cell_pix_size = H['arch']['region_size']
     all_rects = [[[] for _ in range(arch["grid_width"])] for _ in range(arch["grid_height"])]
-    for n in range(0, 5):
+    for n in range(0, H['arch']['rnn_len']):
         for y in range(arch["grid_height"]):
             for x in range(arch["grid_width"]):
                 bbox = boxes_r[0, y, x, n, :]
@@ -44,7 +44,7 @@ def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False,
                 all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
 
     if use_stitching:
-        acc_rects = stitch_rects(all_rects)
+        acc_rects = stitch_rects(all_rects, tau)
     else:
         acc_rects = [r for row in all_rects for cell in row for r in cell if r.confidence > 0.1]
 
@@ -71,7 +71,8 @@ def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False,
 
 def get_image_dir(args):
     weights_iteration = int(args.weights.split('-')[-1])
-    image_dir = '%s/images-%d' % (os.path.dirname(args.weights), weights_iteration)
+    expname = '_' + args.expname if args.expname else ''
+    image_dir = '%s/images_%s_%d%s' % (os.path.dirname(args.weights), os.path.basename(args.test_idl)[:-4], weights_iteration, expname)
     return image_dir
 
 def get_results(args, H):
@@ -82,7 +83,7 @@ def get_results(args, H):
         if H['arch']['use_reinspect']:
             pred_boxes, pred_logits, pred_confidences, pred_confs_deltas, pred_boxes_deltas = build_lstm_forward(H, tf.expand_dims(x_in, 0), googlenet, 'test', reuse=None)
             grid_area = H['arch']['grid_height'] * H['arch']['grid_width']
-            pred_confidences = tf.reshape(tf.nn.softmax(tf.reshape(pred_confs_deltas, [grid_area * 5, 2])), [grid_area, 5, 2])
+            pred_confidences = tf.reshape(tf.nn.softmax(tf.reshape(pred_confs_deltas, [grid_area * H['arch']['rnn_len'], 2])), [grid_area, H['arch']['rnn_len'], 2])
             if H['arch']['reregress']:
                 pred_boxes = pred_boxes + pred_boxes_deltas
         else:
@@ -102,41 +103,43 @@ def get_results(args, H):
         subprocess.call('mkdir -p %s' % image_dir, shell=True)
         for i in range(len(true_annolist)):
             true_anno = true_annolist[i]
-            I = imread('%s/%s' % (data_dir, true_anno.imageName))[:,:,:3]
-            if I.shape[0] != H["arch"]["image_height"] or I.shape[1] != H["arch"]["image_width"]:
-                true_anno = rescale_boxes(I.shape, true_anno, H["arch"]["image_height"], H["arch"]["image_width"])
-                I = imresize(I, (H["arch"]["image_height"], H["arch"]["image_width"]), interp='cubic')
-            feed = {x_in: I}
+            orig_img = imread('%s/%s' % (data_dir, true_anno.imageName))[:,:,:3]
+            img = imresize(orig_img, (H["arch"]["image_height"], H["arch"]["image_width"]), interp='cubic')
+            feed = {x_in: img}
             (np_pred_boxes, np_pred_confidences) = sess.run([pred_boxes, pred_confidences], feed_dict=feed)
             pred_anno = al.Annotation()
             pred_anno.imageName = true_anno.imageName
-            new_img, rects = add_rectangles(H, [I], np_pred_confidences, np_pred_boxes,
-                                            H["arch"], use_stitching=True, rnn_len=H['arch']['rnn_len'], min_conf=0.05)
+            new_img, rects = add_rectangles(H, [img], np_pred_confidences, np_pred_boxes,
+                                            H["arch"], use_stitching=True, rnn_len=H['arch']['rnn_len'], min_conf=0.2, tau=args.tau)
         
             pred_anno.rects = rects
             pred_anno.imagePath = os.path.abspath(data_dir)
+            pred_anno = rescale_boxes((H["arch"]["image_height"], H["arch"]["image_width"]), pred_anno, orig_img.shape[0], orig_img.shape[1])
             pred_annolist.append(pred_anno)
             
             imname = '%s/%s' % (image_dir, os.path.basename(true_anno.imageName))
             misc.imsave(imname, new_img)
-            if i % 100 == 0:
+            if i % 25 == 0:
                 print(i)
     return pred_annolist, true_annolist
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', required=True)
+    parser.add_argument('--expname', default='')
     parser.add_argument('--test_idl', required=True)
     parser.add_argument('--gpu', default=0)
     parser.add_argument('--logdir', default='output')
-    parser.add_argument('--iou_threshold', default=0.5)
+    parser.add_argument('--iou_threshold', default=0.5, type=float)
+    parser.add_argument('--tau', default=0.25, type=float)
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
     hypes_file = '%s/hypes.json' % os.path.dirname(args.weights)
     with open(hypes_file, 'r') as f:
         H = json.load(f)
-    pred_idl = '%s.%s' % (args.weights, os.path.basename(args.test_idl))
-    true_idl = '%s.gt_%s' % (args.weights, os.path.basename(args.test_idl))
+    expname = args.expname + '_' if args.expname else ''
+    pred_idl = '%s.%s%s' % (args.weights, expname, os.path.basename(args.test_idl))
+    true_idl = '%s.gt_%s%s' % (args.weights, expname, os.path.basename(args.test_idl))
 
 
     pred_annolist, true_annolist = get_results(args, H)

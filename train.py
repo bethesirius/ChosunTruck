@@ -36,7 +36,6 @@ def build_lstm_inner(lstm_input, H):
     state = tf.zeros([batch_size, lstm.state_size])
 
     outputs = []
-    #with tf.variable_scope('RNN'):
     with tf.variable_scope('RNN', initializer=tf.random_uniform_initializer(-0.1, 0.1)):
         for time_step in range(H['arch']['rnn_len']):
             if time_step > 0: tf.get_variable_scope().reuse_variables()
@@ -44,10 +43,6 @@ def build_lstm_inner(lstm_input, H):
             outputs.append(output)
     return outputs
 
-#inner_dim = 5
-#data = np.array([[[[100 * x + i * j + k for k in range(inner_dim)] for j in range(10)] for i in range(10)] for x in range(2)])
-#a = tf.constant(data, dtype=tf.float32)
-#index = tf.placeholder(tf.float32)
 def to_idx(vec, w_shape):
     '''
     vec = (idn, idh, idw)
@@ -138,6 +133,23 @@ def reinspect(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset
 
     return reinspect_features_r
 
+def hist_layer(x, num_bins, dim):
+    p = tf.get_variable('p', shape=[num_bins, dim])
+    
+    x_clip = tf.clip_by_value(x * num_bins, 0, num_bins - 1.01)
+    x_lower = tf.to_int32(x_clip)
+    x_upper = tf.to_int32(x_clip) + 1
+    
+    alpha = tf.expand_dims(x_clip - tf.to_float(x_lower), 1)
+    
+    h_upper = tf.nn.embedding_lookup(p, x_upper)
+    h_lower = tf.nn.embedding_lookup(p, x_lower)
+    
+    #print(x.op.outputs[0].get_shape())
+    #print(h_lower.op.outputs[0].get_shape())
+    
+    return alpha * h_upper + (1-alpha) * h_lower
+
 def build_lstm_forward(H, x, googlenet, phase, reuse):
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
@@ -145,6 +157,9 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
     x -= input_mean
     global early_feat
     Z, early_feat, early_feat_channels = googlenet_load.model(x, googlenet, H)
+    early_feat_channels = H['arch']['early_feat_channels']
+    early_feat = early_feat[:, :, :, :early_feat_channels]
+    
     if H['arch']['conv_pool_size'] > 1:
         size = H['arch']['conv_pool_size']
         stride = H['arch']['conv_pool_stride']
@@ -181,8 +196,31 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
             conf_weights = tf.get_variable('conf_ip%d' % k,
                                            shape=(H['arch']['lstm_size'], 2),
                                            initializer=initializer)
-            pred_boxes.append(tf.reshape(tf.matmul(output, box_weights) * 50,
-                                         [outer_size, 1, 4]))
+
+            pred_boxes_step = tf.reshape(tf.matmul(output, box_weights) * 50,
+                                         [outer_size, 1, 4])
+            if H['arch']['hist_regress']:
+                with tf.variable_scope('hist_w%d' % k, initializer=initializer):
+                    hist_w = hist_layer(pred_boxes_step[:, 0, 2] / 100, num_bins=5, dim=H['arch']['lstm_size'])
+                with tf.variable_scope('hist_h%d' % k, initializer=initializer):
+                    hist_h = hist_layer(pred_boxes_step[:, 0, 3] / 100, num_bins=3, dim=H['arch']['lstm_size'])
+                new_w = tf.reshape(tf.reduce_sum(hist_w * output, 1) * H['arch'].get('new_multiple', 1),
+                                   [outer_size, 1, 1])
+                new_h = tf.reshape(tf.reduce_sum(hist_h * output, 1) * H['arch'].get('new_multiple', 1),
+                                   [outer_size, 1, 1])
+
+                if k == 0:
+                    tf.histogram_summary(phase + '/hist_regress%d_w' % k, new_w - pred_boxes_step[:, :, 2:3])
+                    tf.histogram_summary(phase + '/hist_regress%d_h' % k, new_w - pred_boxes_step[:, :, 3:4])
+                new_pred_boxes_step = tf.concat(2, [pred_boxes_step[:, :, 0:2],
+                                                    new_w,
+                                                    new_h])
+
+                epsilon = {'train': 0.5, 'test': 1.0}[phase]
+                choice = tf.to_float(tf.less(tf.random_uniform((1,1)), epsilon))
+                pred_boxes_step = choice * new_pred_boxes_step + (1 - choice) * pred_boxes_step
+                
+            pred_boxes.append(pred_boxes_step)
             pred_logits.append(tf.reshape(tf.matmul(output, conf_weights),
                                          [outer_size, 1, 2]))
  
@@ -195,13 +233,16 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
                                       [outer_size, H['arch']['rnn_len'], 2])
 
         if H['arch']['use_reinspect']:
+            pred_confs_deltas = []
             pred_boxes_deltas = []
-            w_offsets = [-0.25, 0.25]
-            h_offsets = [-0.25, 0.25]
+            w_offsets = H['arch']['reinspect_w_coords']
+            h_offsets = H['arch']['reinspect_h_coords']
             num_offsets = len(w_offsets) * len(h_offsets)
             reinspect_features = tf.concat(2, [
                 reinspect(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset)
                 for w_offset in w_offsets for h_offset in h_offsets])
+            if phase == 'train':
+                reinspect_features = tf.nn.dropout(reinspect_features, 0.5)
             for k in range(H['arch']['rnn_len']):
                 delta_features = tf.concat(1, [lstm_outputs[k], reinspect_features[:, k, :] / 1000.])
                 dim = 128
@@ -211,15 +252,27 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
                                     initializer=initializer)
                 # TODO: add dropout here ?
                 ip1 = tf.nn.relu(tf.matmul(delta_features, delta_weights1))
-                delta_weights2 = tf.get_variable(
+                if phase == 'train':
+                    ip1 = tf.nn.dropout(ip1, 0.5)
+                delta_confs_weights = tf.get_variable(
                                     'delta_ip2%d' % k,
                                     shape=[dim, 2],
                                     initializer=initializer)
+                if H['arch']['reregress']:
+                    delta_boxes_weights = tf.get_variable(
+                                        'delta_ip_boxes%d' % k,
+                                        shape=[dim, 4],
+                                        initializer=initializer)
+                    pred_boxes_deltas.append(tf.reshape(tf.matmul(ip1, delta_boxes_weights) * 5,
+                                                        [outer_size, 1, 4]))
 
-                pred_boxes_deltas.append(tf.reshape(tf.matmul(ip1, delta_weights2) * 50,
+                scale = H['arch'].get('reinspect_conf_scale', 50) 
+                pred_confs_deltas.append(tf.reshape(tf.matmul(ip1, delta_confs_weights) * scale,
                                                     [outer_size, 1, 2]))
-            pred_boxes_deltas = tf.concat(1, pred_boxes_deltas)
-            return pred_boxes, pred_logits, pred_confidences, pred_boxes_deltas
+            pred_confs_deltas = tf.concat(1, pred_confs_deltas)
+            if H['arch']['reregress']:
+                pred_boxes_deltas = tf.concat(1, pred_boxes_deltas)
+            return pred_boxes, pred_logits, pred_confidences, pred_confs_deltas, pred_boxes_deltas
 
     return pred_boxes, pred_logits, pred_confidences
 
@@ -233,14 +286,15 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
     reuse = {'train': None, 'test': True}[phase]
     if H['arch']['use_reinspect']:
         (pred_boxes, pred_logits,
-         pred_confidences, pred_boxes_deltas) = build_lstm_forward(H, x, googlenet, phase, reuse)
+         pred_confidences, pred_confs_deltas, pred_boxes_deltas) = build_lstm_forward(H, x, googlenet, phase, reuse)
     else:
         pred_boxes, pred_logits, pred_confidences = build_lstm_forward(H, x, googlenet, phase, reuse)
     with tf.variable_scope('decoder', reuse={'train': None, 'test': True}[phase]):
         outer_boxes = tf.reshape(boxes, [outer_size, H['arch']['rnn_len'], 4])
         outer_flags = tf.cast(tf.reshape(flags, [outer_size, H['arch']['rnn_len']]), 'int32')
         assignments, classes, perm_truth, pred_mask = (
-            tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags))
+            #tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags))
+            tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags, H['solver']['hungarian_iou']))
         true_classes = tf.reshape(tf.cast(tf.greater(classes, 0), 'int64'),
                                   [outer_size * H['arch']['rnn_len']])
         pred_logit_r = tf.reshape(pred_logits,
@@ -259,38 +313,41 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
             elif H['arch']['reinspect_change_loss'] == 'iou':
                 iou = train_utils.iou(train_utils.to_x1y1x2y2(tf.reshape(pred_boxes, [-1, 4])),
                                       train_utils.to_x1y1x2y2(tf.reshape(perm_truth, [-1, 4])))
-                inside = tf.reshape(tf.to_int64(tf.greater(iou, 0.5)), [-1])
+                inside = tf.reshape(tf.to_int64(tf.greater(iou, 0.4)), [-1])
             else:
                 assert H['arch']['reinspect_change_loss'] == False
                 inside = tf.reshape(tf.to_int64((tf.greater(classes, 0))), [-1])
-            new_confs = tf.reshape(pred_boxes_deltas, [outer_size * H['arch']['rnn_len'], 2])
-            delta_loss = tf.reduce_sum(
+            new_confs = tf.reshape(pred_confs_deltas, [outer_size * H['arch']['rnn_len'], 2])
+            delta_confs_loss = tf.reduce_sum(
                 tf.nn.sparse_softmax_cross_entropy_with_logits(new_confs, inside)) / outer_size * H['solver']['head_weights'][0] * 0.1
 
-            tf.histogram_summary(phase + '/new_confs', new_confs)
-            tf.histogram_summary(phase + '/inside', inside)
-            loss = confidences_loss + boxes_loss + delta_loss
+
             # TODO: remove this
-            confidences_loss = delta_loss
+            use_orig_conf = H['solver'].get('use_orig_confs', False)
+            if not use_orig_conf:
+                confidences_loss = delta_confs_loss
             pred_logits_squash = tf.reshape(new_confs,
                                             [outer_size * H['arch']['rnn_len'], 2])
             pred_confidences_squash = tf.nn.softmax(pred_logits_squash)
             pred_confidences = tf.reshape(pred_confidences_squash,
                                       [outer_size, H['arch']['rnn_len'], 2])
+            loss = confidences_loss + boxes_loss + delta_confs_loss
+            confidences_loss = delta_confs_loss
+            if H['arch']['reregress']:
+                delta_residual = tf.reshape(perm_truth - (pred_boxes + pred_boxes_deltas) * pred_mask,
+                                            [outer_size, H['arch']['rnn_len'], 4])
+                delta_boxes_loss = (tf.reduce_sum(tf.minimum(tf.square(delta_residual), 10. ** 2)) / 
+                               outer_size * H['solver']['head_weights'][1] * 0.03)
+                boxes_loss = delta_boxes_loss
 
-            #delta_residual = tf.reshape(perm_truth - (pred_boxes + pred_boxes_deltas) * pred_mask,
-                                        #[outer_size, H['arch']['rnn_len'], 4])
-            #tf.histogram_summary(phase + '/delta_hist0', pred_boxes_deltas[:, 0, :])
-            #tf.histogram_summary(phase + '/delta_hist0_w', pred_boxes_deltas[:, 0, 2])
-            #tf.histogram_summary(phase + '/delta_hist0_x', pred_boxes_deltas[:, 0, 0])
-            #tf.histogram_summary(phase + '/boxes_hist0', pred_boxes[:, 0, :])
-            #tf.histogram_summary(phase + '/early_feats', early_feat)
-            #deltas_loss = (tf.reduce_sum(tf.abs(delta_residual)) / 
-                           #outer_size * H['solver']['head_weights'][2])
-            #loss = confidences_loss + boxes_loss + deltas_loss
-            ## TODO: remove this
-            #boxes_loss = deltas_loss
-            #pred_boxes = pred_boxes + pred_boxes_deltas
+                tf.histogram_summary(phase + '/delta_hist0_x', pred_boxes_deltas[:, 0, 0])
+                tf.histogram_summary(phase + '/delta_hist0_y', pred_boxes_deltas[:, 0, 1])
+                tf.histogram_summary(phase + '/delta_hist0_w', pred_boxes_deltas[:, 0, 2])
+                tf.histogram_summary(phase + '/delta_hist0_h', pred_boxes_deltas[:, 0, 3])
+                loss += delta_boxes_loss
+                ## TODO: remove this
+                #boxes_loss = deltas_loss
+                #pred_boxes = pred_boxes + pred_boxes_deltas
         else:
             loss = confidences_loss + boxes_loss
 
@@ -349,6 +406,9 @@ def build(H, q):
     if solver['opt'] == 'RMS':
         opt = tf.train.RMSPropOptimizer(learning_rate=learning_rate,
                                         decay=0.9, epsilon=solver['epsilon'])
+    elif solver['opt'] == 'Adam':
+        opt = tf.train.AdamOptimizer(learning_rate=learning_rate,
+                                        epsilon=solver['epsilon'])
     elif solver['opt'] == 'SGD':
         opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
     else:
@@ -486,7 +546,8 @@ def train(H, test_images):
             saver.restore(sess, weights_str)
 
         # train model for N iterations
-        for i in xrange(10000000):
+        start = time.time()
+        for i in xrange(H['solver'].get('max_iter', 10000000)):
             display_iter = H['logging']['display_iter']
             adjusted_lr = (H['solver']['learning_rate'] *
                            0.5 ** max(0, (i / H['solver']['learning_rate_step']) - 2))

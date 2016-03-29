@@ -14,9 +14,10 @@ cdef extern from "stitch_rects.hpp":
     cdef void filter_rects(vector[vector[vector[Rect] ] ]& all_rects,
                       vector[Rect]* stitched_rects,
                       float threshold,
-                      float max_threshold);
+                      float max_threshold,
+                      float tau);
 
-def stitch_rects(all_rects):
+def stitch_rects(all_rects, tau=0.25):
     """
     Implements the stitching procedure discussed in the paper. 
     Complicated, but we find that it does better than simpler versions
@@ -47,15 +48,18 @@ def stitch_rects(all_rects):
 
     cdef vector[Rect] acc_rects;
 
-    filter_rects(c_rects, &acc_rects, .80, 1.0)
-    filter_rects(c_rects, &acc_rects, .70, 0.9)
-    filter_rects(c_rects, &acc_rects, .60, 0.8)
-    filter_rects(c_rects, &acc_rects, .50, 0.7)
-    filter_rects(c_rects, &acc_rects, .40, 0.6)
-    filter_rects(c_rects, &acc_rects, .30, 0.5)
-    filter_rects(c_rects, &acc_rects, .20, 0.4)
-    filter_rects(c_rects, &acc_rects, .10, 0.3)
-    filter_rects(c_rects, &acc_rects, .05, 0.2)
+    filter_rects(c_rects, &acc_rects, .80, 1.0, tau)
+    filter_rects(c_rects, &acc_rects, .70, 0.9, tau)
+    filter_rects(c_rects, &acc_rects, .60, 0.8, tau)
+    filter_rects(c_rects, &acc_rects, .50, 0.7, tau)
+    filter_rects(c_rects, &acc_rects, .40, 0.6, tau)
+    filter_rects(c_rects, &acc_rects, .30, 0.5, tau)
+    filter_rects(c_rects, &acc_rects, .20, 0.4, tau)
+    filter_rects(c_rects, &acc_rects, .10, 0.3, tau)
+    filter_rects(c_rects, &acc_rects, .05, 0.2, tau)
+    filter_rects(c_rects, &acc_rects, .02, 0.1, tau)
+    filter_rects(c_rects, &acc_rects, .005, 0.4, tau)
+    filter_rects(c_rects, &acc_rects, .001, 0.01, tau)
 
     py_acc_rects = []
     for i in range(acc_rects.size()):
