@@ -38,8 +38,8 @@ def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False,
                 conf = confidences_r[0, y, x, n, 1]
                 abs_cx = int(bbox[0]) + cell_pix_size/2 + cell_pix_size * x
                 abs_cy = int(bbox[1]) + cell_pix_size/2 + cell_pix_size * y
-                h = bbox[3]
-                w = bbox[2]
+                h = max(1, bbox[3])
+                w = max(1, bbox[2])
                 #w = h * 0.4
                 all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
 

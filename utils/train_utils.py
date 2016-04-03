@@ -149,10 +149,12 @@ def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False,
     return image, rects
 
 def to_x1y1x2y2(box):
-    x1 = box[:, 2:3] - box[:, 0:1] / 2
-    x2 = box[:, 2:3] + box[:, 0:1] / 2
-    y1 = box[:, 3:4] - box[:, 1:2] / 2
-    y2 = box[:, 3:4] + box[:, 1:2] / 2
+    w = tf.maximum(box[:, 2:3], 1)
+    h = tf.maximum(box[:, 3:4], 1)
+    x1 = box[:, 0:1] - w / 2
+    x2 = box[:, 0:1] + w / 2
+    y1 = box[:, 1:2] - h / 2
+    y2 = box[:, 1:2] + h / 2
     return tf.concat(1, [x1, y1, x2, y2])
 
 def intersection(box1, box2):
