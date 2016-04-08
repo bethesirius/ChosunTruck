@@ -15,7 +15,8 @@ cdef extern from "stitch_rects.hpp":
                       vector[Rect]* stitched_rects,
                       float threshold,
                       float max_threshold,
-                      float tau);
+                      float tau,
+                      float conf_alpha);
 
 def stitch_rects(all_rects, tau=0.25):
     """
@@ -48,18 +49,29 @@ def stitch_rects(all_rects, tau=0.25):
 
     cdef vector[Rect] acc_rects;
 
-    filter_rects(c_rects, &acc_rects, .80, 1.0, tau)
-    filter_rects(c_rects, &acc_rects, .70, 0.9, tau)
-    filter_rects(c_rects, &acc_rects, .60, 0.8, tau)
-    filter_rects(c_rects, &acc_rects, .50, 0.7, tau)
-    filter_rects(c_rects, &acc_rects, .40, 0.6, tau)
-    filter_rects(c_rects, &acc_rects, .30, 0.5, tau)
-    filter_rects(c_rects, &acc_rects, .20, 0.4, tau)
-    filter_rects(c_rects, &acc_rects, .10, 0.3, tau)
-    filter_rects(c_rects, &acc_rects, .05, 0.2, tau)
-    filter_rects(c_rects, &acc_rects, .02, 0.1, tau)
-    filter_rects(c_rects, &acc_rects, .005, 0.4, tau)
-    filter_rects(c_rects, &acc_rects, .001, 0.01, tau)
+    thresholds = [(.80, 1.0),
+                  (.70, 0.9),
+                  (.60, 0.8),
+                  (.50, 0.7),
+                  (.40, 0.6),
+                  (.30, 0.5),
+                  (.20, 0.4),
+                  (.10, 0.3),
+                  (.05, 0.2),
+                  (.02, 0.1),
+                  (.005, 0.4),
+                  (.001, 0.01),
+                  ]
+    t_conf_alphas = [(tau, 1.0),
+                     (1 - (1 - tau) * 0.75, 0.5),
+                     (1 - (1 - tau) * 0.5, 0.1),
+                     (1 - (1 - tau) * 0.25, 0.005),
+                     ]
+    for t, conf_alpha in t_conf_alphas:
+        for lower_t, upper_t in thresholds:
+            if lower_t * conf_alpha > 0.0001:
+                filter_rects(c_rects, &acc_rects, lower_t * conf_alpha,
+                             upper_t * conf_alpha, t, conf_alpha)
 
     py_acc_rects = []
     for i in range(acc_rects.size()):

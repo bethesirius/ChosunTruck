@@ -14,14 +14,18 @@ void filter_rects(const vector<vector<vector<Rect> > >& all_rects,
                   vector<Rect>* stitched_rects,
                   float threshold,
                   float max_threshold,
-                  float tau) {
+                  float tau,
+                  float conf_alpha) {
   const vector<Rect>& accepted_rects = *stitched_rects;
   for (int i = 0; i < (int)all_rects.size(); ++i) {
     for (int j = 0; j < (int)all_rects[0].size(); ++j) {
       vector<Rect> current_rects;
       for (int k = 0; k < (int)all_rects[i][j].size(); ++k) {
-        if (all_rects[i][j][k].confidence_ > threshold) {
-          current_rects.push_back(Rect(all_rects[i][j][k]));
+        if (all_rects[i][j][k].confidence_ * conf_alpha > threshold) {
+          Rect r = Rect(all_rects[i][j][k]);
+          r.confidence_ *= conf_alpha;
+          r.true_confidence_ *= conf_alpha;
+          current_rects.push_back(r);
         }
       }
             

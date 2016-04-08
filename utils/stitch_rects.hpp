@@ -90,6 +90,7 @@ void filter_rects(const vector<vector<vector<Rect> > >& all_rects,
                   vector<Rect>* stitched_rects,
                   float threshold,
                   float max_threshold,
-                  float tau);
+                  float tau,
+                  float conf_alpha);
 
 #endif // STITCH_RECTS_HPP
