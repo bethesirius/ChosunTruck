@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # 0.1 initialization on all LSTM
 # average pooling on Z
 # decrease regression multiplier
@@ -127,16 +128,30 @@ def reinspect(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset
                                           scale_factor * H['arch']['grid_height'] - 1)
 
     interp_indices = tf.concat(1, [tf.to_float(batch_ids), pred_y_center_clip, pred_x_center_clip])
+    return interp_indices
+
+def reinspect2(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets):
+    grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
+    outer_size = grid_size * H['arch']['batch_size']
+    indices = []
+    for w_offset in w_offsets:
+        for h_offset in h_offsets:
+            indices.append(reinspect(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset))
+
+    interp_indices = tf.concat(0, indices)
     reinspect_features = interp(early_feat, interp_indices, early_feat_channels)
     reinspect_features_r = tf.reshape(reinspect_features,
-                                      [outer_size, H['arch']['rnn_len'], early_feat_channels])
+                                      [len(w_offsets) * len(h_offsets), outer_size, H['arch']['rnn_len'], early_feat_channels])
+    reinspect_features_t = tf.transpose(reinspect_features_r, [1, 2, 0, 3])
+    reinspect_features_t_r = tf.reshape(reinspect_features_t,
+                                          [outer_size, H['arch']['rnn_len'], len(w_offsets) * len(h_offsets) * early_feat_channels])
 
-    return reinspect_features_r
+    return reinspect_features_t_r
 
 def hist_layer(x, num_bins, dim):
     p = tf.get_variable('p', shape=[num_bins, dim])
     
-    x_clip = tf.clip_by_value(x * num_bins, 0, num_bins - 1.01)
+    x_clip = tf.clip_by_value(x * num_bins - 1, 0, num_bins - 1.001)
     x_lower = tf.to_int32(x_clip)
     x_upper = tf.to_int32(x_clip) + 1
     
@@ -144,9 +159,6 @@ def hist_layer(x, num_bins, dim):
     
     h_upper = tf.nn.embedding_lookup(p, x_upper)
     h_lower = tf.nn.embedding_lookup(p, x_lower)
-    
-    #print(x.op.outputs[0].get_shape())
-    #print(h_lower.op.outputs[0].get_shape())
     
     return alpha * h_upper + (1-alpha) * h_lower
 
@@ -156,7 +168,7 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
     input_mean = 117.
     x -= input_mean
     global early_feat
-    Z, early_feat, early_feat_channels = googlenet_load.model(x, googlenet, H)
+    Z, early_feat, _ = googlenet_load.model(x, googlenet, H)
     early_feat_channels = H['arch']['early_feat_channels']
     early_feat = early_feat[:, :, :, :early_feat_channels]
     
@@ -202,19 +214,19 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
                                          [outer_size, 1, 4])
 
             unirand = tf.random_uniform((1,1))
-            if H['arch']['hist_regress']:
+            if H['arch']['hist_regressor']:
                 with tf.variable_scope('hist_w%d' % k, initializer=initializer):
-                    hist_w = hist_layer(pred_boxes_step[:, 0, 2] / 100, num_bins=5, dim=H['arch']['lstm_size'])
+                    hist_w = hist_layer(pred_boxes_step[:, 0, 2] / 500, num_bins=10, dim=H['arch']['lstm_size'])
                 with tf.variable_scope('hist_h%d' % k, initializer=initializer):
-                    hist_h = hist_layer(pred_boxes_step[:, 0, 3] / 100, num_bins=3, dim=H['arch']['lstm_size'])
-                new_w = tf.reshape(tf.reduce_sum(hist_w * output, 1) * H['arch'].get('new_multiple', 1),
+                    hist_h = hist_layer(pred_boxes_step[:, 0, 3] / 300, num_bins=10, dim=H['arch']['lstm_size'])
+                new_w = tf.reshape(tf.reduce_sum(hist_w * output, 1) * H['arch']['new_multiple'],
                                    [outer_size, 1, 1])
-                new_h = tf.reshape(tf.reduce_sum(hist_h * output, 1) * H['arch'].get('new_multiple', 1),
+                new_h = tf.reshape(tf.reduce_sum(hist_h * output, 1) * H['arch']['new_multiple'],
                                    [outer_size, 1, 1])
 
                 if k == 0:
                     tf.histogram_summary(phase + '/hist_regress%d_w' % k, new_w - pred_boxes_step[:, :, 2:3])
-                    tf.histogram_summary(phase + '/hist_regress%d_h' % k, new_w - pred_boxes_step[:, :, 3:4])
+                    tf.histogram_summary(phase + '/hist_regress%d_h' % k, new_h - pred_boxes_step[:, :, 3:4])
                 new_pred_boxes_step = tf.concat(2, [pred_boxes_step[:, :, 0:2],
                                                     new_w,
                                                     new_h])
@@ -223,27 +235,6 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
                 choice = tf.to_float(tf.less(unirand, epsilon))
                 pred_boxes_step = choice * new_pred_boxes_step + (1 - choice) * pred_boxes_step
 
-            if H['arch']['hist_regress2']:
-                with tf.variable_scope('hist2_w%d' % k, initializer=initializer):
-                    hist_w = hist_layer(pred_boxes_step[:, 0, 2] / 50, num_bins=10, dim=H['arch']['lstm_size'])
-                with tf.variable_scope('hist2_h%d' % k, initializer=initializer):
-                    hist_h = hist_layer(pred_boxes_step[:, 0, 3] / 30, num_bins=10, dim=H['arch']['lstm_size'])
-                new_w = tf.reshape(tf.reduce_sum(hist_w * output, 1) * H['arch'].get('new_multiple', 1),
-                                   [outer_size, 1, 1])
-                new_h = tf.reshape(tf.reduce_sum(hist_h * output, 1) * H['arch'].get('new_multiple', 1),
-                                   [outer_size, 1, 1])
-
-                if k == 0:
-                    tf.histogram_summary(phase + '/hist_regress2_%d_w' % k, new_w - pred_boxes_step[:, :, 2:3])
-                    tf.histogram_summary(phase + '/hist_regress2_%d_h' % k, new_w - pred_boxes_step[:, :, 3:4])
-                new_pred_boxes_step = tf.concat(2, [pred_boxes_step[:, :, 0:2],
-                                                    new_w,
-                                                    new_h])
-
-                epsilon = {'train': 0.3, 'test': 1.0}[phase]
-                choice = tf.to_float(tf.less(unirand, epsilon))
-                pred_boxes_step = choice * new_pred_boxes_step + (1 - choice) * pred_boxes_step
-                
             pred_boxes.append(pred_boxes_step)
             pred_logits.append(tf.reshape(tf.matmul(output, conf_weights),
                                          [outer_size, 1, 2]))
@@ -262,9 +253,7 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
             w_offsets = H['arch']['reinspect_w_coords']
             h_offsets = H['arch']['reinspect_h_coords']
             num_offsets = len(w_offsets) * len(h_offsets)
-            reinspect_features = tf.concat(2, [
-                reinspect(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset)
-                for w_offset in w_offsets for h_offset in h_offsets])
+            reinspect_features = reinspect2(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets)
             if phase == 'train':
                 reinspect_features = tf.nn.dropout(reinspect_features, 0.5)
             for k in range(H['arch']['rnn_len']):
@@ -289,7 +278,6 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
                                         initializer=initializer)
                     pred_boxes_deltas.append(tf.reshape(tf.matmul(ip1, delta_boxes_weights) * 5,
                                                         [outer_size, 1, 4]))
-
                 scale = H['arch'].get('reinspect_conf_scale', 50) 
                 pred_confs_deltas.append(tf.reshape(tf.matmul(ip1, delta_confs_weights) * scale,
                                                     [outer_size, 1, 2]))
@@ -338,7 +326,6 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
                 iou = train_utils.iou(train_utils.to_x1y1x2y2(tf.reshape(pred_boxes, [-1, 4])),
                                       train_utils.to_x1y1x2y2(tf.reshape(perm_truth, [-1, 4])))
                 inside = tf.reshape(tf.to_int64(tf.greater(iou, 0.5)), [-1])
-                #inside = tf.Print(inside, [tf.reduce_mean(tf.to_float(tf.greater(iou, 0.2))), tf.shape(iou), tf.reduce_max(iou)])
             else:
                 assert H['arch']['reinspect_change_loss'] == False
                 inside = tf.reshape(tf.to_int64((tf.greater(classes, 0))), [-1])
