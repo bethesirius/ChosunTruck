@@ -124,7 +124,8 @@ def model(x, googlenet, H):
     coarse_feat = T['mixed5b']
 
     # fine feat can be used to reinspect input
-    early_feat = T['mixed3b']
+    attention_lname = H['arch'].get('attention_lname', 'mixed3b')
+    early_feat = T[attention_lname]
     early_feat_channels = 480
 
     return coarse_feat, early_feat, early_feat_channels
