@@ -596,7 +596,10 @@ class HungarianOp : public OpKernel {
 
     // Create an output tensor
     Tensor* assignments_tensor = NULL;
-    gtl::ArraySlice<int64> pred_shape = pred_input.shape().dim_sizes();
+    std::vector<int64> pred_shape;
+    for (int i = 0; i < pred_input.shape().dims(); ++i) {
+      pred_shape.push_back(pred_input.shape().dim_size(i));
+    }
     OP_REQUIRES_OK(context, context->allocate_output(0, TensorShape({pred_shape[0], pred_shape[1]}),
                                                      &assignments_tensor));
     auto assignments_output = assignments_tensor->matrix<int>();
