@@ -168,7 +168,9 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
     input_mean = 117.
     x -= input_mean
     global early_feat
-    Z, early_feat, _ = googlenet_load.model(x, googlenet, H)
+    #Z, early_feat, _ = googlenet_load.model(x, googlenet, H)
+    Z, early_feat, _ = googlenet_load.vgg_model(x, googlenet, H)
+    Z = tf.concat(3, [Z, Z])
     early_feat_channels = H['arch']['early_feat_channels']
     early_feat = early_feat[:, :, :, :early_feat_channels]
     
@@ -365,25 +367,34 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
 
     return pred_boxes, pred_confidences, loss, confidences_loss, boxes_loss
 
-def build_overfeat_forward(H, x, googlenet, phase):
+def build_overfeat_forward(H, x, net, phase, reuse):
     input_mean = 117.
     x -= input_mean
-    Z, _, _ = googlenet_load.model(x, googlenet, H)
-    Z = tf.reshape(Z, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
+    #Z, _, _ = googlenet_load.model(x, googlenet, H)
+    Z, _, _ = googlenet_load.vgg_model(x, net, H)
+    #Z = tf.reshape(Z, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
+    Z = tf.reshape(Z, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 512])
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     if H['arch']['use_dropout'] and phase == 'train':
         Z = tf.nn.dropout(Z, 0.5)
-    pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, googlenet['W'][0], googlenet['B'][0],
-                                             name=phase+'/logits_0'),
+    initializer = tf.random_normal_initializer(0.0, 0.001)
+    sizes = [H['arch']['num_classes'], 4]
+    with tf.variable_scope('decoder', reuse=reuse):
+        W = [tf.get_variable('W%d' % i, shape=(512, sizes[i]), initializer=initializer)
+             for i in range(2)]
+        B = [tf.get_variable('B%d' % i, shape=(sizes[i]), initializer=initializer)
+             for i in range(2)]
+    pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'),
                              [H['arch']['batch_size'] * grid_size, H['arch']['num_classes']])
     pred_confidences = tf.nn.softmax(pred_logits)
-    pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, googlenet['W'][1], googlenet['B'][1],
+    pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1],
                                             name=phase+'/logits_1'),
                             [H['arch']['batch_size'] * grid_size, 1, 4]) * 100
     return pred_boxes, pred_logits, pred_confidences
 
 def build_overfeat(H, x, googlenet, phase, boxes, confidences_r):
-    pred_boxes, pred_logits, pred_confidences = build_overfeat_forward(H, x, googlenet, phase)
+    reuse = {'train': None, 'test': True}[phase]
+    pred_boxes, pred_logits, pred_confidences = build_overfeat_forward(H, x, googlenet, phase, reuse)
 
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     boxes = tf.cast(tf.reshape(boxes, [H['arch']['batch_size'] * grid_size, 4]), 'float32')
@@ -413,7 +424,10 @@ def build(H, q):
     gpu_options = tf.GPUOptions()
     config = tf.ConfigProto(gpu_options=gpu_options)
 
-    googlenet = googlenet_load.init(H, config)
+    #googlenet = googlenet_load.init(H, config)
+    #W_norm = googlenet['W_norm']
+    W_norm = tf.constant([0.])
+
     learning_rate = tf.placeholder(tf.float32)
     if solver['opt'] == 'RMS':
         opt = tf.train.RMSPropOptimizer(learning_rate=learning_rate,
@@ -429,6 +443,8 @@ def build(H, q):
     for phase in ['train', 'test']:
         # generate predictions and losses from forward pass
         x, confidences, boxes = q[phase].dequeue_many(arch['batch_size'])
+        with tf.variable_scope('', reuse={'train': None, 'test': True}[phase]):
+            vggnet = googlenet_load.vgg_init(x)
         flags = tf.argmax(confidences, 3)
 
 
@@ -437,14 +453,14 @@ def build(H, q):
         if arch['use_lstm']:
             (pred_boxes, pred_confidences,
              loss[phase], confidences_loss[phase],
-             boxes_loss[phase]) = build_lstm(H, x, googlenet, phase, boxes, flags)
+             boxes_loss[phase]) = build_lstm(H, x, vggnet, phase, boxes, flags)
         else:
             confidences_r = tf.cast(
                 tf.reshape(confidences[:, :, 0, :],
                            [H['arch']['batch_size'] * grid_size, arch['num_classes']]), 'float32')
             (pred_boxes, pred_confidences,
              loss[phase], confidences_loss[phase],
-             boxes_loss[phase]) = build_overfeat(H, x, googlenet, phase, boxes, confidences_r)
+             boxes_loss[phase]) = build_overfeat(H, x, vggnet, phase, boxes, confidences_r)
         pred_confidences_r = tf.reshape(pred_confidences, [H['arch']['batch_size'], grid_size, H['arch']['rnn_len'], arch['num_classes']])
         pred_boxes_r = tf.reshape(pred_boxes, [H['arch']['batch_size'], grid_size, H['arch']['rnn_len'], 4])
 
@@ -455,7 +471,13 @@ def build(H, q):
 
         if phase == 'train':
             global_step = tf.Variable(0, trainable=False)
-            train_op = opt.minimize(loss['train'], global_step=global_step)
+            #train_op = opt.minimize(loss['train'], global_step=global_step)
+
+            tvars = tf.trainable_variables()
+            #grads = tf.gradients(loss['train'], tvars)
+            grads, norm = tf.clip_by_global_norm(tf.gradients(loss['train'], tvars), H['arch']['clip_norm'])
+            grads[-1] = tf.Print(grads[-1], [norm])
+            train_op = opt.apply_gradients(zip(grads, tvars), global_step=global_step)
         elif phase == 'test':
             moving_avg = tf.train.ExponentialMovingAverage(0.95)
             smooth_op = moving_avg.apply([accuracy['train'], accuracy['test'],
@@ -482,13 +504,14 @@ def build(H, q):
             # show predictions to visualize training progress
             test_pred_confidences = pred_confidences_r[0, :, :, :]
             test_pred_boxes = pred_boxes_r[0, :, :, :]
+            #test_pred_boxes = boxes[0, :, :, :]
 
     summary_op = tf.merge_all_summaries()
 
-    return (config, loss, accuracy, summary_op, train_op, googlenet['W_norm'],
+    return (config, loss, accuracy, summary_op, train_op, W_norm,
             test_image, test_pred_boxes, test_pred_confidences,
             test_true_boxes, test_true_confidences, smooth_op,
-            global_step, learning_rate)
+            global_step, learning_rate, vggnet)
 
 
 def train(H, test_images):
@@ -525,7 +548,7 @@ def train(H, test_images):
     (config, loss, accuracy, summary_op, train_op, W_norm,
      test_image, test_pred_boxes, test_pred_confidences,
      test_true_boxes, test_true_confidences,
-     smooth_op, global_step, learning_rate) = build(H, q)
+     smooth_op, global_step, learning_rate, vggnet) = build(H, q)
 
     saver = tf.train.Saver(max_to_keep=None)
     writer = tf.train.SummaryWriter(
@@ -539,6 +562,7 @@ def train(H, test_images):
     log_image = tf.image_summary(log_image_name, tf.expand_dims(test_image_to_log, 0))
 
     with tf.Session(config=config) as sess:
+        vggnet.load('./data/mynet.npy', sess, ignore_missing=True)
         threads = []
         for phase in ['train', 'test']:
             # enqueue once manually to avoid thread start delay
