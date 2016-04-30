@@ -562,7 +562,7 @@ def train(H, test_images):
     log_image = tf.image_summary(log_image_name, tf.expand_dims(test_image_to_log, 0))
 
     with tf.Session(config=config) as sess:
-        vggnet.load('./data/mynet.npy', sess, ignore_missing=True)
+        vggnet.load('./data/vgg.npy', sess, ignore_missing=True)
         threads = []
         for phase in ['train', 'test']:
             # enqueue once manually to avoid thread start delay
