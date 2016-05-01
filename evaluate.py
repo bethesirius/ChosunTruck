@@ -77,8 +77,9 @@ def get_image_dir(args):
 
 def get_results(args, H):
     tf.reset_default_graph()
-    googlenet = googlenet_load.init(H)
-    x_in = tf.placeholder(tf.float32, name='x_in')
+    #googlenet = googlenet_load.init(H)
+    x_in = tf.placeholder(tf.float32, name='x_in', shape=[1, H['arch']['image_height'], H['arch']['image_width'], 3])
+    googlenet = googlenet_load.vgg_init(x_in)
     if H['arch']['use_lstm']:
         if H['arch']['use_reinspect']:
             pred_boxes, pred_logits, pred_confidences, pred_confs_deltas, pred_boxes_deltas = build_lstm_forward(H, tf.expand_dims(x_in, 0), googlenet, 'test', reuse=None)
@@ -105,7 +106,7 @@ def get_results(args, H):
             true_anno = true_annolist[i]
             orig_img = imread('%s/%s' % (data_dir, true_anno.imageName))[:,:,:3]
             img = imresize(orig_img, (H["arch"]["image_height"], H["arch"]["image_width"]), interp='cubic')
-            feed = {x_in: img}
+            feed = {x_in: [img]}
             (np_pred_boxes, np_pred_confidences) = sess.run([pred_boxes, pred_confidences], feed_dict=feed)
             pred_anno = al.Annotation()
             pred_anno.imageName = true_anno.imageName
