@@ -77,9 +77,11 @@ def get_image_dir(args):
 
 def get_results(args, H):
     tf.reset_default_graph()
-    #googlenet = googlenet_load.init(H)
     x_in = tf.placeholder(tf.float32, name='x_in', shape=[1, H['arch']['image_height'], H['arch']['image_width'], 3])
-    googlenet = googlenet_load.vgg_init(x_in)
+    if H['arch']['encoder'] == 'googlenet':
+        googlenet = googlenet_load.init(H)
+    elif H['arch']['encoder'] == 'vgg':
+        googlenet = googlenet_load.vgg_init(x_in)
     if H['arch']['use_lstm']:
         if H['arch']['use_reinspect']:
             pred_boxes, pred_logits, pred_confidences, pred_confs_deltas, pred_boxes_deltas = build_lstm_forward(H, tf.expand_dims(x_in, 0), googlenet, 'test', reuse=None)
@@ -147,16 +149,19 @@ def main():
     pred_annolist.save(pred_idl)
     true_annolist.save(true_idl)
 
-    rpc_cmd = './utils/annolist/doRPC.py --minOverlap %f %s %s' % (args.iou_threshold, true_idl, pred_idl)
-    print('$ %s' % rpc_cmd)
-    rpc_output = subprocess.check_output(rpc_cmd, shell=True)
-    print(rpc_output)
-    txt_file = [line for line in rpc_output.split('\n') if line.strip()][-1]
-    output_png = '%s/results.png' % get_image_dir(args)
-    plot_cmd = './utils/annolist/plotSimple.py %s --output %s' % (txt_file, output_png)
-    print('$ %s' % plot_cmd)
-    plot_output = subprocess.check_output(plot_cmd, shell=True)
-    print('output results at: %s' % plot_output)
+    try:
+        rpc_cmd = './utils/annolist/doRPC.py --minOverlap %f %s %s' % (args.iou_threshold, true_idl, pred_idl)
+        print('$ %s' % rpc_cmd)
+        rpc_output = subprocess.check_output(rpc_cmd, shell=True)
+        print(rpc_output)
+        txt_file = [line for line in rpc_output.split('\n') if line.strip()][-1]
+        output_png = '%s/results.png' % get_image_dir(args)
+        plot_cmd = './utils/annolist/plotSimple.py %s --output %s' % (txt_file, output_png)
+        print('$ %s' % plot_cmd)
+        plot_output = subprocess.check_output(plot_cmd, shell=True)
+        print('output results at: %s' % plot_output)
+    except Exception as e:
+        print(e)
 
 if __name__ == '__main__':
     main()

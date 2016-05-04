@@ -29,13 +29,13 @@ class run_exp(threading.Thread):
             H = json.load(open(hypes, 'r'))
             H['solver']['learning_rate'] *= 10 ** (random.random() - 0.5)
             H['solver']['head_weights'][0] *= 3 ** (random.random() - 0.5)
-            H['solver']['max_iter'] = 101
+            H['solver']['max_iter'] = 100001
             json_file = 'hypes_gen/%s/%s.%s.%d.%d.%s.json' % (expname, basepath[:-5], expname, i, int(gpu), host)
             with open(json_file, 'w') as f:
                 f.write(json.dumps(H))
             train_path = os.path.dirname(os.path.realpath(__file__))
             train_cmd = 'ssh %s "cd %s && python train.py --gpu %s --hypes %s --logdir output_kitti_gen/%s"' % (host, train_path, gpu, json_file, expname)
-            #subprocess.check_output(train_cmd, shell=True)
+            subprocess.check_output(train_cmd, shell=True)
             last_ckpt = H['solver']['max_iter'] - H['solver']['max_iter'] % H['logging']['save_iter']
             eval_cmd = 'ssh %s "cd %s && python evaluate.py --gpu %d --test_idl data/kitti/val_small_unscale.idl --iou_threshold 0.5 --weights output_kitti_gen/%s/%s_*/save.ckpt-%d"' % (host, train_path, gpu, expname, os.path.basename(json_file)[:-5], last_ckpt)
             subprocess.check_output(eval_cmd, shell=True)
