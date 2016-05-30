@@ -63,9 +63,9 @@ def stitch_rects(all_rects, tau=0.25):
                   (.001, 0.01),
                   ]
     t_conf_alphas = [(tau, 1.0),
-                     (1 - (1 - tau) * 0.75, 0.5),
-                     (1 - (1 - tau) * 0.5, 0.1),
-                     (1 - (1 - tau) * 0.25, 0.005),
+                     #(1 - (1 - tau) * 0.75, 0.5),
+                     #(1 - (1 - tau) * 0.5, 0.1),
+                     #(1 - (1 - tau) * 0.25, 0.005),
                      ]
     for t, conf_alpha in t_conf_alphas:
         for lower_t, upper_t in thresholds:

@@ -130,9 +130,3 @@ def model(x, googlenet, H):
     early_feat_channels = 480
 
     return coarse_feat, early_feat, early_feat_channels
-
-def vgg_init(x):
-    net = mynet.VGG({'data': x})
-    return net
-def vgg_model(x, net, H):
-    return net.layers['pool5'], net.layers['pool3'], 256

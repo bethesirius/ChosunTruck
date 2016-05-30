@@ -78,10 +78,7 @@ def get_image_dir(args):
 def get_results(args, H):
     tf.reset_default_graph()
     x_in = tf.placeholder(tf.float32, name='x_in', shape=[1, H['arch']['image_height'], H['arch']['image_width'], 3])
-    if H['arch']['encoder'] == 'googlenet':
-        googlenet = googlenet_load.init(H)
-    elif H['arch']['encoder'] == 'vgg':
-        googlenet = googlenet_load.vgg_init(x_in)
+    googlenet = googlenet_load.init(H)
     if H['arch']['use_lstm']:
         if H['arch']['use_reinspect']:
             pred_boxes, pred_logits, pred_confidences, pred_confs_deltas, pred_boxes_deltas = build_lstm_forward(H, tf.expand_dims(x_in, 0), googlenet, 'test', reuse=None)

@@ -130,7 +130,7 @@ def reinspect(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset
     interp_indices = tf.concat(1, [tf.to_float(batch_ids), pred_y_center_clip, pred_x_center_clip])
     return interp_indices
 
-def reinspect2(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets):
+def multi_reinspect(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets):
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
     indices = []
@@ -148,43 +148,16 @@ def reinspect2(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offs
 
     return reinspect_features_t_r
 
-def hist_layer(x, num_bins, dim):
-    p = tf.get_variable('p', shape=[num_bins, dim])
-    
-    x_clip = tf.clip_by_value(x * num_bins - 1, 0, num_bins - 1.001)
-    x_lower = tf.to_int32(x_clip)
-    x_upper = tf.to_int32(x_clip) + 1
-    
-    alpha = tf.expand_dims(x_clip - tf.to_float(x_lower), 1)
-    
-    h_upper = tf.nn.embedding_lookup(p, x_upper)
-    h_lower = tf.nn.embedding_lookup(p, x_lower)
-    
-    return alpha * h_upper + (1-alpha) * h_lower
-
 def build_lstm_forward(H, x, googlenet, phase, reuse):
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
     input_mean = 117.
     x -= input_mean
     global early_feat
-    if H['arch']['encoder'] == 'vgg':
-        Z, early_feat, _ = googlenet_load.vgg_model(x, googlenet, H)
-        Z = tf.concat(3, [Z, Z])
-    elif H['arch']['encoder'] == 'googlenet':
-        Z, early_feat, _ = googlenet_load.model(x, googlenet, H)
+    Z, early_feat, _ = googlenet_load.model(x, googlenet, H)
     early_feat_channels = H['arch']['early_feat_channels']
     early_feat = early_feat[:, :, :, :early_feat_channels]
     
-    if H['arch']['conv_pool_size'] > 1:
-        size = H['arch']['conv_pool_size']
-        stride = H['arch']['conv_pool_stride']
-
-        with tf.variable_scope("", reuse=reuse):
-            w = tf.get_variable('conv_pool_w', shape=[size, size, 1024, 1024],
-                                initializer=tf.random_normal_initializer(stddev=0.01))
-        Z = tf.nn.conv2d(Z, w, strides=[1, stride, stride, 1], padding='SAME')
-
     if H['arch']['avg_pool_size'] > 1:
         pool_size = H['arch']['avg_pool_size']
         Z1 = Z[:, :, :, :700]
@@ -194,8 +167,6 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
     Z = tf.reshape(Z, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
     with tf.variable_scope('decoder', reuse=reuse):
         scale_down = 0.01
-        if H['arch']['early_dropout'] and phase == 'train':
-            Z = tf.nn.dropout(Z, 0.5)
         lstm_input = tf.reshape(Z * scale_down, (H['arch']['batch_size'] * grid_size, 1024))
         lstm_outputs = build_lstm_inner(lstm_input, H)
 
@@ -204,7 +175,7 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
         initializer = tf.random_uniform_initializer(-0.1, 0.1)
         for k in range(H['arch']['rnn_len']):
             output = lstm_outputs[k]
-            if H['arch']['late_dropout'] and phase == 'train':
+            if phase == 'train':
                 output = tf.nn.dropout(output, 0.5)
             box_weights = tf.get_variable('box_ip%d' % k,
                                           shape=(H['arch']['lstm_size'], 4),
@@ -215,28 +186,6 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
 
             pred_boxes_step = tf.reshape(tf.matmul(output, box_weights) * 50,
                                          [outer_size, 1, 4])
-
-            unirand = tf.random_uniform((1,1))
-            if H['arch']['hist_regressor']:
-                with tf.variable_scope('hist_w%d' % k, initializer=initializer):
-                    hist_w = hist_layer(pred_boxes_step[:, 0, 2] / 500, num_bins=10, dim=H['arch']['lstm_size'])
-                with tf.variable_scope('hist_h%d' % k, initializer=initializer):
-                    hist_h = hist_layer(pred_boxes_step[:, 0, 3] / 300, num_bins=10, dim=H['arch']['lstm_size'])
-                new_w = tf.reshape(tf.reduce_sum(hist_w * output, 1) * H['arch']['new_multiple'],
-                                   [outer_size, 1, 1])
-                new_h = tf.reshape(tf.reduce_sum(hist_h * output, 1) * H['arch']['new_multiple'],
-                                   [outer_size, 1, 1])
-
-                if k == 0:
-                    tf.histogram_summary(phase + '/hist_regress%d_w' % k, new_w - pred_boxes_step[:, :, 2:3])
-                    tf.histogram_summary(phase + '/hist_regress%d_h' % k, new_h - pred_boxes_step[:, :, 3:4])
-                new_pred_boxes_step = tf.concat(2, [pred_boxes_step[:, :, 0:2],
-                                                    new_w,
-                                                    new_h])
-
-                epsilon = {'train': 0.6, 'test': 1.0}[phase]
-                choice = tf.to_float(tf.less(unirand, epsilon))
-                pred_boxes_step = choice * new_pred_boxes_step + (1 - choice) * pred_boxes_step
 
             pred_boxes.append(pred_boxes_step)
             pred_logits.append(tf.reshape(tf.matmul(output, conf_weights),
@@ -256,7 +205,7 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
             w_offsets = H['arch']['reinspect_w_coords']
             h_offsets = H['arch']['reinspect_h_coords']
             num_offsets = len(w_offsets) * len(h_offsets)
-            reinspect_features = reinspect2(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets)
+            reinspect_features = multi_reinspect(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets)
             if phase == 'train':
                 reinspect_features = tf.nn.dropout(reinspect_features, 0.5)
             for k in range(H['arch']['rnn_len']):
@@ -308,7 +257,6 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
         outer_boxes = tf.reshape(boxes, [outer_size, H['arch']['rnn_len'], 4])
         outer_flags = tf.cast(tf.reshape(flags, [outer_size, H['arch']['rnn_len']]), 'int32')
         assignments, classes, perm_truth, pred_mask = (
-            #tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags))
             tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags, H['solver']['hungarian_iou']))
         true_classes = tf.reshape(tf.cast(tf.greater(classes, 0), 'int64'),
                                   [outer_size * H['arch']['rnn_len']])
@@ -336,8 +284,6 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
             delta_confs_loss = tf.reduce_sum(
                 tf.nn.sparse_softmax_cross_entropy_with_logits(new_confs, inside)) / outer_size * H['solver']['head_weights'][0] * 0.1
 
-
-            # TODO: remove this
             use_orig_conf = H['solver'].get('use_orig_confs', False)
             if not use_orig_conf:
                 confidences_loss = delta_confs_loss
@@ -360,9 +306,6 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
                 tf.histogram_summary(phase + '/delta_hist0_w', pred_boxes_deltas[:, 0, 2])
                 tf.histogram_summary(phase + '/delta_hist0_h', pred_boxes_deltas[:, 0, 3])
                 loss += delta_boxes_loss
-                ## TODO: remove this
-                #boxes_loss = deltas_loss
-                #pred_boxes = pred_boxes + pred_boxes_deltas
         else:
             loss = confidences_loss + boxes_loss
 
@@ -371,12 +314,8 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
 def build_overfeat_forward(H, x, net, phase, reuse):
     input_mean = 117.
     x -= input_mean
-    if H['arch']['encoder'] == 'vgg':
-        Z, _, _ = googlenet_load.vgg_model(x, net, H)
-        Z = tf.reshape(Z, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 512])
-    elif H['arch']['encoder'] == 'googlenet':
-        Z, _, _ = googlenet_load.model(x, net, H)
-        Z = tf.reshape(Z, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
+    Z, _, _ = googlenet_load.model(x, net, H)
+    Z = tf.reshape(Z, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     if H['arch']['use_dropout'] and phase == 'train':
         Z = tf.nn.dropout(Z, 0.5)
@@ -427,11 +366,8 @@ def build(H, q):
     gpu_options = tf.GPUOptions()
     config = tf.ConfigProto(gpu_options=gpu_options)
 
-    if H['arch']['encoder'] == 'vgg':
-        W_norm = tf.constant([0.])
-    elif H['arch']['encoder'] == 'googlenet':
-        encoder_net = googlenet_load.init(H, config)
-        W_norm = encoder_net['W_norm']
+    encoder_net = googlenet_load.init(H, config)
+    W_norm = encoder_net['W_norm']
 
     learning_rate = tf.placeholder(tf.float32)
     if solver['opt'] == 'RMS':
@@ -448,9 +384,6 @@ def build(H, q):
     for phase in ['train', 'test']:
         # generate predictions and losses from forward pass
         x, confidences, boxes = q[phase].dequeue_many(arch['batch_size'])
-        if H['arch']['encoder'] == 'vgg':
-            with tf.variable_scope('', reuse={'train': None, 'test': True}[phase]):
-                encoder_net = googlenet_load.vgg_init(x)
         flags = tf.argmax(confidences, 3)
 
 
@@ -570,8 +503,6 @@ def train(H, test_images):
     log_image = tf.image_summary(log_image_name, tf.expand_dims(test_image_to_log, 0))
 
     with tf.Session(config=config) as sess:
-        if H['arch']['encoder'] == 'vgg':
-            encoder_net.load('./data/vgg.npy', sess, ignore_missing=True)
         threads = []
         for phase in ['train', 'test']:
             # enqueue once manually to avoid thread start delay
