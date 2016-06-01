@@ -410,14 +410,12 @@ def build(H, q):
 
         if phase == 'train':
             global_step = tf.Variable(0, trainable=False)
-            #train_op = opt.minimize(loss['train'], global_step=global_step)
 
             tvars = tf.trainable_variables()
             if H['arch']['clip_norm'] <= 0:
                 grads = tf.gradients(loss['train'], tvars)
             else:
                 grads, norm = tf.clip_by_global_norm(tf.gradients(loss['train'], tvars), H['arch']['clip_norm'])
-                grads[-1] = tf.Print(grads[-1], [norm])
             train_op = opt.apply_gradients(zip(grads, tvars), global_step=global_step)
         elif phase == 'test':
             moving_avg = tf.train.ExponentialMovingAverage(0.95)
