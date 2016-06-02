@@ -5,7 +5,7 @@
         "truncate_data": false
     },
     "arch": {
-        "use_lstm": true,
+        "use_lstm": false,
         "use_reinspect": false,
         "biggest_box_px": 10000,
         "reinspect_change_loss": "center",
@@ -23,7 +23,7 @@
         "clip_norm": 1.0,
         "lstm_size": 500,
         "num_classes": 2,
-        "rnn_len": 5
+        "rnn_len": 1
     }, 
     "logging": {
         "display_iter": 50,
