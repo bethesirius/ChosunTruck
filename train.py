@@ -44,6 +44,15 @@ def build_lstm_inner(lstm_input, H):
             outputs.append(output)
     return outputs
 
+def build_overfeat_inner(lstm_input, H):
+    if H['arch']['rnn_len'] > 1:
+        raise ValueError('rnn_len > 1 only supported with use_lstm == True')
+    outputs = []
+    with tf.variable_scope('Overfeat', initializer=tf.random_uniform_initializer(-0.1, 0.1)):
+        w = tf.get_variable('ip', shape=[1024, H['arch']['lstm_size']])
+        outputs.append(tf.matmul(lstm_input, w))
+    return outputs
+
 def to_idx(vec, w_shape):
     '''
     vec = (idn, idh, idw)
@@ -168,7 +177,10 @@ def build_lstm_forward(H, x, googlenet, phase, reuse):
     with tf.variable_scope('decoder', reuse=reuse):
         scale_down = 0.01
         lstm_input = tf.reshape(Z * scale_down, (H['arch']['batch_size'] * grid_size, 1024))
-        lstm_outputs = build_lstm_inner(lstm_input, H)
+        if H['arch']['use_lstm']:
+            lstm_outputs = build_lstm_inner(lstm_input, H)
+        else:
+            lstm_outputs = build_overfeat_inner(lstm_input, H)
 
         pred_boxes = []
         pred_logits = []
@@ -256,8 +268,13 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
     with tf.variable_scope('decoder', reuse={'train': None, 'test': True}[phase]):
         outer_boxes = tf.reshape(boxes, [outer_size, H['arch']['rnn_len'], 4])
         outer_flags = tf.cast(tf.reshape(flags, [outer_size, H['arch']['rnn_len']]), 'int32')
-        assignments, classes, perm_truth, pred_mask = (
-            tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags, H['solver']['hungarian_iou']))
+        if H['arch']['use_lstm']:
+            assignments, classes, perm_truth, pred_mask = (
+                tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags, H['solver']['hungarian_iou']))
+        else:
+            classes = tf.reshape(flags, (outer_size, 1))
+            perm_truth = tf.reshape(outer_boxes, (outer_size, 1, 4))
+            pred_mask = tf.reshape(tf.cast(tf.greater(classes, 0), 'float32'), (outer_size, 1, 1))
         true_classes = tf.reshape(tf.cast(tf.greater(classes, 0), 'int64'),
                                   [outer_size * H['arch']['rnn_len']])
         pred_logit_r = tf.reshape(pred_logits,
@@ -311,47 +328,6 @@ def build_lstm(H, x, googlenet, phase, boxes, flags):
 
     return pred_boxes, pred_confidences, loss, confidences_loss, boxes_loss
 
-def build_overfeat_forward(H, x, net, phase, reuse):
-    input_mean = 117.
-    x -= input_mean
-    Z, _, _ = googlenet_load.model(x, net, H)
-    Z = tf.reshape(Z, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
-    grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
-    if H['arch']['use_dropout'] and phase == 'train':
-        Z = tf.nn.dropout(Z, 0.5)
-    initializer = tf.random_normal_initializer(0.0, 0.001)
-    sizes = [H['arch']['num_classes'], 4]
-    with tf.variable_scope('decoder', reuse=reuse):
-        W = [tf.get_variable('W%d' % i, shape=(512, sizes[i]), initializer=initializer)
-             for i in range(2)]
-        B = [tf.get_variable('B%d' % i, shape=(sizes[i]), initializer=initializer)
-             for i in range(2)]
-    pred_logits = tf.reshape(tf.nn.xw_plus_b(Z, W[0], B[0], name=phase+'/logits_0'),
-                             [H['arch']['batch_size'] * grid_size, H['arch']['num_classes']])
-    pred_confidences = tf.nn.softmax(pred_logits)
-    pred_boxes = tf.reshape(tf.nn.xw_plus_b(Z, W[1], B[1],
-                                            name=phase+'/logits_1'),
-                            [H['arch']['batch_size'] * grid_size, 1, 4]) * 100
-    return pred_boxes, pred_logits, pred_confidences
-
-def build_overfeat(H, x, googlenet, phase, boxes, confidences_r):
-    reuse = {'train': None, 'test': True}[phase]
-    pred_boxes, pred_logits, pred_confidences = build_overfeat_forward(H, x, googlenet, phase, reuse)
-
-    grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
-    boxes = tf.cast(tf.reshape(boxes, [H['arch']['batch_size'] * grid_size, 4]), 'float32')
-    cross_entropy = -tf.reduce_sum(confidences_r*tf.log(tf.nn.softmax(pred_logits) + 1e-6))
-
-    L = (H['solver']['head_weights'][0] * cross_entropy,
-         H['solver']['head_weights'][1] * tf.abs(pred_boxes[:, 0, :] - boxes) *
-             tf.expand_dims(confidences_r[:, 1], 1))
-    confidences_loss = (tf.reduce_sum(L[0], name=phase+'/confidences_loss') /
-                        (H['arch']['batch_size'] * grid_size))
-    boxes_loss = (tf.reduce_sum(L[1], name=phase+'/boxes_loss') /
-                  (H['arch']['batch_size'] * grid_size))
-    loss = confidences_loss + boxes_loss
-    return pred_boxes, pred_confidences, loss, confidences_loss, boxes_loss
-
 def build(H, q):
     '''
     Build full model for training, including forward / backward passes,
@@ -389,17 +365,9 @@ def build(H, q):
 
         grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
 
-        if arch['use_lstm']:
-            (pred_boxes, pred_confidences,
-             loss[phase], confidences_loss[phase],
-             boxes_loss[phase]) = build_lstm(H, x, encoder_net, phase, boxes, flags)
-        else:
-            confidences_r = tf.cast(
-                tf.reshape(confidences[:, :, 0, :],
-                           [H['arch']['batch_size'] * grid_size, arch['num_classes']]), 'float32')
-            (pred_boxes, pred_confidences,
-             loss[phase], confidences_loss[phase],
-             boxes_loss[phase]) = build_overfeat(H, x, encoder_net, phase, boxes, confidences_r)
+        (pred_boxes, pred_confidences,
+         loss[phase], confidences_loss[phase],
+         boxes_loss[phase]) = build_lstm(H, x, encoder_net, phase, boxes, flags)
         pred_confidences_r = tf.reshape(pred_confidences, [H['arch']['batch_size'], grid_size, H['arch']['rnn_len'], arch['num_classes']])
         pred_boxes_r = tf.reshape(pred_boxes, [H['arch']['batch_size'], grid_size, H['arch']['rnn_len'], 4])
 
@@ -549,7 +517,7 @@ def train(H, test_images):
                                                                     confidences,
                                                                     boxes,
                                                                     H["arch"],
-                                                                    use_stitching=H['arch']['use_lstm'],
+                                                                    use_stitching=True,
                                                                     rnn_len=H['arch']['rnn_len'])[0]
                     assert test_output_to_log.shape == (H['arch']['image_height'],
                                                         H['arch']['image_width'], num_img_logs)
