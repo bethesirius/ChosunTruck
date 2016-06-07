@@ -8,8 +8,6 @@ echo "Downloading..."
 
 mkdir -p data && cd data
 wget http://russellsstewart.com/s/tensorbox/googlenet.pb
-mkdir -p lstm && cd lstm
-wget http://russellsstewart.com/s/tensorbox/lstm/hungarian.cc
 mkdir -p overfeat_rezoom && cd overfeat_rezoom
 wget http://russellsstewart.com/s/tensorbox/overfeat_rezoom/save.ckpt-150000
 cd ..
