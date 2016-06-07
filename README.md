@@ -16,9 +16,9 @@ First, [install TensorFlow from source or pip](https://www.tensorflow.org/versio
     $ git clone http://github.com/russell91/tensorbox
     $ cd tensorbox
     $ ./download_data.sh
-    $ python train.py --hypes hypes/default.json --gpu 0 --logdir output
+    $ python train.py --hypes hypes/overfeat_rezoom.json --gpu 0 --logdir output
 
-Note that running on your own dataset should only require modifying the `hypes/default.json` file. 
+Note that running on your own dataset should only require modifying the `hypes/overfeat_rezoom.json` file. 
 When finished training, you can use code from the provided 
 [ipython notebook](https://github.com/Russell91/tensorbox/blob/master/evaluate.ipynb)
 to get results on your test set.
@@ -42,7 +42,7 @@ See <a href="http://arxiv.org/abs/1506.04878" target="_blank">the paper</a> for 
     $ # (see https://www.tensorflow.org/versions/r0.7/get_started/os_setup.html#installing-from-sources)
 
     $ cd /path/to/tensorbox/utils && make && cd ..
-    $ python train.py --hypes hypes/lstm.json --gpu 0 --logdir output
+    $ python train.py --hypes hypes/lstm_rezoom.json --gpu 0 --logdir output
 
 ## Tensorboard
 
