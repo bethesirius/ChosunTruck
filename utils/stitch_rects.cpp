@@ -13,21 +13,26 @@ using std::vector;
 void filter_rects(const vector<vector<vector<Rect> > >& all_rects,
                   vector<Rect>* stitched_rects,
                   float threshold,
-                  float max_threshold) {
+                  float max_threshold,
+                  float tau,
+                  float conf_alpha) {
   const vector<Rect>& accepted_rects = *stitched_rects;
   for (int i = 0; i < (int)all_rects.size(); ++i) {
     for (int j = 0; j < (int)all_rects[0].size(); ++j) {
       vector<Rect> current_rects;
       for (int k = 0; k < (int)all_rects[i][j].size(); ++k) {
-        if (all_rects[i][j][k].confidence_ > threshold) {
-          current_rects.push_back(Rect(all_rects[i][j][k]));
+        if (all_rects[i][j][k].confidence_ * conf_alpha > threshold) {
+          Rect r = Rect(all_rects[i][j][k]);
+          r.confidence_ *= conf_alpha;
+          r.true_confidence_ *= conf_alpha;
+          current_rects.push_back(r);
         }
       }
             
       vector<Rect> relevant_rects;
       for (int k = 0; k < (int)accepted_rects.size(); ++k) {
           for (int l = 0; l < (int)current_rects.size(); ++l) {
-              if (accepted_rects[k].overlaps(current_rects[l])) {
+              if (accepted_rects[k].overlaps(current_rects[l], tau)) {
                 relevant_rects.push_back(Rect(accepted_rects[k]));
                 break;
               }
@@ -49,7 +54,7 @@ void filter_rects(const vector<vector<vector<Rect> > >& all_rects,
         for (int l = 0; l < (int)relevant_rects.size(); ++l) {
           int idx = k * num_pred + l;
           int cost = 10000;
-          if (current_rects[k].overlaps(relevant_rects[l])) {
+          if (current_rects[k].overlaps(relevant_rects[l], tau)) {
             cost -= 1000;
           }
           cost += (int)(current_rects[k].distance(relevant_rects[l]) / 10.);
@@ -86,7 +91,7 @@ void filter_rects(const vector<vector<vector<Rect> > >& all_rects,
           bad.push_back(k);
           continue;
         }
-        if (c.overlaps(a)) {
+        if (c.overlaps(a, tau)) {
           if (c.confidence_ > a.confidence_ && c.iou(a) > 0.7) {
             c.true_confidence_ = a.confidence_;
             stitched_rects->erase(std::find(stitched_rects->begin(), stitched_rects->end(), a));

@@ -18,6 +18,85 @@ extern "C" {
 #define HUNGARIAN_MODE_MINIMIZE_COST   0
 #define HUNGARIAN_MODE_MAXIMIZE_UTIL 1
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
+using std::vector;
+
+class Rect {
+ public:
+  int cx_;
+  int cy_;
+  int width_;
+  int height_;
+  float confidence_;
+  float true_confidence_;
+
+  explicit Rect(int cx, int cy, int width, int height, float confidence) {
+    cx_ = cx;
+    cy_ = cy;
+    width_ = width;
+    height_ = height;
+    confidence_ = confidence;
+    true_confidence_ = confidence;
+  }
+
+  Rect(const Rect& other) {
+    cx_ = other.cx_;
+    cy_ = other.cy_;
+    width_ = other.width_;
+    height_ = other.height_;
+    confidence_ = other.confidence_;
+    true_confidence_ = other.true_confidence_;
+  }
+
+  bool overlaps(const Rect& other) const {
+    if (fabs(cx_ - other.cx_) > (width_ + other.width_) / 1.5) {
+      return false;
+    } else if (fabs(cy_ - other.cy_) > (height_ + other.height_) / 2.0) {
+      return false;
+    } else {
+      return iou(other) > 0.25;
+    }
+  }
+
+  int distance(const Rect& other) const {
+    return (fabs(cx_ - other.cx_) + fabs(cy_ - other.cy_) +
+            fabs(width_ - other.width_) + fabs(height_ - other.height_));
+  }
+
+  float intersection(const Rect& other) const {
+    int left = MAX(cx_ - width_ / 2., other.cx_ - other.width_ / 2.);
+    int right = MIN(cx_ + width_ / 2., other.cx_ + other.width_ / 2.);
+    int width = MAX(right - left, 0);
+
+    int top = MAX(cy_ - height_ / 2., other.cy_ - other.height_ / 2.);
+    int bottom = MIN(cy_ + height_ / 2., other.cy_ + other.height_ / 2.);
+    int height = MAX(bottom - top, 0);
+    return width * height;
+  }
+
+  int area() const {
+    return height_ * width_;
+  }
+
+  float union_area(const Rect& other) const {
+    return this->area() + other.area() - this->intersection(other);
+  }
+
+  float iou(const Rect& other) const {
+    return this->intersection(other) / this->union_area(other);
+  }
+
+  bool operator==(const Rect& other) const {
+    return (cx_ == other.cx_ && 
+      cy_ == other.cy_ &&
+      width_ == other.width_ &&
+      height_ == other.height_ &&
+      confidence_ == other.confidence_);
+  }
+};
+
 
 typedef struct {
   int num_rows;
@@ -494,6 +573,7 @@ REGISTER_OP("Hungarian")
     .Input("true_boxes: float32")
     .Input("pred_boxes: float32")
     .Input("box_classes: int32")
+    .Input("overlap_threshold: float32")
     .Output("assignments: int32")
     .Output("permuted_box_classes: int32")
     .Output("permuted_true_boxes: float32")
@@ -508,9 +588,11 @@ class HungarianOp : public OpKernel {
     const Tensor& pred_input = context->input(0);
     const Tensor& true_input = context->input(1);
     const Tensor& class_input = context->input(2);
+    const Tensor& overlap_input = context->input(3);
     auto pred_boxes = pred_input.tensor<float, 3>();
     auto true_boxes = true_input.tensor<float, 3>();
     auto box_classes = class_input.matrix<int>();
+    auto iou_threshold = overlap_input.scalar<float>()(0);
 
     // Create an output tensor
     Tensor* assignments_tensor = NULL;
@@ -576,18 +658,27 @@ class HungarianOp : public OpKernel {
   
           const float pred_x = pred_boxes(n, i, c_x);
           const float pred_y = pred_boxes(n, i, c_y);
+          const float pred_w = MAX(pred_boxes(n, i, c_w), 1.); // Rect is at least 1 pixel wide
+          const float pred_h = MAX(pred_boxes(n, i, c_h), 1.); // Rect is at least 1 pixel tall
+          const Rect pred_rect = Rect(pred_x, pred_y, pred_w, pred_h, 0.);
   
           const float true_x = true_boxes(n, j, c_x);
           const float true_y = true_boxes(n, j, c_y);
           const float true_w = true_boxes(n, j, c_w);
           const float true_h = true_boxes(n, j, c_h);
+          const Rect true_rect = Rect(true_x, true_y, true_w, true_h, 0.);
   
-          float ratio = 1.0;
+          //const float iou_threshold = 0.25;
   
-          if (fabs(pred_x - true_x) / true_w > ratio ||
-              fabs(pred_y - true_y) / true_h > ratio) {
+          if (true_rect.iou(pred_rect) < iou_threshold) {
             match_cost[idx] += 100;
           }
+  
+          //float ratio = 1.0;
+          //if (fabs(pred_x - true_x) / true_w > ratio ||
+              //fabs(pred_y - true_y) / true_h > ratio) {
+            //match_cost[idx] += 100;
+          //}
         }
       }
 

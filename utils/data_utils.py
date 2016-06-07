@@ -7,20 +7,10 @@ import numpy as np
 import copy
 import annolist.AnnotationLib as al
 
-def image_to_h5(I, data_mean, image_scaling = 1.0):
-
-    # normalization as needed for ipython notebook
-    I = I.astype(np.float32) / image_scaling - data_mean
-
-    # MA: model expects BGR ordering
-    I = I[:, :, (2, 1, 0)]
-
-    data_shape = (1, I.shape[2], I.shape[0], I.shape[1])
-    h5_image = np.transpose(I, (2,0,1)).reshape(data_shape) 
-    return h5_image
-
-def annotation_to_h5(a, cell_width, cell_height, max_len):
-    region_size = 32
+def annotation_to_h5(H, a, cell_width, cell_height, max_len):
+    region_size = H['arch']['region_size']
+    assert H['arch']['region_size'] == H['arch']['image_height'] / H['arch']['grid_height']
+    assert H['arch']['region_size'] == H['arch']['image_width'] / H['arch']['grid_width']
     cell_regions = get_cell_grid(cell_width, cell_height, region_size)
 
     cells_per_image = len(cell_regions)
@@ -34,16 +24,13 @@ def annotation_to_h5(a, cell_width, cell_height, max_len):
     box_flags = np.zeros((1, cells_per_image, 1, max_len, 1), dtype = np.float)
 
     for cidx in xrange(cells_per_image):
-        cur_num_boxes = min(len(box_list[cidx]), max_len)
         #assert(cur_num_boxes <= max_len)
 
-        box_flags[0, cidx, 0, 0:cur_num_boxes, 0] = 1
-
-        cell_ox = 0.5*(cell_regions[cidx].x1 + cell_regions[cidx].x2)
-        cell_oy = 0.5*(cell_regions[cidx].y1 + cell_regions[cidx].y2)
+        cell_ox = 0.5 * (cell_regions[cidx].x1 + cell_regions[cidx].x2)
+        cell_oy = 0.5 * (cell_regions[cidx].y1 + cell_regions[cidx].y2)
 
         unsorted_boxes = []
-        for bidx in xrange(cur_num_boxes):
+        for bidx in xrange(min(len(box_list[cidx]), max_len)):
 
             # relative box position with respect to cell
             ox = 0.5 * (box_list[cidx][bidx].x1 + box_list[cidx][bidx].x2) - cell_ox
@@ -51,8 +38,12 @@ def annotation_to_h5(a, cell_width, cell_height, max_len):
 
             width = abs(box_list[cidx][bidx].x2 - box_list[cidx][bidx].x1)
             height= abs(box_list[cidx][bidx].y2 - box_list[cidx][bidx].y1)
+            
+            if (abs(ox) < H['arch']['focus_size'] * region_size and abs(oy) < H['arch']['focus_size'] * region_size and
+                    width < H['arch']['biggest_box_px'] and height < H['arch']['biggest_box_px']):
+                unsorted_boxes.append(np.array([ox, oy, width, height], dtype=np.float))
 
-            unsorted_boxes.append(np.array([ox, oy, width, height], dtype=np.float))
+        box_flags[0, cidx, 0, 0:len(unsorted_boxes), 0] = 1
 
         for bidx, box in enumerate(sorted(unsorted_boxes, key=lambda x: x[0]**2 + x[1]**2)):
             boxes[0, cidx, :, bidx, 0] = box
@@ -62,16 +53,14 @@ def annotation_to_h5(a, cell_width, cell_height, max_len):
 def get_cell_grid(cell_width, cell_height, region_size):
 
     cell_regions = []
-    cell_size = 32
     for iy in xrange(cell_height):
         for ix in xrange(cell_width):
-            cidx = iy*cell_width + ix
+            cidx = iy * cell_width + ix
+            ox = (ix + 0.5) * region_size
+            oy = (iy + 0.5) * region_size
 
-            ox = (ix + 0.5)*cell_size
-            oy = (iy + 0.5)*cell_size
-
-            r = al.AnnoRect(ox - 0.5*region_size, oy - 0.5*region_size, 
-                    ox + 0.5*region_size, oy + 0.5*region_size)
+            r = al.AnnoRect(ox - 0.5 * region_size, oy - 0.5 * region_size,
+                            ox + 0.5 * region_size, oy + 0.5 * region_size)
             r.track_id = cidx
 
             cell_regions.append(r)
@@ -186,4 +175,3 @@ def annotation_jitter(I, a_in, min_box_width=20, jitter_scale_min=0.9, jitter_sc
     a.rects = new_rects
 
     return I2, a
-

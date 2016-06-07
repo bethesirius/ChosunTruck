@@ -5,9 +5,9 @@ import os
 import cv2
 import itertools
 from scipy.misc import imread, imresize
+import tensorflow as tf
 
-from data_utils import (annotation_jitter, image_to_h5,
-                   annotation_to_h5)
+from data_utils import (annotation_jitter, annotation_to_h5)
 from utils.annolist import AnnotationLib as al
 from rect import Rect
 
@@ -58,7 +58,8 @@ def load_idl_tf(idlfile, H, jitter):
                                             jitter_scale_max=jitter_scale_max,
                                             jitter_offset=jitter_offset)
 
-            boxes, flags = annotation_to_h5(anno,
+            boxes, flags = annotation_to_h5(H,
+                                            anno,
                                             H["arch"]["grid_width"],
                                             H["arch"]["grid_height"],
                                             H["arch"]["rnn_len"])
@@ -85,13 +86,13 @@ def load_data_gen(H, phase, jitter):
         assert(boxes.shape == (grid_size, rnn_len, 4))
 
         output['image'] = d['image']
-        output['confs'] = np.array([[make_sparse(detection, d=2) for detection in cell] for cell in flags])
+        output['confs'] = np.array([[make_sparse(int(detection), d=2) for detection in cell] for cell in flags])
         output['boxes'] = boxes
         output['flags'] = flags
         
         yield output
 
-def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.5):
+def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.1, show_removed=True, tau=0.25):
     image = np.copy(orig_image[0])
     num_cells = arch["grid_height"] * arch["grid_width"]
     boxes_r = np.reshape(boxes, (-1,
@@ -104,33 +105,36 @@ def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rn
                                              arch["grid_width"],
                                              rnn_len,
                                              2))
-    cell_pix_size = 32
+    cell_pix_size = H['arch']['region_size']
     all_rects = [[[] for _ in range(arch["grid_width"])] for _ in range(arch["grid_height"])]
     for n in range(rnn_len):
         for y in range(arch["grid_height"]):
             for x in range(arch["grid_width"]):
                 bbox = boxes_r[0, y, x, n, :]
-                conf = confidences_r[0, y, x, n, 1]
                 abs_cx = int(bbox[0]) + cell_pix_size/2 + cell_pix_size * x
                 abs_cy = int(bbox[1]) + cell_pix_size/2 + cell_pix_size * y
                 w = bbox[2]
                 h = bbox[3]
+                conf = confidences_r[0, y, x, n, 1]
                 all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
 
+    all_rects_r = [r for row in all_rects for cell in row for r in cell]
     if use_stitching:
         from stitch_wrapper import stitch_rects
-        acc_rects = stitch_rects(all_rects)
+        acc_rects = stitch_rects(all_rects, tau)
     else:
-        acc_rects = [r for row in all_rects for cell in row for r in cell]
+        acc_rects = all_rects_r
 
 
-    for rect in acc_rects:
-        if rect.confidence > min_conf:
-            cv2.rectangle(image,
-                (rect.cx-int(rect.width/2), rect.cy-int(rect.height/2)),
-                (rect.cx+int(rect.width/2), rect.cy+int(rect.height/2)),
-                (0,255,0),
-                2)
+    pairs = [(all_rects_r, (255, 0, 0)), (acc_rects, (0, 255, 0))]
+    for rect_set, color in pairs:
+        for rect in rect_set:
+            if rect.confidence > min_conf:
+                cv2.rectangle(image,
+                    (rect.cx-int(rect.width/2), rect.cy-int(rect.height/2)),
+                    (rect.cx+int(rect.width/2), rect.cy+int(rect.height/2)),
+                    color,
+                    2)
 
     rects = []
     for rect in acc_rects:
@@ -143,3 +147,34 @@ def add_rectangles(orig_image, confidences, boxes, arch, use_stitching=False, rn
         rects.append(r)
 
     return image, rects
+
+def to_x1y1x2y2(box):
+    w = tf.maximum(box[:, 2:3], 1)
+    h = tf.maximum(box[:, 3:4], 1)
+    x1 = box[:, 0:1] - w / 2
+    x2 = box[:, 0:1] + w / 2
+    y1 = box[:, 1:2] - h / 2
+    y2 = box[:, 1:2] + h / 2
+    return tf.concat(1, [x1, y1, x2, y2])
+
+def intersection(box1, box2):
+    x1_max = tf.maximum(box1[:, 0], box2[:, 0])
+    y1_max = tf.maximum(box1[:, 1], box2[:, 1])
+    x2_min = tf.minimum(box1[:, 2], box2[:, 2])
+    y2_min = tf.minimum(box1[:, 3], box2[:, 3])
+   
+    x_diff = tf.maximum(x2_min - x1_max, 0)
+    y_diff = tf.maximum(y2_min - y1_max, 0)
+    
+    return x_diff * y_diff
+
+def area(box):
+    x_diff = tf.maximum(box[:, 2] - box[:, 0], 0)
+    y_diff = tf.maximum(box[:, 3] - box[:, 1], 0)
+    return x_diff * y_diff
+
+def union(box1, box2):
+    return area(box1) + area(box2) - intersection(box1, box2)
+
+def iou(box1, box2):
+    return intersection(box1, box2) / union(box1, box2)

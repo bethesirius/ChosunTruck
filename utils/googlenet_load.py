@@ -1,4 +1,5 @@
 import tensorflow as tf
+from kaffe import mynet
 import os
 import numpy as np
 
@@ -118,14 +119,14 @@ def model(x, googlenet, H):
             )
 
             T[op.name] = copied_op.outputs[0]
-            #T[op.name] = tf.Print(copied_op.outputs[0], [tf.shape(copied_op.outputs[0]), tf.constant(op.name)])
+            #T[op.name] = tf.Print(copied_op.outputs[0], [tf.shape(copied_op.outputs[0]), tf.constant(op.name)], summarize=4)
     
 
-    cnn_feat = T['mixed5b']
-    cnn_feat_r = tf.reshape(cnn_feat, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'], 1024])
-    finegrain = T['mixed3b']
-    finegrain_r = tf.reshape(cnn_feat, [H['arch']['batch_size'] * H['arch']['grid_width'] * H['arch']['grid_height'] * 4 * 4, 64])
+    coarse_feat = T['mixed5b']
 
-    Z = cnn_feat_r
+    # fine feat can be used to reinspect input
+    attention_lname = H['arch'].get('attention_lname', 'mixed3b')
+    early_feat = T[attention_lname]
+    early_feat_channels = 480
 
-    return Z
+    return coarse_feat, early_feat, early_feat_channels

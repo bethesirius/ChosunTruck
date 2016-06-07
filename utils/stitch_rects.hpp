@@ -39,13 +39,13 @@ class Rect {
     true_confidence_ = other.true_confidence_;
   }
 
-  bool overlaps(const Rect& other) const {
+  bool overlaps(const Rect& other, float tau) const {
     if (fabs(cx_ - other.cx_) > (width_ + other.width_) / 1.5) {
       return false;
     } else if (fabs(cy_ - other.cy_) > (height_ + other.height_) / 2.0) {
       return false;
     } else {
-      return true;
+      return iou(other) > tau;
     }
   }
 
@@ -89,6 +89,8 @@ class Rect {
 void filter_rects(const vector<vector<vector<Rect> > >& all_rects,
                   vector<Rect>* stitched_rects,
                   float threshold,
-                  float max_threshold);
+                  float max_threshold,
+                  float tau,
+                  float conf_alpha);
 
 #endif // STITCH_RECTS_HPP
