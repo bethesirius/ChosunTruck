@@ -5,7 +5,7 @@ import subprocess
 from scipy.misc import imread, imresize
 from scipy import misc
 
-from train import build_lstm_forward
+from train import build_forward_backward
 from utils import googlenet_load
 from utils.annolist import AnnotationLib as al
 from utils.train_utils import add_rectangles, rescale_boxes
@@ -79,17 +79,14 @@ def get_results(args, H):
     tf.reset_default_graph()
     x_in = tf.placeholder(tf.float32, name='x_in', shape=[H['arch']['image_height'], H['arch']['image_width'], 3])
     googlenet = googlenet_load.init(H)
-    #if H['arch']['use_lstm']:
-    if H['arch']['use_reinspect']:
-        pred_boxes, pred_logits, pred_confidences, pred_confs_deltas, pred_boxes_deltas = build_lstm_forward(H, tf.expand_dims(x_in, 0), googlenet, 'test', reuse=None)
+    if H['arch']['use_rezoom']:
+        pred_boxes, pred_logits, pred_confidences, pred_confs_deltas, pred_boxes_deltas = build_forward_backward(H, tf.expand_dims(x_in, 0), googlenet, 'test', reuse=None)
         grid_area = H['arch']['grid_height'] * H['arch']['grid_width']
         pred_confidences = tf.reshape(tf.nn.softmax(tf.reshape(pred_confs_deltas, [grid_area * H['arch']['rnn_len'], 2])), [grid_area, H['arch']['rnn_len'], 2])
         if H['arch']['reregress']:
             pred_boxes = pred_boxes + pred_boxes_deltas
     else:
-        pred_boxes, pred_logits, pred_confidences = build_lstm_forward(H, tf.expand_dims(x_in, 0), googlenet, 'test', reuse=None)
-    #else:
-        #pred_boxes, pred_logits, pred_confidences = build_overfeat_forward(H, tf.expand_dims(x_in, 0), googlenet, 'test')
+        pred_boxes, pred_logits, pred_confidences = build_forward_backward(H, tf.expand_dims(x_in, 0), googlenet, 'test', reuse=None)
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.initialize_all_variables())

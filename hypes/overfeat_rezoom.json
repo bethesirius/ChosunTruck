@@ -5,12 +5,12 @@
         "truncate_data": false
     },
     "arch": {
-        "use_lstm": true,
-        "use_reinspect": true,
+        "use_lstm": false,
+        "use_rezoom": true,
         "biggest_box_px": 10000,
-        "reinspect_change_loss": "center",
-        "reinspect_w_coords": [-0.25, 0.25],
-        "reinspect_h_coords": [-0.25, 0.25],
+        "rezoom_change_loss": "center",
+        "rezoom_w_coords": [-0.25, 0.25],
+        "rezoom_h_coords": [-0.25, 0.25],
         "reregress": true,
         "focus_size": 1.8,
         "early_feat_channels": 256,
@@ -25,7 +25,7 @@
         "clip_norm": 1.0,
         "lstm_size": 500,
         "num_classes": 2,
-        "rnn_len": 5
+        "rnn_len": 1
     }, 
     "logging": {
         "display_iter": 50,
