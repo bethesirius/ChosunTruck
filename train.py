@@ -27,6 +27,9 @@ from utils import train_utils
 from utils import googlenet_load
 
 def build_lstm_inner(lstm_input, H):
+    '''
+    build lstm decoder
+    '''
     lstm_cell = rnn_cell.BasicLSTMCell(H['arch']['lstm_size'], forget_bias=0.0)
     if H['arch']['num_lstm_layers'] > 1:
         lstm = rnn_cell.MultiRNNCell([lstm_cell] * H['arch']['num_lstm_layers'])
@@ -45,6 +48,9 @@ def build_lstm_inner(lstm_input, H):
     return outputs
 
 def build_overfeat_inner(lstm_input, H):
+    '''
+    build simple overfeat decoder
+    '''
     if H['arch']['rnn_len'] > 1:
         raise ValueError('rnn_len > 1 only supported with use_lstm == True')
     outputs = []
@@ -103,7 +109,11 @@ def interp(w, i, channel_dim):
     value = (1 - alpha_ud) * upper_value + (alpha_ud) * lower_value
     return value
 
-def rezoom(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset):
+def bilinear_select(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset):
+    '''
+    Function used for rezooming high level feature maps. Uses bilinear interpolation
+    to select all channels at index (x, y) for a high level feature map, where x and y are floats.
+    '''
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
 
@@ -139,13 +149,29 @@ def rezoom(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset):
     interp_indices = tf.concat(1, [tf.to_float(batch_ids), pred_y_center_clip, pred_x_center_clip])
     return interp_indices
 
-def multi_rezoom(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets):
+def rezoom(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets):
+    '''
+    Rezoom into a feature map at multiple interpolation points in a grid. 
+
+    If the predicted object center is at X, len(w_offsets) == 3, and len(h_offsets) == 5,
+    the rezoom grid will look as follows:
+
+    [o o o]
+    [o o o]
+    [o X o]
+    [o o o]
+    [o o o]
+
+    Where each letter indexes into the feature map with bilinear interpolation
+    '''
+
+
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
     indices = []
     for w_offset in w_offsets:
         for h_offset in h_offsets:
-            indices.append(rezoom(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset))
+            indices.append(bilinear_select(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset))
 
     interp_indices = tf.concat(0, indices)
     rezoom_features = interp(early_feat, interp_indices, early_feat_channels)
@@ -158,6 +184,10 @@ def multi_rezoom(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_of
     return rezoom_features_t_r
 
 def build_forward(H, x, googlenet, phase, reuse):
+    '''
+    Construct the forward model
+    '''
+
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
     input_mean = 117.
@@ -217,7 +247,7 @@ def build_forward(H, x, googlenet, phase, reuse):
             w_offsets = H['arch']['rezoom_w_coords']
             h_offsets = H['arch']['rezoom_h_coords']
             num_offsets = len(w_offsets) * len(h_offsets)
-            rezoom_features = multi_rezoom(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets)
+            rezoom_features = rezoom(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets)
             if phase == 'train':
                 rezoom_features = tf.nn.dropout(rezoom_features, 0.5)
             for k in range(H['arch']['rnn_len']):
@@ -257,6 +287,10 @@ def _hungarian_grad(op, *args):
     return map(array_ops.zeros_like, op.inputs)
 
 def build_forward_backward(H, x, googlenet, phase, boxes, flags):
+    '''
+    Call build_forward() and then setup the loss functions
+    '''
+
     grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
     outer_size = grid_size * H['arch']['batch_size']
     reuse = {'train': None, 'test': True}[phase]
@@ -421,6 +455,10 @@ def build(H, q):
 
 
 def train(H, test_images):
+    '''
+    Setup computation graph, run 2 prefetch data threads, and then run the main loop
+    '''
+
     if not os.path.exists(H['save_dir']): os.makedirs(H['save_dir'])
 
     ckpt_file = H['save_dir'] + '/save.ckpt'
@@ -547,9 +585,6 @@ def train(H, test_images):
 
             if global_step.eval() % H['logging']['save_iter'] == 0 or global_step.eval() == max_iter - 1:
                 saver.save(sess, ckpt_file, global_step=global_step)
-
-        #for phase in ['train', 'test']:
-            #q[phase].close()
 
 
 def main():
