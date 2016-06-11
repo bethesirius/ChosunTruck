@@ -14,6 +14,7 @@ import time
 import string
 import argparse
 import os
+from scipy import misc
 import tensorflow as tf
 import numpy as np
 from tensorflow.models.rnn import rnn_cell
@@ -223,7 +224,7 @@ def build_forward(H, x, googlenet, phase, reuse):
                                           shape=(H['arch']['lstm_size'], 4),
                                           initializer=initializer)
             conf_weights = tf.get_variable('conf_ip%d' % k,
-                                           shape=(H['arch']['lstm_size'], 2),
+                                           shape=(H['arch']['lstm_size'], H['arch']['num_classes']),
                                            initializer=initializer)
 
             pred_boxes_step = tf.reshape(tf.matmul(output, box_weights) * 50,
@@ -231,15 +232,15 @@ def build_forward(H, x, googlenet, phase, reuse):
 
             pred_boxes.append(pred_boxes_step)
             pred_logits.append(tf.reshape(tf.matmul(output, conf_weights),
-                                         [outer_size, 1, 2]))
+                                         [outer_size, 1, H['arch']['num_classes']]))
  
         pred_boxes = tf.concat(1, pred_boxes)
         pred_logits = tf.concat(1, pred_logits)
         pred_logits_squash = tf.reshape(pred_logits,
-                                        [outer_size * H['arch']['rnn_len'], 2])
+                                        [outer_size * H['arch']['rnn_len'], H['arch']['num_classes']])
         pred_confidences_squash = tf.nn.softmax(pred_logits_squash)
         pred_confidences = tf.reshape(pred_confidences_squash,
-                                      [outer_size, H['arch']['rnn_len'], 2])
+                                      [outer_size, H['arch']['rnn_len'], H['arch']['num_classes']])
 
         if H['arch']['use_rezoom']:
             pred_confs_deltas = []
@@ -263,7 +264,7 @@ def build_forward(H, x, googlenet, phase, reuse):
                     ip1 = tf.nn.dropout(ip1, 0.5)
                 delta_confs_weights = tf.get_variable(
                                     'delta_ip2%d' % k,
-                                    shape=[dim, 2],
+                                    shape=[dim, H['arch']['num_classes']],
                                     initializer=initializer)
                 if H['arch']['reregress']:
                     delta_boxes_weights = tf.get_variable(
@@ -274,12 +275,13 @@ def build_forward(H, x, googlenet, phase, reuse):
                                                         [outer_size, 1, 4]))
                 scale = H['arch'].get('rezoom_conf_scale', 50) 
                 pred_confs_deltas.append(tf.reshape(tf.matmul(ip1, delta_confs_weights) * scale,
-                                                    [outer_size, 1, 2]))
+                                                    [outer_size, 1, H['arch']['num_classes']]))
             pred_confs_deltas = tf.concat(1, pred_confs_deltas)
             if H['arch']['reregress']:
                 pred_boxes_deltas = tf.concat(1, pred_boxes_deltas)
             return pred_boxes, pred_logits, pred_confidences, pred_confs_deltas, pred_boxes_deltas
 
+    pred_logits = tf.Print(pred_logits, [tf.shape(pred_logits)])
     return pred_boxes, pred_logits, pred_confidences
 
 @ops.RegisterGradient("Hungarian")
@@ -312,7 +314,7 @@ def build_forward_backward(H, x, googlenet, phase, boxes, flags):
         true_classes = tf.reshape(tf.cast(tf.greater(classes, 0), 'int64'),
                                   [outer_size * H['arch']['rnn_len']])
         pred_logit_r = tf.reshape(pred_logits,
-                                  [outer_size * H['arch']['rnn_len'], 2])
+                                  [outer_size * H['arch']['rnn_len'], H['arch']['num_classes']])
         confidences_loss = (tf.reduce_sum(
             tf.nn.sparse_softmax_cross_entropy_with_logits(pred_logit_r, true_classes))
             ) / outer_size * H['solver']['head_weights'][0]
@@ -331,7 +333,7 @@ def build_forward_backward(H, x, googlenet, phase, boxes, flags):
             else:
                 assert H['arch']['rezoom_change_loss'] == False
                 inside = tf.reshape(tf.to_int64((tf.greater(classes, 0))), [-1])
-            new_confs = tf.reshape(pred_confs_deltas, [outer_size * H['arch']['rnn_len'], 2])
+            new_confs = tf.reshape(pred_confs_deltas, [outer_size * H['arch']['rnn_len'], H['arch']['num_classes']])
             delta_confs_loss = tf.reduce_sum(
                 tf.nn.sparse_softmax_cross_entropy_with_logits(new_confs, inside)) / outer_size * H['solver']['head_weights'][0] * 0.1
 
@@ -339,10 +341,10 @@ def build_forward_backward(H, x, googlenet, phase, boxes, flags):
             if not use_orig_conf:
                 confidences_loss = delta_confs_loss
             pred_logits_squash = tf.reshape(new_confs,
-                                            [outer_size * H['arch']['rnn_len'], 2])
+                                            [outer_size * H['arch']['rnn_len'], H['arch']['num_classes']])
             pred_confidences_squash = tf.nn.softmax(pred_logits_squash)
             pred_confidences = tf.reshape(pred_confidences_squash,
-                                      [outer_size, H['arch']['rnn_len'], 2])
+                                      [outer_size, H['arch']['rnn_len'], H['arch']['num_classes']])
             loss = confidences_loss + boxes_loss + delta_confs_loss
             confidences_loss = delta_confs_loss
             if H['arch']['reregress']:
@@ -403,6 +405,7 @@ def build(H, q):
          loss[phase], confidences_loss[phase],
          boxes_loss[phase]) = build_forward_backward(H, x, encoder_net, phase, boxes, flags)
         pred_confidences_r = tf.reshape(pred_confidences, [H['arch']['batch_size'], grid_size, H['arch']['rnn_len'], arch['num_classes']])
+        pred_confidences_r = tf.Print(pred_confidences_r, [tf.shape(pred_confidences_r)], summarize=4)
         pred_boxes_r = tf.reshape(pred_boxes, [H['arch']['batch_size'], grid_size, H['arch']['rnn_len'], 4])
 
 
@@ -609,7 +612,6 @@ def main():
         datetime.datetime.now().strftime('%Y_%m_%d_%H.%M'))
     if args.weights is not None:
         H['solver']['weights'] = args.weights
-    H['arch']['num_classes'] = 2
     train(H, test_images=[])
 
 if __name__ == '__main__':

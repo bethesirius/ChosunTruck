@@ -80,13 +80,13 @@ def load_data_gen(H, phase, jitter):
         output = {}
         
         rnn_len = H["arch"]["rnn_len"]
-        flags = d['flags'][0,:,0,0:rnn_len,0]
-        boxes = np.transpose(d['boxes'][0,:,:,0:rnn_len,0], (0,2,1))
+        flags = d['flags'][0, :, 0, 0:rnn_len, 0]
+        boxes = np.transpose(d['boxes'][0, :, :, 0:rnn_len, 0], (0, 2, 1))
         assert(flags.shape == (grid_size, rnn_len))
         assert(boxes.shape == (grid_size, rnn_len, 4))
 
         output['image'] = d['image']
-        output['confs'] = np.array([[make_sparse(int(detection), d=2) for detection in cell] for cell in flags])
+        output['confs'] = np.array([[make_sparse(int(detection), d=H['arch']['num_classes']) for detection in cell] for cell in flags])
         output['boxes'] = boxes
         output['flags'] = flags
         
@@ -104,7 +104,7 @@ def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False,
                                              arch["grid_height"],
                                              arch["grid_width"],
                                              rnn_len,
-                                             2))
+                                             H['arch']['num_classes']))
     cell_pix_size = H['arch']['region_size']
     all_rects = [[[] for _ in range(arch["grid_width"])] for _ in range(arch["grid_height"])]
     for n in range(rnn_len):
@@ -115,7 +115,7 @@ def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False,
                 abs_cy = int(bbox[1]) + cell_pix_size/2 + cell_pix_size * y
                 w = bbox[2]
                 h = bbox[3]
-                conf = confidences_r[0, y, x, n, 1]
+                conf = np.max(confidences_r[0, y, x, n, 1:])
                 all_rects[y][x].append(Rect(abs_cx,abs_cy,w,h,conf))
 
     all_rects_r = [r for row in all_rects for cell in row for r in cell]

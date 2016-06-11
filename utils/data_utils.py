@@ -43,10 +43,9 @@ def annotation_to_h5(H, a, cell_width, cell_height, max_len):
                     width < H['arch']['biggest_box_px'] and height < H['arch']['biggest_box_px']):
                 unsorted_boxes.append(np.array([ox, oy, width, height], dtype=np.float))
 
-        box_flags[0, cidx, 0, 0:len(unsorted_boxes), 0] = 1
-
         for bidx, box in enumerate(sorted(unsorted_boxes, key=lambda x: x[0]**2 + x[1]**2)):
             boxes[0, cidx, :, bidx, 0] = box
+            box_flags[0, cidx, 0, bidx, 0] = max(box_list[cidx][bidx].silhouetteID, 1)
 
     return boxes, box_flags
 
