@@ -351,12 +351,30 @@ def build(H, q):
             test_pred_confidences = pred_confidences_r[0, :, :, :]
             test_pred_boxes = pred_boxes_r[0, :, :, :]
 
+            def log_image(np_img, np_confidences, np_boxes, np_global_step, pred_or_true):
+                
+                merged = train_utils.add_rectangles(H, np_img, np_confidences, np_boxes,
+                                                    H["arch"], use_stitching=True,
+                                                    rnn_len=H['arch']['rnn_len'])[0]
+                
+                padded_step = '0' * (7 - len(str(np_global_step))) + str(np_global_step)
+                img_path = os.path.join(H['save_dir'], '%s_%s.jpg' % (padded_step, pred_or_true))
+                misc.imsave(img_path, merged)
+                return merged
+
+            pred_log_img = tf.py_func(log_image,
+                                      [test_image, test_pred_confidences, test_pred_boxes, global_step, 'pred'],
+                                      [tf.float32])
+            true_log_img = tf.py_func(log_image,
+                                      [test_image, test_true_confidences, test_true_boxes, global_step, 'true'],
+                                      [tf.float32])
+            tf.image_summary(phase + '/pred_boxes', pred_log_img)
+            tf.image_summary(phase + '/true_boxes', true_log_img)
+
     summary_op = tf.merge_all_summaries()
 
     return (config, loss, accuracy, summary_op, train_op, W_norm,
-            test_image, test_pred_boxes, test_pred_confidences,
-            test_true_boxes, test_true_confidences, smooth_op,
-            global_step, learning_rate, encoder_net)
+            smooth_op, global_step, learning_rate, encoder_net)
 
 
 def train(H, test_images):
@@ -399,8 +417,6 @@ def train(H, test_images):
                 break
 
     (config, loss, accuracy, summary_op, train_op, W_norm,
-     test_image, test_pred_boxes, test_pred_confidences,
-     test_true_boxes, test_true_confidences,
      smooth_op, global_step, learning_rate, encoder_net) = build(H, q)
 
     saver = tf.train.Saver(max_to_keep=None)
@@ -408,11 +424,6 @@ def train(H, test_images):
         logdir=H['save_dir'],
         flush_secs=10
     )
-
-    test_image_to_log = tf.placeholder(tf.uint8,
-                                       [H['arch']['image_height'], H['arch']['image_width'], 3])
-    log_image_name = tf.placeholder(tf.string)
-    log_image = tf.image_summary(log_image_name, tf.expand_dims(test_image_to_log, 0))
 
     coord = tf.train.Coordinator()
     with tf.Session(config=config) as sess:
@@ -449,31 +460,11 @@ def train(H, test_images):
                     dt = (time.time() - start) / (H['arch']['batch_size'] * display_iter)
                 start = time.time()
                 (batch_loss_train, test_accuracy, weights_norm,
-                    summary_str, np_test_image, np_test_pred_boxes,
-                    np_test_pred_confidences, np_test_true_boxes,
-                    np_test_true_confidences, _, _) = sess.run([
+                    summary_str,
+                    _, _) = sess.run([
                          loss['train'], accuracy['test'], W_norm,
-                         summary_op, test_image, test_pred_boxes,
-                         test_pred_confidences, test_true_boxes, test_true_confidences,
-                         train_op, smooth_op,
+                         summary_op, train_op, smooth_op,
                         ], feed_dict=lr_feed)
-                num_img_logs = 3
-                pred_true = [("%d_pred_output" % (i % num_img_logs), np_test_pred_boxes, np_test_pred_confidences),
-                             ("%d_true_output" % (i % num_img_logs), np_test_true_boxes, np_test_true_confidences)]
-
-                for name, boxes, confidences in pred_true:
-                    test_output_to_log = train_utils.add_rectangles(H,
-                                                                    np_test_image,
-                                                                    confidences,
-                                                                    boxes,
-                                                                    H["arch"],
-                                                                    use_stitching=True,
-                                                                    rnn_len=H['arch']['rnn_len'])[0]
-                    assert test_output_to_log.shape == (H['arch']['image_height'],
-                                                        H['arch']['image_width'], num_img_logs)
-                    feed = {test_image_to_log: test_output_to_log, log_image_name: name}
-                    test_image_summary_str = sess.run(log_image, feed_dict=feed)
-                    writer.add_summary(test_image_summary_str, global_step=global_step.eval())
                 writer.add_summary(summary_str, global_step=global_step.eval())
                 print_str = string.join([
                     'Step: %d',
