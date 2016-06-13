@@ -8,7 +8,7 @@ def init(H, config=None):
         gpu_options = tf.GPUOptions()
         config = tf.ConfigProto(gpu_options=gpu_options)
 
-    k = H['arch']['num_classes']
+    k = H['num_classes']
     features_dim = 1024
     input_layer = 'input'
 
@@ -106,7 +106,7 @@ def model(x, googlenet, H):
         if is_early_loss(op.name):
             continue
         elif op.name == 'avgpool0':
-            pool_op = tf.nn.avg_pool(T['mixed5b'], ksize=[1,H['arch']['grid_height'],H['arch']['grid_width'],1], strides=[1,1,1,1], padding='VALID', name=op.name)
+            pool_op = tf.nn.avg_pool(T['mixed5b'], ksize=[1,H['grid_height'],H['grid_width'],1], strides=[1,1,1,1], padding='VALID', name=op.name)
             T[op.name] = pool_op
 
         else:
@@ -125,7 +125,7 @@ def model(x, googlenet, H):
     coarse_feat = T['mixed5b']
 
     # fine feat can be used to reinspect input
-    attention_lname = H['arch'].get('attention_lname', 'mixed3b')
+    attention_lname = H.get('attention_lname', 'mixed3b')
     early_feat = T[attention_lname]
     early_feat_channels = 480
 

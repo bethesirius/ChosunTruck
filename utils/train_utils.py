@@ -43,26 +43,26 @@ def load_idl_tf(idlfile, H, jitter):
             I = imread(anno.imageName)
             if I.shape[2] == 4:
                 I = I[:, :, :3]
-            if I.shape[0] != H["arch"]["image_height"] or I.shape[1] != H["arch"]["image_width"]:
+            if I.shape[0] != H["image_height"] or I.shape[1] != H["image_width"]:
                 if epoch == 0:
-                    anno = rescale_boxes(I.shape, anno, H["arch"]["image_height"], H["arch"]["image_width"])
-                I = imresize(I, (H["arch"]["image_height"], H["arch"]["image_width"]), interp='cubic')
+                    anno = rescale_boxes(I.shape, anno, H["image_height"], H["image_width"])
+                I = imresize(I, (H["image_height"], H["image_width"]), interp='cubic')
             if jitter:
                 jitter_scale_min=0.9
                 jitter_scale_max=1.1
                 jitter_offset=16
                 I, anno = annotation_jitter(I,
-                                            anno, target_width=H["arch"]["image_width"],
-                                            target_height=H["arch"]["image_height"],
+                                            anno, target_width=H["image_width"],
+                                            target_height=H["image_height"],
                                             jitter_scale_min=jitter_scale_min,
                                             jitter_scale_max=jitter_scale_max,
                                             jitter_offset=jitter_offset)
 
             boxes, flags = annotation_to_h5(H,
                                             anno,
-                                            H["arch"]["grid_width"],
-                                            H["arch"]["grid_height"],
-                                            H["arch"]["rnn_len"])
+                                            H["grid_width"],
+                                            H["grid_height"],
+                                            H["rnn_len"])
 
             yield {"image": I, "boxes": boxes, "flags": flags}
 
@@ -72,44 +72,44 @@ def make_sparse(n, d):
     return v
 
 def load_data_gen(H, phase, jitter):
-    grid_size = H["arch"]['grid_width'] * H["arch"]['grid_height']
+    grid_size = H['grid_width'] * H['grid_height']
 
     data = load_idl_tf(H["data"]['%s_idl' % phase], H, jitter={'train': jitter, 'test': False}[phase])
 
     for d in data:
         output = {}
         
-        rnn_len = H["arch"]["rnn_len"]
+        rnn_len = H["rnn_len"]
         flags = d['flags'][0, :, 0, 0:rnn_len, 0]
         boxes = np.transpose(d['boxes'][0, :, :, 0:rnn_len, 0], (0, 2, 1))
         assert(flags.shape == (grid_size, rnn_len))
         assert(boxes.shape == (grid_size, rnn_len, 4))
 
         output['image'] = d['image']
-        output['confs'] = np.array([[make_sparse(int(detection), d=H['arch']['num_classes']) for detection in cell] for cell in flags])
+        output['confs'] = np.array([[make_sparse(int(detection), d=H['num_classes']) for detection in cell] for cell in flags])
         output['boxes'] = boxes
         output['flags'] = flags
         
         yield output
 
-def add_rectangles(H, orig_image, confidences, boxes, arch, use_stitching=False, rnn_len=1, min_conf=0.1, show_removed=True, tau=0.25):
+def add_rectangles(H, orig_image, confidences, boxes, use_stitching=False, rnn_len=1, min_conf=0.1, show_removed=True, tau=0.25):
     image = np.copy(orig_image[0])
-    num_cells = arch["grid_height"] * arch["grid_width"]
+    num_cells = H["grid_height"] * H["grid_width"]
     boxes_r = np.reshape(boxes, (-1,
-                                 arch["grid_height"],
-                                 arch["grid_width"],
+                                 H["grid_height"],
+                                 H["grid_width"],
                                  rnn_len,
                                  4))
     confidences_r = np.reshape(confidences, (-1,
-                                             arch["grid_height"],
-                                             arch["grid_width"],
+                                             H["grid_height"],
+                                             H["grid_width"],
                                              rnn_len,
-                                             H['arch']['num_classes']))
-    cell_pix_size = H['arch']['region_size']
-    all_rects = [[[] for _ in range(arch["grid_width"])] for _ in range(arch["grid_height"])]
+                                             H['num_classes']))
+    cell_pix_size = H['region_size']
+    all_rects = [[[] for _ in range(H["grid_width"])] for _ in range(H["grid_height"])]
     for n in range(rnn_len):
-        for y in range(arch["grid_height"]):
-            for x in range(arch["grid_width"]):
+        for y in range(H["grid_height"]):
+            for x in range(H["grid_width"]):
                 bbox = boxes_r[0, y, x, n, :]
                 abs_cx = int(bbox[0]) + cell_pix_size/2 + cell_pix_size * x
                 abs_cy = int(bbox[1]) + cell_pix_size/2 + cell_pix_size * y
@@ -234,18 +234,18 @@ def bilinear_select(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_
     Function used for rezooming high level feature maps. Uses bilinear interpolation
     to select all channels at index (x, y) for a high level feature map, where x and y are floats.
     '''
-    grid_size = H['arch']['grid_width'] * H['arch']['grid_height']
-    outer_size = grid_size * H['arch']['batch_size']
+    grid_size = H['grid_width'] * H['grid_height']
+    outer_size = grid_size * H['batch_size']
 
     fine_stride = 8. # pixels per 60x80 grid cell in 480x640 image
-    coarse_stride = H['arch']['region_size'] # pixels per 15x20 grid cell in 480x640 image
+    coarse_stride = H['region_size'] # pixels per 15x20 grid cell in 480x640 image
     batch_ids = []
     x_offsets = []
     y_offsets = []
-    for n in range(H['arch']['batch_size']):
-        for i in range(H['arch']['grid_height']):
-            for j in range(H['arch']['grid_width']):
-                for k in range(H['arch']['rnn_len']):
+    for n in range(H['batch_size']):
+        for i in range(H['grid_height']):
+            for j in range(H['grid_width']):
+                for k in range(H['rnn_len']):
                     batch_ids.append([n])
                     x_offsets.append([coarse_stride / 2. + coarse_stride * j])
                     y_offsets.append([coarse_stride / 2. + coarse_stride * i])
@@ -254,18 +254,17 @@ def bilinear_select(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_
     x_offsets = tf.constant(x_offsets)
     y_offsets = tf.constant(y_offsets)
 
-    pred_boxes_r = tf.reshape(pred_boxes, [outer_size * H['arch']['rnn_len'], 4])
+    pred_boxes_r = tf.reshape(pred_boxes, [outer_size * H['rnn_len'], 4])
     scale_factor = coarse_stride / fine_stride # scale difference between 15x20 and 60x80 features
 
     pred_x_center = (pred_boxes_r[:, 0:1] + w_offset * pred_boxes_r[:, 2:3] + x_offsets) / fine_stride
     pred_x_center_clip = tf.clip_by_value(pred_x_center,
                                      0,
-                                     scale_factor * H['arch']['grid_width'] - 1)
+                                     scale_factor * H['grid_width'] - 1)
     pred_y_center = (pred_boxes_r[:, 1:2] + h_offset * pred_boxes_r[:, 3:4] + y_offsets) / fine_stride
     pred_y_center_clip = tf.clip_by_value(pred_y_center,
                                           0,
-                                          scale_factor * H['arch']['grid_height'] - 1)
+                                          scale_factor * H['grid_height'] - 1)
 
     interp_indices = tf.concat(1, [tf.to_float(batch_ids), pred_y_center_clip, pred_x_center_clip])
     return interp_indices
-
