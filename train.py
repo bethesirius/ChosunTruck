@@ -53,7 +53,8 @@ def build_overfeat_inner(H, lstm_input):
     if H['rnn_len'] > 1:
         raise ValueError('rnn_len > 1 only supported with use_lstm == True')
     outputs = []
-    with tf.variable_scope('Overfeat', initializer=tf.random_uniform_initializer(-0.1, 0.1)):
+    initializer = tf.random_uniform_initializer(-0.1, 0.1)
+    with tf.variable_scope('Overfeat', initializer=initializer):
         w = tf.get_variable('ip', shape=[1024, H['lstm_size']])
         outputs.append(tf.matmul(lstm_input, w))
     return outputs
@@ -80,17 +81,26 @@ def rezoom(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets)
     indices = []
     for w_offset in w_offsets:
         for h_offset in h_offsets:
-            indices.append(train_utils.bilinear_select(H, pred_boxes, early_feat, early_feat_channels, w_offset, h_offset))
+            indices.append(train_utils.bilinear_select(H,
+                                                       pred_boxes,
+                                                       early_feat,
+                                                       early_feat_channels,
+                                                       w_offset, h_offset))
 
     interp_indices = tf.concat(0, indices)
-    rezoom_features = train_utils.interp(early_feat, interp_indices, early_feat_channels)
+    rezoom_features = train_utils.interp(early_feat,
+                                         interp_indices,
+                                         early_feat_channels)
     rezoom_features_r = tf.reshape(rezoom_features,
-                                      [len(w_offsets) * len(h_offsets), outer_size, H['rnn_len'], early_feat_channels])
+                                   [len(w_offsets) * len(h_offsets),
+                                    outer_size,
+                                    H['rnn_len'],
+                                    early_feat_channels])
     rezoom_features_t = tf.transpose(rezoom_features_r, [1, 2, 0, 3])
-    rezoom_features_t_r = tf.reshape(rezoom_features_t,
-                                          [outer_size, H['rnn_len'], len(w_offsets) * len(h_offsets) * early_feat_channels])
-
-    return rezoom_features_t_r
+    return tf.reshape(rezoom_features_t,
+                      [outer_size,
+                       H['rnn_len'],
+                       len(w_offsets) * len(h_offsets) * early_feat_channels])
 
 def build_forward(H, x, googlenet, phase, reuse):
     '''
@@ -109,10 +119,13 @@ def build_forward(H, x, googlenet, phase, reuse):
         pool_size = H['avg_pool_size']
         cnn1 = cnn[:, :, :, :700]
         cnn2 = cnn[:, :, :, 700:]
-        cnn2 = tf.nn.avg_pool(cnn2, ksize=[1, pool_size, pool_size, 1], strides=[1, 1, 1, 1], padding='SAME')
+        cnn2 = tf.nn.avg_pool(cnn2, ksize=[1, pool_size, pool_size, 1],
+                              strides=[1, 1, 1, 1], padding='SAME')
         cnn = tf.concat(3, [cnn1, cnn2])
-    cnn = tf.reshape(cnn, [H['batch_size'] * H['grid_width'] * H['grid_height'], 1024])
-    with tf.variable_scope('decoder', reuse=reuse, initializer=tf.random_uniform_initializer(-0.1, 0.1)):
+    cnn = tf.reshape(cnn,
+                     [H['batch_size'] * H['grid_width'] * H['grid_height'], 1024])
+    initializer = tf.random_uniform_initializer(-0.1, 0.1)
+    with tf.variable_scope('decoder', reuse=reuse, initializer=initializer):
         scale_down = 0.01
         lstm_input = tf.reshape(cnn * scale_down, (H['batch_size'] * grid_size, 1024))
         if H['use_lstm']:
@@ -233,16 +246,12 @@ def build_forward_backward(H, x, googlenet, phase, boxes, flags):
             delta_confs_loss = tf.reduce_sum(
                 tf.nn.sparse_softmax_cross_entropy_with_logits(new_confs, inside)) / outer_size * H['solver']['head_weights'][0] * 0.1
 
-            use_orig_conf = H['solver'].get('use_orig_confs', False)
-            if not use_orig_conf:
-                confidences_loss = delta_confs_loss
             pred_logits_squash = tf.reshape(new_confs,
                                             [outer_size * H['rnn_len'], H['num_classes']])
             pred_confidences_squash = tf.nn.softmax(pred_logits_squash)
             pred_confidences = tf.reshape(pred_confidences_squash,
                                       [outer_size, H['rnn_len'], H['num_classes']])
             loss = confidences_loss + boxes_loss + delta_confs_loss
-            confidences_loss = delta_confs_loss
             if H['reregress']:
                 delta_residual = tf.reshape(perm_truth - (pred_boxes + pred_boxes_deltas) * pred_mask,
                                             [outer_size, H['rnn_len'], 4])
