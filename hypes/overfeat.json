@@ -6,9 +6,9 @@
     },
     "arch": {
         "use_lstm": false,
-        "use_reinspect": false,
+        "use_rezoom": false,
         "biggest_box_px": 10000,
-        "reinspect_change_loss": "center",
+        "rezoom_change_loss": "center",
         "reregress": false,
         "focus_size": 1.8,
         "early_feat_channels": 256,
