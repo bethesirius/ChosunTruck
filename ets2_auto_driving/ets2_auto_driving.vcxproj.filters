@@ -18,6 +18,12 @@
     <ClCompile Include="cuda.cu">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="linefinder.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="hwnd2mat.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ets2_self_driving.h">
