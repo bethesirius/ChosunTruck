@@ -32,17 +32,18 @@ int main() {
 	HWND hWnd = FindWindow("prism3d", NULL);
 	// NOTEPAD
 	//HWND hWnd = FindWindow("Notepad", NULL);
-	Mat image = hwnd2mat(hWnd);
+	UMat image;
+	hwnd2mat(hWnd).copyTo(image);
 	
 	// Mat to GpuMat
 	//cuda::GpuMat imageGPU;
 	//imageGPU.upload(image);
 
-	medianBlur((Mat)image, (Mat)image, 3);
-	//cuda::bilateralFilter(imageGPU, imageGPU, );
+	medianBlur(image, image, 3);
+	//cv::cuda::bilateralFilter(imageGPU, imageGPU, );
 
-	cv::Mat contours;
-	cv::Canny((Mat)image, contours, 125, 350);
+	cv::UMat contours;
+	cv::Canny(image, contours, 125, 350);
 	LineFinder ld; // 인스턴스 생성
 
 	// 확률적 허프변환 파라미터 설정하기
@@ -50,9 +51,9 @@ int main() {
 	ld.setMinVote(50);
 
 	std::vector<cv::Vec4i> li = ld.findLines(contours);
-	ld.drawDetectedLines((Mat)image);
+	ld.drawDetectedLines(image);
 
-	imshow("Test", (Mat)image);
+	imshow("Test", image);
 	waitKey(1);
 	auto end = chrono::high_resolution_clock::now();
 	auto dur = end - begin;
@@ -64,3 +65,5 @@ int main() {
 
 	return 0;
 }
+
+//umat

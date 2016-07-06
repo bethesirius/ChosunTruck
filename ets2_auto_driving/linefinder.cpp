@@ -37,7 +37,7 @@ void LineFinder::setLineLengthAndGap(double length, double gap) {
 
 // 허프 선 세그먼트 감지를 수행하는 메소드
 // 확률적 허프 변환 적용
-std::vector<cv::Vec4i> LineFinder::findLines(cv::Mat& binary) {
+std::vector<cv::Vec4i> LineFinder::findLines(cv::UMat& binary) {
 	lines.clear();
 	cv::HoughLinesP(binary, lines, deltaRho, deltaTheta, minVote, 200, maxGap);
 	return lines;
@@ -45,7 +45,7 @@ std::vector<cv::Vec4i> LineFinder::findLines(cv::Mat& binary) {
 
 // 위 메소드에서 감지한 선을 다음 메소드를 사용해서 그림
 // 영상에서 감지된 선을 그리기
-void LineFinder::drawDetectedLines(cv::Mat &image, cv::Scalar color) {
+void LineFinder::drawDetectedLines(cv::UMat &image, cv::Scalar color) {
 
 	// 선 그리기
 	std::vector<cv::Vec4i>::const_iterator it2 = lines.begin();
