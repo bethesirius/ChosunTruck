@@ -59,6 +59,14 @@ def build_overfeat_inner(H, lstm_input):
         outputs.append(tf.matmul(lstm_input, w))
     return outputs
 
+def deconv(x, output_shape, channels):
+    k_h = 2
+    k_w = 2
+    w = tf.get_variable('w_deconv', initializer=tf.random_normal_initializer(stddev=0.01),
+                        shape=[k_h, k_w, channels[1], channels[0]])
+    y = tf.nn.conv2d_transpose(x, w, output_shape, strides=[1, k_h, k_w, 1], padding='VALID')
+    return y
+
 def rezoom(H, pred_boxes, early_feat, early_feat_channels, w_offsets, h_offsets):
     '''
     Rezoom into a feature map at multiple interpolation points in a grid. 
@@ -115,13 +123,30 @@ def build_forward(H, x, googlenet, phase, reuse):
     early_feat_channels = H['early_feat_channels']
     early_feat = early_feat[:, :, :, :early_feat_channels]
     
-    if H['avg_pool_size'] > 1:
+    if H['deconv']:
+        size = 3
+        stride = 2
+        pool_size = 5
+
+        with tf.variable_scope("deconv", reuse=reuse):
+            w = tf.get_variable('conv_pool_w', shape=[size, size, 1024, 1024],
+                                initializer=tf.random_normal_initializer(stddev=0.01))
+            cnn_s = tf.nn.conv2d(cnn, w, strides=[1, stride, stride, 1], padding='SAME')
+            cnn_s_pool = tf.nn.avg_pool(cnn_s[:, :, :, :256], ksize=[1, pool_size, pool_size, 1],
+                                        strides=[1, 1, 1, 1], padding='SAME')
+
+            cnn_s_with_pool = tf.concat(3, [cnn_s_pool, cnn_s[:, :, :, 256:]])
+            cnn_deconv = deconv(cnn_s_with_pool, output_shape=[H['batch_size'], H['grid_height'], H['grid_width'], 256], channels=[1024, 256])
+            cnn = tf.concat(3, (cnn_deconv, cnn[:, :, :, 256:]))
+
+    elif H['avg_pool_size'] > 1:
         pool_size = H['avg_pool_size']
         cnn1 = cnn[:, :, :, :700]
         cnn2 = cnn[:, :, :, 700:]
         cnn2 = tf.nn.avg_pool(cnn2, ksize=[1, pool_size, pool_size, 1],
                               strides=[1, 1, 1, 1], padding='SAME')
         cnn = tf.concat(3, [cnn1, cnn2])
+
     cnn = tf.reshape(cnn,
                      [H['batch_size'] * H['grid_width'] * H['grid_height'], 1024])
     initializer = tf.random_uniform_initializer(-0.1, 0.1)
@@ -358,8 +383,8 @@ def build(H, q):
                                                     use_stitching=True,
                                                     rnn_len=H['rnn_len'])[0]
                 
-                padded_step = '0' * (7 - len(str(np_global_step))) + str(np_global_step)
-                img_path = os.path.join(H['save_dir'], '%s_%s.jpg' % (padded_step, pred_or_true))
+                num_images = 10
+                img_path = os.path.join(H['save_dir'], '%s_%s.jpg' % ((np_global_step / H['logging']['display_iter']) % num_images, pred_or_true))
                 misc.imsave(img_path, merged)
                 return merged
 

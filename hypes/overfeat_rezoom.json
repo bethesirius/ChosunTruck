@@ -38,6 +38,7 @@
     "region_size": 32,
     "clip_norm": 1.0,
     "lstm_size": 500,
+    "deconv": false,
     "num_classes": 2,
     "rnn_len": 1
 }
