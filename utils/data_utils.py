@@ -8,9 +8,9 @@ import copy
 import annolist.AnnotationLib as al
 
 def annotation_to_h5(H, a, cell_width, cell_height, max_len):
-    region_size = H['arch']['region_size']
-    assert H['arch']['region_size'] == H['arch']['image_height'] / H['arch']['grid_height']
-    assert H['arch']['region_size'] == H['arch']['image_width'] / H['arch']['grid_width']
+    region_size = H['region_size']
+    assert H['region_size'] == H['image_height'] / H['grid_height']
+    assert H['region_size'] == H['image_width'] / H['grid_width']
     cell_regions = get_cell_grid(cell_width, cell_height, region_size)
 
     cells_per_image = len(cell_regions)
@@ -39,14 +39,13 @@ def annotation_to_h5(H, a, cell_width, cell_height, max_len):
             width = abs(box_list[cidx][bidx].x2 - box_list[cidx][bidx].x1)
             height= abs(box_list[cidx][bidx].y2 - box_list[cidx][bidx].y1)
             
-            if (abs(ox) < H['arch']['focus_size'] * region_size and abs(oy) < H['arch']['focus_size'] * region_size and
-                    width < H['arch']['biggest_box_px'] and height < H['arch']['biggest_box_px']):
+            if (abs(ox) < H['focus_size'] * region_size and abs(oy) < H['focus_size'] * region_size and
+                    width < H['biggest_box_px'] and height < H['biggest_box_px']):
                 unsorted_boxes.append(np.array([ox, oy, width, height], dtype=np.float))
-
-        box_flags[0, cidx, 0, 0:len(unsorted_boxes), 0] = 1
 
         for bidx, box in enumerate(sorted(unsorted_boxes, key=lambda x: x[0]**2 + x[1]**2)):
             boxes[0, cidx, :, bidx, 0] = box
+            box_flags[0, cidx, 0, bidx, 0] = max(box_list[cidx][bidx].silhouetteID, 1)
 
     return boxes, box_flags
 
