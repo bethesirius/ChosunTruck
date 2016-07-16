@@ -434,13 +434,9 @@ def train(H, test_images):
         return {x_in: d['image'], confs_in: d['confs'], boxes_in: d['boxes'],
                 learning_rate: H['solver']['learning_rate']}
 
-    def my_loop(coord, sess, enqueue_op, phase, gen):
+    def thread_loop(sess, enqueue_op, phase, gen):
         for d in gen:
-            try:
-                sess.run(enqueue_op[phase], feed_dict=make_feed(d))
-            except tf.errors.CancelledError:
-                print('Cancelling data input queues\n')
-                break
+            sess.run(enqueue_op[phase], feed_dict=make_feed(d))
 
     (config, loss, accuracy, summary_op, train_op,
      smooth_op, global_step, learning_rate, encoder_net) = build(H, q)
@@ -451,17 +447,17 @@ def train(H, test_images):
         flush_secs=10
     )
 
-    coord = tf.train.Coordinator()
     with tf.Session(config=config) as sess:
-        threads = []
+        tf.train.start_queue_runners(sess=sess)
         for phase in ['train', 'test']:
             # enqueue once manually to avoid thread start delay
             gen = train_utils.load_data_gen(H, phase, jitter=H['solver']['use_jitter'])
             d = gen.next()
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
-            threads.append(tf.train.threading.Thread(target=my_loop,
-                                                     args=(coord, sess, enqueue_op, phase, gen)))
-            threads[-1].start()
+            t = tf.train.threading.Thread(target=thread_loop,
+                                          args=(sess, enqueue_op, phase, gen))
+            t.daemon = True
+            t.start()
 
         tf.set_random_seed(H['solver']['rnd_seed'])
         sess.run(tf.initialize_all_variables())
@@ -475,13 +471,16 @@ def train(H, test_images):
         start = time.time()
         max_iter = H['solver'].get('max_iter', 10000000)
         for i in xrange(max_iter):
-            if coord.should_stop():
-                break
             display_iter = H['logging']['display_iter']
             adjusted_lr = (H['solver']['learning_rate'] *
                            0.5 ** max(0, (i / H['solver']['learning_rate_step']) - 2))
             lr_feed = {learning_rate: adjusted_lr}
-            if i % display_iter == 0:
+
+            if i % display_iter != 0:
+                # train network
+                batch_loss_train, _ = sess.run([loss['train'], train_op], feed_dict=lr_feed)
+            else:
+                # test network every N iterations; log additional info
                 if i > 0:
                     dt = (time.time() - start) / (H['batch_size'] * display_iter)
                 start = time.time()
@@ -500,8 +499,6 @@ def train(H, test_images):
                 print(print_str %
                       (i, adjusted_lr, train_loss,
                        test_accuracy * 100, dt * 1000 if i > 0 else 0))
-            else:
-                batch_loss_train, _ = sess.run([loss['train'], train_op], feed_dict=lr_feed)
 
             if global_step.eval() % H['logging']['save_iter'] == 0 or global_step.eval() == max_iter - 1:
                 saver.save(sess, ckpt_file, global_step=global_step)
