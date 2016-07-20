@@ -40,14 +40,16 @@ def next(event):  #called when the next button is hit
     text_line = ''.join(line)
     outfile.write(text_line)
     print "writing line : " + text_line
-    filename = path + "/" + onlyfiles.pop()
-    image = mpimg.imread(filename)
-    imshow_obj.set_data(image)
-    top_corners[:] = []
-    bottom_corners[:] = []
-    removeAllPatches()
     if len(onlyfiles) == 0:
         plt.close()
+    else:
+        filename = path + "/" + onlyfiles.pop()
+        image = mpimg.imread(filename)
+        imshow_obj.set_data(image)
+        top_corners[:] = []
+        bottom_corners[:] = []
+        removeAllPatches()
+    
 
 def clear(event): #called when the clear button is hit
     top_corners[:] = []
