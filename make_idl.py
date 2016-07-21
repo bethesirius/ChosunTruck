@@ -27,9 +27,7 @@ def removeAllPatches():
     patchCache[:] = []
 
 def next(event):  #called when the next button is hit
-    filename = path + "/" + onlyfiles.pop()
-    image = mpimg.imread(filename)
-    imshow_obj.set_data(image)
+    global filename
     line = []
     line.append('"' + filename + '": ')
     one_decimal = "{0:0.1f}"
@@ -42,11 +40,16 @@ def next(event):  #called when the next button is hit
     text_line = ''.join(line)
     outfile.write(text_line)
     print "writing line : " + text_line
-    top_corners[:] = []
-    bottom_corners[:] = []
-    removeAllPatches()
     if len(onlyfiles) == 0:
         plt.close()
+    else:
+        filename = path + "/" + onlyfiles.pop()
+        image = mpimg.imread(filename)
+        imshow_obj.set_data(image)
+        top_corners[:] = []
+        bottom_corners[:] = []
+        removeAllPatches()
+    
 
 def clear(event): #called when the clear button is hit
     top_corners[:] = []
@@ -77,7 +80,8 @@ outfile = open(outfile_name, 'w')
 onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
 
 #
-image = mpimg.imread(path + "/" + onlyfiles.pop())
+filename = path + "/" + onlyfiles.pop()
+image = mpimg.imread(filename)
 imshow_obj = ax.imshow(image)
 
 plt.axis("off")
