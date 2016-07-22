@@ -461,7 +461,7 @@ def train(H, test_images):
 
         tf.set_random_seed(H['solver']['rnd_seed'])
         sess.run(tf.initialize_all_variables())
-
+        writer.add_graph(sess.graph)
         weights_str = H['solver']['weights']
         if len(weights_str) > 0:
             print('Restoring from: %s' % weights_str)
