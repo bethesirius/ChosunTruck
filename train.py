@@ -394,8 +394,8 @@ def build(H, q):
             true_log_img = tf.py_func(log_image,
                                       [test_image, test_true_confidences, test_true_boxes, global_step, 'true'],
                                       [tf.float32])
-            tf.image_summary(phase + '/pred_boxes', pred_log_img)
-            tf.image_summary(phase + '/true_boxes', true_log_img)
+            tf.image_summary(phase + '/pred_boxes', tf.pack(pred_log_img),max_images=10)
+            tf.image_summary(phase + '/true_boxes', tf.pack(true_log_img),max_images=10)
 
     summary_op = tf.merge_all_summaries()
 
