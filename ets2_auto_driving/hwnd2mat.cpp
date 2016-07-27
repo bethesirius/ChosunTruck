@@ -31,10 +31,10 @@ Mat hwnd2mat(HWND hwnd) {
 	RECT windowsize;    // get the height and width of the screen
 	GetClientRect(hwnd, &windowsize);
 
-	srcheight = windowsize.bottom / 2 + 200;// change this to whatever size you want to resize to
+	srcheight = windowsize.bottom / 2;// change this to whatever size you want to resize to
 	srcwidth = windowsize.right;
-	height = windowsize.bottom / 2 + 200; // change this to whatever size you want to resize to
-	width = windowsize.right;
+	height = windowsize.bottom * 0.3125; // change this to whatever size you want to resize to
+	width = windowsize.right * 0.625;
 
 	src.create(height, width, CV_8UC4);
 
