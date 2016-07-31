@@ -78,7 +78,7 @@ int main() {
 		ipm.drawPoints(origPoints, image);
 
 		cv::Mat contours;
-		cv::Canny(image, contours, 125, 350);
+		cv::Canny(outputImg, contours, 125, 350);
 		LineFinder ld; // 인스턴스 생성
 
 		// 확률적 허프변환 파라미터 설정하기
