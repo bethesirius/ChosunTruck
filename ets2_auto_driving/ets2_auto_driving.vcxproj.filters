@@ -24,9 +24,15 @@
     <ClCompile Include="hwnd2mat.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="IPM.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ets2_self_driving.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="IPM.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

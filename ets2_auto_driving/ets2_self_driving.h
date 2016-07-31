@@ -40,8 +40,8 @@ public:
 	void setAccResolution(double dRho, double dTheta);
 	void setMinVote(int minv);
 	void setLineLengthAndGap(double length, double gap);
-	std::vector<cv::Vec4i> findLines(cv::UMat& binary);
-	void drawDetectedLines(cv::UMat &image, cv::Scalar color = cv::Scalar(0, 0, 255));
+	std::vector<cv::Vec4i> findLines(cv::Mat& binary);
+	void drawDetectedLines(cv::Mat &image, cv::Scalar color = cv::Scalar(0, 0, 255));
 };
 Mat hwnd2mat(HWND hwnd);
 void cudaf();
