@@ -924,7 +924,7 @@ def saveJSON(filename, annotations):
         jdoc.append(annotation.writeJSON())
 
     with open(filename, 'w') as f:
-        f.write(json.dumps(jdoc, indent=2))
+        f.write(json.dumps(jdoc, indent=2, sort_keys=True))
 
 
 def idlBase(filename):
