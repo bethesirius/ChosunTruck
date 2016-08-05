@@ -512,7 +512,7 @@ class Annotation(object):
 
     def writeJSON(self):
         jdoc = {}
-        jdoc['image'] = os.path.join(self.imagePath, self.imageName)
+        jdoc['image_path'] = os.path.join(self.imagePath, self.imageName)
         jdoc['rects'] = []
         for rect in self.rects:
             jdoc['rects'].append(rect.writeJSON())
@@ -723,77 +723,18 @@ def parseJSON(filename):
     with open(filename, 'r') as f:
         jdoc = json.load(f)
 
-    for annotation in doc.getElementsByTagName("annotation"):
+    for annotation in jdoc:
         anno = Annotation()
-        for image in annotation.getElementsByTagName("image"):
-            for name in image.getElementsByTagName("name"):
-                anno.imageName = name.firstChild.data
-
-            for fn in image.getElementsByTagName("frameNr"):
-                anno.frameNr = int(fn.firstChild.data)
+        anno.imageName = annotation["image_path"]
 
         rects = []
-        for annoRect in annotation.getElementsByTagName("annorect"):
+        for annoRect in annotation["rects"]:
             rect = AnnoRect()
 
-            for x1 in annoRect.getElementsByTagName("x1"):
-                rect.x1 = float(x1.firstChild.data)
-
-            for y1 in annoRect.getElementsByTagName("y1"):
-                rect.y1 = float(y1.firstChild.data)
-
-            for x2 in annoRect.getElementsByTagName("x2"):
-                rect.x2 = float(x2.firstChild.data)
-
-            for y2 in annoRect.getElementsByTagName("y2"):
-                rect.y2 = float(y2.firstChild.data)
-
-            for scale in annoRect.getElementsByTagName("scale"):
-                rect.scale = float(scale.firstChild.data)
-
-            for score in annoRect.getElementsByTagName("score"):
-                rect.score = float(score.firstChild.data)
-
-            for classID in annoRect.getElementsByTagName("classID"):
-                rect.classID = int(classID.firstChild.data)
-
-            for track_id in annoRect.getElementsByTagName("track_id"):
-                rect.track_id = int(track_id.firstChild.data)
-
-            for articulation in annoRect.getElementsByTagName("articulation"):
-                for id in articulation.getElementsByTagName("id"):
-                    rect.articulations.append(int(id.firstChild.data))
-                #print "Articulations: ", rect.articulations
-
-            for viewpoint in annoRect.getElementsByTagName("viewpoint"):
-                for id in viewpoint.getElementsByTagName("id"):
-                    rect.viewpoints.append(int(id.firstChild.data))
-                    #print "Viewpoints: ", rect.viewpoints
-                    
-            for d in annoRect.getElementsByTagName("D3"):
-                for id in d.getElementsByTagName("id"):
-                    rect.d3.append(float(id.firstChild.data))
-
-            for silhouette in annoRect.getElementsByTagName("silhouette"):
-                for id in silhouette.getElementsByTagName("id"):
-                    rect.silhouetteID = int(id.firstChild.data)
-                #print "SilhouetteID: ", rect.silhouetteID
-
-            for annoPoints in annoRect.getElementsByTagName("annopoints"):                          
-                for annoPoint in annoPoints.getElementsByTagName("point"):
-
-                    p = AnnoPoint();
-                    for annoPointX in annoPoint.getElementsByTagName("x"):
-                        p.x = int(float(annoPointX.firstChild.data));
-
-                    for annoPointY in annoPoint.getElementsByTagName("y"):
-                        p.y = int(float(annoPointY.firstChild.data));
-                        
-                    for annoPointId in annoPoint.getElementsByTagName("id"):
-                        p.id = int(annoPointId.firstChild.data);
-
-                    assert(p.x != None and p.y != None and p.id != None);
-                    rect.point.append(p);                                   
+            rect.x1 = annoRect["x1"]
+            rect.x2 = annoRect["x2"]
+            rect.y1 = annoRect["y1"]
+            rect.y2 = annoRect["y2"]
 
             rects.append(rect)
 
@@ -802,8 +743,6 @@ def parseJSON(filename):
 
     return annotations
     
-
-
 def parse(filename, abs_path=False):
     #print "Parsing: ", filename
     name, ext = os.path.splitext(filename)
