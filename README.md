@@ -1,7 +1,7 @@
 <img src=http://russellsstewart.com/s/tensorbox/tensorbox_output.jpg></img>
 
 TensorBox is a simple framework for training neural networks to detect objects in images. 
-Training requires a text file (see [here](http://russellsstewart.com/s/tensorbox/brainwash_test.txt), for example)
+Training requires a json file (see [here](http://russellsstewart.com/s/tensorbox/test_boxes.json), for example)
 of paths to images on disk and the corresponding object locations in each image.
 The basic model implements the simple and robust GoogLeNet-OverFeat algorithm. We additionally provide an implementation of the 
 [ReInspect](https://github.com/Russell91/ReInspect/)
