@@ -1,14 +1,11 @@
 <img src=http://russellsstewart.com/s/tensorbox/tensorbox_output.jpg></img>
 
 TensorBox is a simple framework for training neural networks to detect objects in images. 
-Training requires a json file (see [here](http://russellsstewart.com/s/tensorbox/test_boxes.json), for example)
-of paths to images on disk and the corresponding object locations in each image.
+Training requires a json file (e.g. [here](http://russellsstewart.com/s/tensorbox/test_boxes.json))
+containing a list of images and the bounding boxes in each image.
 The basic model implements the simple and robust GoogLeNet-OverFeat algorithm. We additionally provide an implementation of the 
 [ReInspect](https://github.com/Russell91/ReInspect/)
-algorithm, reproducing state-of-the-art detection results on the highly occluded TUD crossing and brainwash datasets. 
-
-Special thanks to [Brett Kuprel](http://stanford.edu/~kuprel/) of Sebastian Thrun's group for providing the initial code
-to hack into Google's pretrained ImageNet weights for finetuning.
+algorithm, reproducing state-of-the-art detection results on the highly occluded TUD crossing and brainwash datasets.
 
 ## OverFeat Installation & Training
 First, [install TensorFlow from source or pip](https://www.tensorflow.org/versions/r0.7/get_started/os_setup.html#pip-installation)
