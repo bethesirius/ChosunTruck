@@ -239,8 +239,9 @@ def build_forward_backward(H, x, googlenet, phase, boxes, flags):
         outer_boxes = tf.reshape(boxes, [outer_size, H['rnn_len'], 4])
         outer_flags = tf.cast(tf.reshape(flags, [outer_size, H['rnn_len']]), 'int32')
         if H['use_lstm']:
+            hungarian_module = tf.load_op_library('utils/hungarian/hungarian.so')
             assignments, classes, perm_truth, pred_mask = (
-                tf.user_ops.hungarian(pred_boxes, outer_boxes, outer_flags, H['solver']['hungarian_iou']))
+                hungarian_module.hungarian(pred_boxes, outer_boxes, outer_flags, H['solver']['hungarian_iou']))
         else:
             classes = tf.reshape(flags, (outer_size, 1))
             perm_truth = tf.reshape(outer_boxes, (outer_size, 1, 4))
@@ -302,7 +303,7 @@ def build(H, q):
     arch = H
     solver = H["solver"]
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(solver['gpu'])
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(solver.get('gpu', ''))
 
     #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
     gpu_options = tf.GPUOptions()
