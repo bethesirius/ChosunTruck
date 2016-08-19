@@ -1,10 +1,10 @@
-﻿빌드 시작: 2016-07-31 오후 8:40:29
+﻿빌드 시작: 2016-08-19 오후 10:41:39
      1>2 노드의 "C:\Users\CAUCSE\Documents\Visual Studio 2013\Projects\ets2_auto_driving\ets2_auto_driving\ets2_auto_driving.vcxproj" 프로젝트(Build 대상)입니다.
      1>AddCudaCompileDeps:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D_MBCS /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include" /IC:\opencv\build\include /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include" /IC:\opencv\myBuild\include /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include" /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\bin" /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include" /I. /FIcuda_runtime.h /c "C:\Users\CAUCSE\Documents\Visual Studio 2013\Projects\ets2_auto_driving\ets2_auto_driving\main.cpp" 
        CudaBuild:
          Compiling CUDA source file main.cpp...
-         cmd.exe /C "C:\Users\CAUCSE\AppData\Local\Temp\tmp53f62fe935df4f8c8de2d4630b7a3a90.cmd"
+         cmd.exe /C "C:\Users\CAUCSE\AppData\Local\Temp\tmpdffb32fc22e5470faa471bc399542559.cmd"
          "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\bin\nvcc.exe" -gencode=arch=compute_20,code=\"sm_20,compute_20\" --use-local-env --cl-version 2013 -ccbin "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64"  -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include" -IC:\opencv\build\include -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include" -IC:\opencv\myBuild\include -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include"  -G   --keep-dir x64\Debug -maxrregcount=0  --machine 64 --compile -cudart static  -g   -D_MBCS -Xcompiler "/EHsc /W3 /nologo /Od /Zi /RTC1 /MDd " -o x64\Debug\main.cpp.obj "C:\Users\CAUCSE\Documents\Visual Studio 2013\Projects\ets2_auto_driving\ets2_auto_driving\main.cpp"
          
          C:\Users\CAUCSE\Documents\Visual Studio 2013\Projects\ets2_auto_driving\ets2_auto_driving>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\bin\nvcc.exe" -gencode=arch=compute_20,code=\"sm_20,compute_20\" --use-local-env --cl-version 2013 -ccbin "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64"  -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include" -IC:\opencv\build\include -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include" -IC:\opencv\myBuild\include -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include"  -G   --keep-dir x64\Debug -maxrregcount=0  --machine 64 --compile -cudart static  -g   -D_MBCS -Xcompiler "/EHsc /W3 /nologo /Od /Zi /RTC1 /MDd " -o x64\Debug\main.cpp.obj "C:\Users\CAUCSE\Documents\Visual Studio 2013\Projects\ets2_auto_driving\ets2_auto_driving\main.cpp" 
@@ -29,4 +29,4 @@
 
 빌드했습니다.
 
-경과 시간: 00:00:04.35
+경과 시간: 00:00:04.06
