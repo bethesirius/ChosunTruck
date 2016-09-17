@@ -1,11 +1,11 @@
 #A tool for hand labelling images
-#Generates an IDL file
+#Generates a json file
 #pass in the directory where you store your images and a filename, then select the points on the images
 #every time you hit next a line is generated
 #the clear button removes are selected points on the current image
-#when all files in the directory are processed, the idl file is written out
+#when all files in the directory are processed, the json file is written out
 
-#ex: python make_idl.py train640x480 train.idl
+#ex: python make_idl.py train640x480 train.json
 
 import sys
 import matplotlib.pyplot as plt
