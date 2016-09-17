@@ -41,6 +41,9 @@ def load_idl_tf(idlfile, H, jitter):
         random.shuffle(annos)
         for anno in annos:
             I = imread(anno.imageName)
+	    #Skip Greyscale images
+            if len(I.shape) < 3:
+                continue	    
             if I.shape[2] == 4:
                 I = I[:, :, :3]
             if I.shape[0] != H["image_height"] or I.shape[1] != H["image_width"]:
