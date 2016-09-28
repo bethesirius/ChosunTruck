@@ -1,11 +1,11 @@
 #A tool for hand labelling images
-#Generates an IDL file
+#Generates a json file
 #pass in the directory where you store your images and a filename, then select the points on the images
 #every time you hit next a line is generated
 #the clear button removes are selected points on the current image
-#when all files in the directory are processed, the idl file is written out
+#when all files in the directory are processed, the json file is written out
 
-#ex: python make_idl.py train640x480 train.idl
+#ex: python make_idl.py train640x480 train.json
 
 import sys
 import matplotlib.pyplot as plt
@@ -16,10 +16,13 @@ mpl.rcParams['toolbar'] = 'None'
 from matplotlib.widgets import Button
 from os import listdir
 from os.path import isfile, join
+import json
 
+final_json = []
 top_corners = []
 bottom_corners = []
 patchCache = [] #the rectangles that get drawn on the image, stored so they can be removed in an orderly fashion
+
 
 def removeAllPatches():
     for patch in patchCache:
@@ -28,18 +31,24 @@ def removeAllPatches():
 
 def next(event):  #called when the next button is hit
     global filename
-    line = []
-    line.append('"' + filename + '": ')
+    global outfile_name
     one_decimal = "{0:0.1f}"
+    json_dict = {}
+    json_dict["image_path"] = filename
+    json_dict["rects"] = []
     for i in range(len(top_corners)):
-        line.append('(' + one_decimal.format(top_corners[i][0]) + ', ' + one_decimal.format(top_corners[i][1]) + ', ' + one_decimal.format(bottom_corners[i][0])  + ', ' + one_decimal.format(bottom_corners[i][1]) + ')')
-        if i != len(top_corners) - 1:
-            line.append(',')
-        else:
-            line.append(';' + "\n")
-    text_line = ''.join(line)
-    outfile.write(text_line)
-    print "writing line : " + text_line
+        rects = {}
+        rects["x1"] = float(one_decimal.format(top_corners[i][0]))
+        rects["x2"] = float(one_decimal.format(bottom_corners[i][0]))
+        rects["y1"] = float(one_decimal.format(top_corners[i][1]))
+        rects["y2"] = float(one_decimal.format(bottom_corners[i][1]))
+        json_dict["rects"].append(rects)
+    final_json.append(json_dict)
+
+    outfile = open(outfile_name, 'w')
+    json.dump(final_json, outfile, sort_keys = True, indent = 4)
+    outfile.close()
+
     if len(onlyfiles) == 0:
         plt.close()
     else:
@@ -97,6 +106,6 @@ bclear = Button(axclear, 'Clear')
 bclear.on_clicked(clear)
 plt.show()
 
-outfile.close()
+# outfile.close()
 
 print "finished"
