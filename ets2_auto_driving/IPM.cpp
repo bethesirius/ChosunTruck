@@ -21,7 +21,6 @@ void IPM::drawPoints( const std::vector<cv::Point2f>& _points, cv::Mat& _img ) c
 	line(_img, Point(static_cast<int>(_points[2].x), static_cast<int>(_points[2].y)), Point(static_cast<int>(_points[3].x), static_cast<int>(_points[3].y)), CV_RGB( 205,205,0), 2);
 	line(_img, Point(static_cast<int>(_points[0].x), static_cast<int>(_points[0].y)), Point(static_cast<int>(_points[1].x), static_cast<int>(_points[1].y)), CV_RGB( 205,205,0), 2);
 	line(_img, Point(static_cast<int>(_points[2].x), static_cast<int>(_points[2].y)), Point(static_cast<int>(_points[1].x), static_cast<int>(_points[1].y)), CV_RGB( 205,205,0), 2);
-	
 	for(size_t i=0; i<_points.size(); i++)
 	{
 		circle(_img, Point(static_cast<int>(_points[i].x), static_cast<int>(_points[i].y)), 2, CV_RGB(238,238,0), -1);
@@ -96,10 +95,12 @@ void IPM::createMaps()
 	// Create remap images
 	m_mapX.create(m_dstSize, CV_32F);
 	m_mapY.create(m_dstSize, CV_32F);
+	//#pragma omp parallel for schedule(dynamic)
 	for( int j = 0; j < m_dstSize.height; ++j )
 	{
 		float* ptRowX = m_mapX.ptr<float>(j);
 		float* ptRowY = m_mapY.ptr<float>(j);
+		//#pragma omp parallel for schedule(dynamic)
 		for( int i = 0; i < m_dstSize.width; ++i )
 		{
 			Point2f pt = applyHomography( Point2f( static_cast<float>(i), static_cast<float>(j) ), m_H_inv );
@@ -111,10 +112,12 @@ void IPM::createMaps()
 	m_invMapX.create(m_origSize, CV_32F);
 	m_invMapY.create(m_origSize, CV_32F);
 
+	//#pragma omp parallel for schedule(dynamic)
 	for( int j = 0; j < m_origSize.height; ++j )
 	{
 		float* ptRowX = m_invMapX.ptr<float>(j);
 		float* ptRowY = m_invMapY.ptr<float>(j);
+	//#pragma omp parallel for schedule(dynamic)
 		for( int i = 0; i < m_origSize.width; ++i )
 		{
 			Point2f pt = applyHomography( Point2f( static_cast<float>(i), static_cast<float>(j) ), m_H );

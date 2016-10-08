@@ -31,7 +31,7 @@ Mat hwnd2mat(HWND hwnd) {
 	RECT windowsize;    // get the height and width of the screen
 	GetClientRect(hwnd, &windowsize);
 
-	srcheight = windowsize.bottom / 4 ;// change this to whatever size you want to resize to
+	srcheight = windowsize.bottom ;// change this to whatever size you want to resize to
 	srcwidth = windowsize.right;
 	height = windowsize.bottom; // change this to whatever size you want to resize to
 	width = windowsize.right;
@@ -57,7 +57,7 @@ Mat hwnd2mat(HWND hwnd) {
 	// use the previously created device context with the bitmap
 	SelectObject(hwindowCompatibleDC, hbwindow);
 	// copy from the window device context to the bitmap device context
-	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 340, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
+	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
 	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
 
 	// avoid memory leak

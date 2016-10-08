@@ -27,6 +27,9 @@
     <ClCompile Include="IPM.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="guassian_filter.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ets2_self_driving.h">
