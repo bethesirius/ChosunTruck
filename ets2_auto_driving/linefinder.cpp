@@ -39,7 +39,7 @@ void LineFinder::setLineLengthAndGap(double length, double gap) {
 // 확률적 허프 변환 적용
 std::vector<cv::Vec4i> LineFinder::findLines(cv::Mat& binary) {
 	lines.clear();
-	cv::HoughLinesP(binary, lines, deltaRho, deltaTheta, minVote, 200, maxGap);
+	cv::HoughLinesP(binary, lines, deltaRho, deltaTheta, minVote, 20, maxGap);
 	return lines;
 } // cv::Vec4i 벡터를 반환하고, 감지된 각 세그먼트의 시작과 마지막 점 좌표를 포함.
 

@@ -41,7 +41,7 @@ int main() {
 		//cuda::GpuMat imageGPU;
 		//imageGPU.upload(image);
 
-		medianBlur(image, image, 3);
+		medianBlur(image, image, 3); 
 		//cv::cuda::bilateralFilter(imageGPU, imageGPU, );
 
 		int width = 0, height = 0;
@@ -87,24 +87,107 @@ int main() {
 		cv::Sobel(gray, gray, gray.depth(), 1, 0, 3, 0.5, 127);
 		cv::threshold(gray, gray, 145, 255, CV_THRESH_BINARY);
 		cv::Mat contours;
-		cv::Canny(gray, contours, 125, 350);
+		//cv::Canny(gray, contours, 125, 350);
+		
 		LineFinder ld; // 인스턴스 생성
 
 		// 확률적 허프변환 파라미터 설정하기
-		ld.setLineLengthAndGap(100, 30);
+		
+		ld.setLineLengthAndGap(10, 3);
 		ld.setMinVote(80);
 
 		std::vector<cv::Vec4i> li = ld.findLines(contours);
 		ld.drawDetectedLines(contours);
+		
+		///////////////////////////////////////
+		unsigned char row_center = gray.at<unsigned char>(10, 160);
 
-		imshow("Test", contours);
+		unsigned char row_left=0;
+		unsigned char row_right=0;
+
+		int left = 0;
+		int right = 0;
+		int i = 0;
+		int row_number = 5;
+		while (i < 150) {
+			if (i == 149) {
+				i = 0;
+				row_left = 0;
+				row_right = 0;
+				left = 0;
+				right = 0;
+				row_number++;
+			}
+			if (row_left == 255 && row_right == 255) {
+				row_number = 5;
+				break;
+			}
+			if (row_left != 255) {
+				row_left = gray.at<unsigned char>(row_number, 159 + left);
+				left--;
+			}
+			if (row_right != 255) {
+				row_right = gray.at<unsigned char>(row_number, 159 + right);
+				right++;
+			}
+			i++;
+		}
+		SetActiveWindow(hWnd);
+		int average = (left == -150 || right == 150) ? 0: left+right;
+		if (left + right < -50){
+			cout << "go left ";
+			
+			/*
+			SendMessage(hWnd, WM_KEYUP, 0x44, 0);
+			Sleep(100);
+			SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+			Sleep(100);
+			SendMessage(hWnd, WM_KEYUP, 0x74, 0);
+			*/
+			//keybd_event(0x74, 0, KEYEVENTF_KEYUP, 0);
+			//keybd_event(0x74, 0, 0, 0);
+			//Sleep(1000);
+			//keybd_event(VK_LEFT, 0, KEYEVENTF_KEYUP, 0);
+		}
+		else if (left + right > -50 && left + right < 50){
+			cout << "go straight ";
+			for (int x=0, y = 0; x < 700 && y<700; x += 10, y += 10)
+			{
+				SendMessage(hWnd, WM_MOUSEMOVE, 0, MAKELPARAM(x, y));
+				Sleep(10);
+			}
+			/*
+			SendMessage(hWnd, WM_KEYUP, 0x44, 0);
+			Sleep(10);
+			SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+			*/
+		}
+		else{
+			cout << "go right ";
+			/*
+			SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+			Sleep(100);
+			SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+			Sleep(100);
+			SendMessage(hWnd, WM_KEYUP, 0x74, 0);
+			*/
+			//Sleep(1000);
+			//keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);
+		}
+		cout << "left: " << left << ", right: " << right << ", average: "<< average<<endl;
+		///////////////////////////////////////
+
+
+		imshow("Test", gray);
 		waitKey(1);
+		/*
 		auto end = chrono::high_resolution_clock::now();
 		auto dur = end - begin;
 		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
 		ms++;
 		sum += ms;
 		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
+		*/
 	}
 	return 0;
 }
