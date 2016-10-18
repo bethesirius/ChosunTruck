@@ -7,11 +7,11 @@ cd $DIR
 echo "Downloading..."
 
 mkdir -p data && cd data
-wget http://russellsstewart.com/s/tensorbox/googlenet.pb
+wget --continue http://russellsstewart.com/s/tensorbox/googlenet.pb
 mkdir -p overfeat_rezoom && cd overfeat_rezoom
-wget http://russellsstewart.com/s/tensorbox/overfeat_rezoom/save.ckpt-150000
+wget --continue http://russellsstewart.com/s/tensorbox/overfeat_rezoom/save.ckpt-150000
 cd ..
-wget http://russellsstewart.com/s/tensorbox/brainwash.tar.gz
+wget --continue http://russellsstewart.com/s/tensorbox/brainwash.tar.gz
 echo "Extracting..."
 tar xf brainwash.tar.gz
 
