@@ -20,6 +20,8 @@
 using namespace cv;
 using namespace std;
 
+void Thinning(Mat input, int row, int col);
+
 int main() {
 
 	//cudaf();
@@ -33,7 +35,7 @@ int main() {
 		// ETS2
 		HWND hWnd = FindWindow("prism3d", NULL);
 		// NOTEPAD
-		//HWND hWnd = FindWindow("Notepad", NULL);
+		//HWND hWnd = FindWindow("Photo_Light", NULL);
 		Mat image, outputImg;
 		hwnd2mat(hWnd).copyTo(image);
 
@@ -80,105 +82,30 @@ int main() {
 		//ipm.drawPoints(origPoints, image);
 
 		//Mat row = outputImg.row[0];
-		Mat gray;
+		cv::Mat gray;
+		cv::Mat blur;
+		cv::Mat sobel;
+		cv::Mat contours;
 		cv::resize(outputImg, outputImg, cv::Size(320, 240));
 		cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
-		cv::blur(gray, gray, cv::Size(10, 10));
-		cv::Sobel(gray, gray, gray.depth(), 1, 0, 3, 0.5, 127);
-		cv::threshold(gray, gray, 145, 255, CV_THRESH_BINARY);
-		cv::Mat contours;
+		cv::blur(gray, blur, cv::Size(10, 10));
+		cv::Sobel(blur, sobel, blur.depth(), 1, 0, 3, 0.5, 127);
+		cv::threshold(sobel, contours, 145, 255, CV_THRESH_BINARY);
+		//Thinning(contours, contours.rows, contours.cols);
 		//cv::Canny(gray, contours, 125, 350);
 		
 		LineFinder ld; // 인스턴스 생성
 
 		// 확률적 허프변환 파라미터 설정하기
 		
-		ld.setLineLengthAndGap(10, 3);
-		ld.setMinVote(80);
+		ld.setLineLengthAndGap(20, 120);
+		ld.setMinVote(55);
 
 		std::vector<cv::Vec4i> li = ld.findLines(contours);
 		ld.drawDetectedLines(contours);
 		
-		///////////////////////////////////////
-		unsigned char row_center = gray.at<unsigned char>(10, 160);
-
-		unsigned char row_left=0;
-		unsigned char row_right=0;
-
-		int left = 0;
-		int right = 0;
-		int i = 0;
-		int row_number = 5;
-		while (i < 150) {
-			if (i == 149) {
-				i = 0;
-				row_left = 0;
-				row_right = 0;
-				left = 0;
-				right = 0;
-				row_number++;
-			}
-			if (row_left == 255 && row_right == 255) {
-				row_number = 5;
-				break;
-			}
-			if (row_left != 255) {
-				row_left = gray.at<unsigned char>(row_number, 159 + left);
-				left--;
-			}
-			if (row_right != 255) {
-				row_right = gray.at<unsigned char>(row_number, 159 + right);
-				right++;
-			}
-			i++;
-		}
-		SetActiveWindow(hWnd);
-		int average = (left == -150 || right == 150) ? 0: left+right;
-		if (left + right < -50){
-			cout << "go left ";
-			
-			/*
-			SendMessage(hWnd, WM_KEYUP, 0x44, 0);
-			Sleep(100);
-			SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
-			Sleep(100);
-			SendMessage(hWnd, WM_KEYUP, 0x74, 0);
-			*/
-			//keybd_event(0x74, 0, KEYEVENTF_KEYUP, 0);
-			//keybd_event(0x74, 0, 0, 0);
-			//Sleep(1000);
-			//keybd_event(VK_LEFT, 0, KEYEVENTF_KEYUP, 0);
-		}
-		else if (left + right > -50 && left + right < 50){
-			cout << "go straight ";
-			for (int x=0, y = 0; x < 700 && y<700; x += 10, y += 10)
-			{
-				SendMessage(hWnd, WM_MOUSEMOVE, 0, MAKELPARAM(x, y));
-				Sleep(10);
-			}
-			/*
-			SendMessage(hWnd, WM_KEYUP, 0x44, 0);
-			Sleep(10);
-			SendMessage(hWnd, WM_KEYUP, 0x41, 0);
-			*/
-		}
-		else{
-			cout << "go right ";
-			/*
-			SendMessage(hWnd, WM_KEYUP, 0x41, 0);
-			Sleep(100);
-			SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
-			Sleep(100);
-			SendMessage(hWnd, WM_KEYUP, 0x74, 0);
-			*/
-			//Sleep(1000);
-			//keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);
-		}
-		cout << "left: " << left << ", right: " << right << ", average: "<< average<<endl;
-		///////////////////////////////////////
-
-
-		imshow("Test", gray);
+		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
+		imshow("Test", contours);
 		waitKey(1);
 		/*
 		auto end = chrono::high_resolution_clock::now();

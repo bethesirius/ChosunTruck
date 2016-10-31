@@ -34,14 +34,14 @@ private:
 	double maxGap; // 선에 따른 최대 허용 간격
 
 public:
-	LineFinder::LineFinder() : deltaRho(1), deltaTheta(PI / 180), minVote(10), minLength(0.), maxGap(0.) {}
+	LineFinder::LineFinder() : deltaRho(1), deltaTheta(PI / 180), minVote(50), minLength(50), maxGap(10) {}
 	// 기본 누적 해상도는 1각도 1화소 
 	// 간격이 없고 최소 길이도 없음
 	void setAccResolution(double dRho, double dTheta);
 	void setMinVote(int minv);
 	void setLineLengthAndGap(double length, double gap);
 	std::vector<cv::Vec4i> findLines(cv::Mat& binary);
-	void drawDetectedLines(cv::Mat &image, cv::Scalar color = cv::Scalar(0, 0, 255));
+	void drawDetectedLines(cv::Mat &image, cv::Scalar color = cv::Scalar(112, 112, 0));
 };
 Mat hwnd2mat(HWND hwnd);
 void cudaf();
