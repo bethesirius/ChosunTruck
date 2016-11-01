@@ -1,7 +1,8 @@
 import inception_v1 as inception
 import tensorflow.contrib.slim as slim
 
-def model(x, H, reuse, is_training=True):
+def model(x, H, phase, reuse):
+    is_training = (phase == 'train')
     with slim.arg_scope(inception.inception_v1_arg_scope()):
         _, T = inception.inception_v1(x,
                                       is_training=is_training,
