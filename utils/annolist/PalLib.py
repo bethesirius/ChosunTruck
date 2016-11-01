@@ -23,7 +23,7 @@ def al2pal(annotations):
 
     #assert(isinstance(annotations, AnnotationLib.AnnoList));
 
-    # check type of attributes, add missing attributes 
+    # check type of attributes, add missing attributes
     for a in annotations:
         for r in a.rects:
             for k, v in r.at.iteritems():
@@ -49,7 +49,7 @@ def al2pal(annotations):
     for a in annotations:
         _a = _annolist.annotation.add();
         _a.imageName = a.imageName;
-		
+
         for r in a.rects:
             _r = _a.rect.add();
 
@@ -57,7 +57,7 @@ def al2pal(annotations):
             _r.y1 = r.y1;
             _r.x2 = r.x2;
             _r.y2 = r.y2;
-            
+
             _r.score = float(r.score);
 
             if hasattr(r, 'id'):
@@ -82,7 +82,7 @@ def al2pal(annotations):
                         assert(AnnotationLib.is_compatible_attr_type(AnnotationLib.AnnoList.TYPE_STRING, type(v)));
                         _at.strval = str(v);
                     else:
-                        assert(false);            
+                        assert(false);
 
     return _annolist;
 
@@ -99,7 +99,7 @@ def pal2al(_annolist):
 
     attribute_name_from_id = {adesc.id: aname for aname, adesc in annotations.attribute_desc.iteritems()}
     attribute_dtype_from_id = {adesc.id: adesc.dtype for aname, adesc in annotations.attribute_desc.iteritems()}
-    
+
     for _a in _annolist.annotation:
         anno = AnnotationLib.Annotation()
 
@@ -140,7 +140,7 @@ def pal2al(_annolist):
                 elif cur_dtype == AnnotationLib.AnnoList.TYPE_STRING:
                     rect.at[cur_aname] = _at.strval;
                 else:
-                    assert(False);            
+                    assert(False);
 
             anno.rects.append(rect);
 
