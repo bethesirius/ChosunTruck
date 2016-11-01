@@ -6,7 +6,6 @@ from scipy.misc import imread, imresize
 from scipy import misc
 
 from train import build_forward
-from utils import googlenet_load
 from utils.annolist import AnnotationLib as al
 from utils.train_utils import add_rectangles, rescale_boxes
 
@@ -16,21 +15,20 @@ import argparse
 def get_image_dir(args):
     weights_iteration = int(args.weights.split('-')[-1])
     expname = '_' + args.expname if args.expname else ''
-    image_dir = '%s/images_%s_%d%s' % (os.path.dirname(args.weights), os.path.basename(args.test_idl)[:-4], weights_iteration, expname)
+    image_dir = '%s/images_%s_%d%s' % (os.path.dirname(args.weights), os.path.basename(args.test_boxes)[:-5], weights_iteration, expname)
     return image_dir
 
 def get_results(args, H):
     tf.reset_default_graph()
     x_in = tf.placeholder(tf.float32, name='x_in', shape=[H['image_height'], H['image_width'], 3])
-    googlenet = googlenet_load.init(H)
     if H['use_rezoom']:
-        pred_boxes, pred_logits, pred_confidences, pred_confs_deltas, pred_boxes_deltas = build_forward(H, tf.expand_dims(x_in, 0), googlenet, 'test', reuse=None)
+        pred_boxes, pred_logits, pred_confidences, pred_confs_deltas, pred_boxes_deltas = build_forward(H, tf.expand_dims(x_in, 0), 'test', reuse=None)
         grid_area = H['grid_height'] * H['grid_width']
         pred_confidences = tf.reshape(tf.nn.softmax(tf.reshape(pred_confs_deltas, [grid_area * H['rnn_len'], 2])), [grid_area, H['rnn_len'], 2])
         if H['reregress']:
             pred_boxes = pred_boxes + pred_boxes_deltas
     else:
-        pred_boxes, pred_logits, pred_confidences = build_forward(H, tf.expand_dims(x_in, 0), googlenet, 'test', reuse=None)
+        pred_boxes, pred_logits, pred_confidences = build_forward(H, tf.expand_dims(x_in, 0), 'test', reuse=None)
     saver = tf.train.Saver()
     with tf.Session() as sess:
         sess.run(tf.initialize_all_variables())
@@ -38,8 +36,8 @@ def get_results(args, H):
 
         pred_annolist = al.AnnoList()
 
-        true_annolist = al.parse(args.test_idl)
-        data_dir = os.path.dirname(args.test_idl)
+        true_annolist = al.parse(args.test_boxes)
+        data_dir = os.path.dirname(args.test_boxes)
         image_dir = get_image_dir(args)
         subprocess.call('mkdir -p %s' % image_dir, shell=True)
         for i in range(len(true_annolist)):
@@ -68,7 +66,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', required=True)
     parser.add_argument('--expname', default='')
-    parser.add_argument('--test_idl', required=True)
+    parser.add_argument('--test_boxes', required=True)
     parser.add_argument('--gpu', default=0)
     parser.add_argument('--logdir', default='output')
     parser.add_argument('--iou_threshold', default=0.5, type=float)
@@ -79,16 +77,16 @@ def main():
     with open(hypes_file, 'r') as f:
         H = json.load(f)
     expname = args.expname + '_' if args.expname else ''
-    pred_idl = '%s.%s%s' % (args.weights, expname, os.path.basename(args.test_idl))
-    true_idl = '%s.gt_%s%s' % (args.weights, expname, os.path.basename(args.test_idl))
+    pred_boxes = '%s.%s%s' % (args.weights, expname, os.path.basename(args.test_boxes))
+    true_boxes = '%s.gt_%s%s' % (args.weights, expname, os.path.basename(args.test_boxes))
 
 
     pred_annolist, true_annolist = get_results(args, H)
-    pred_annolist.save(pred_idl)
-    true_annolist.save(true_idl)
+    pred_annolist.save(pred_boxes)
+    true_annolist.save(true_boxes)
 
     try:
-        rpc_cmd = './utils/annolist/doRPC.py --minOverlap %f %s %s' % (args.iou_threshold, true_idl, pred_idl)
+        rpc_cmd = './utils/annolist/doRPC.py --minOverlap %f %s %s' % (args.iou_threshold, true_boxes, pred_boxes)
         print('$ %s' % rpc_cmd)
         rpc_output = subprocess.check_output(rpc_cmd, shell=True)
         print(rpc_output)

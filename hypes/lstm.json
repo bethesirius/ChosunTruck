@@ -26,6 +26,7 @@
     "reregress": false,
     "focus_size": 1.8,
     "early_feat_channels": 256,
+    "later_feat_channels": 832,
     "avg_pool_size": 5,
     "num_lstm_layers": 2,
     "image_width": 640, 
