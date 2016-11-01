@@ -735,6 +735,8 @@ def parseJSON(filename):
             rect.x2 = annoRect["x2"]
             rect.y1 = annoRect["y1"]
             rect.y2 = annoRect["y2"]
+            if "score" in annoRect:
+                rect.score = annoRect["score"]
 
             rects.append(rect)
 
@@ -930,6 +932,9 @@ def saveJSON(filename, annotations):
 def idlBase(filename):
     if (filename.rfind(".pal") == len(filename) - 4):
         return (filename[:-4], ".pal")
+
+    if (filename.rfind(".json") == len(filename) - 5):
+        return (filename[:-5], ".json")
 
     if (filename.rfind(".idl") == len(filename) - 4):
         return (filename[:-4], ".idl")
