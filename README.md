@@ -1,6 +1,6 @@
 <img src=http://russellsstewart.com/s/tensorbox/tensorbox_output.jpg></img>
 
-### Tensorflow == 0.10 supported by current version (>= 0.11 may cause errors, but upgrade is in the works).
+### Tensorflow == 0.11 supported by current version (Please report if you use >0.11 and get errors).
 
 TensorBox is a simple framework for training neural networks to detect objects in images. 
 Training requires a json file (e.g. [here](http://russellsstewart.com/s/tensorbox/test_boxes.json))
