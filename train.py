@@ -120,7 +120,7 @@ def build_forward(H, x, phase, reuse):
     outer_size = grid_size * H['batch_size']
     input_mean = 117.
     x -= input_mean
-    cnn, early_feat, _ = googlenet_load.model(x, H, phase, reuse)
+    cnn, early_feat, _ = googlenet_load.model(x, H, reuse)
     early_feat_channels = H['early_feat_channels']
     early_feat = early_feat[:, :, :, :early_feat_channels]
     
