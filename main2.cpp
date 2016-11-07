@@ -8,9 +8,11 @@
 //#include <opencv2/cudaimgproc.hpp>
 //#include <opencv2/cudafilters.hpp>
 //#include <opencv2/gpu/gpu.hpp>
+#include <omp.h>
 #include <iostream>
 #include <string>
 #include <chrono>
+#include <thread>
 #include "ets2_self_driving.h"
 #include "IPM.h"
 #include "getScreen_linux.cpp"
@@ -23,39 +25,38 @@
 using namespace cv;
 using namespace std;
 
-void Thinning(Mat input, int row, int col);
+void input(int, int, int);
+int counter = 0;
 
 int main() {
 
 
-	int counter = 0;
 	//cudaf();
 
 
-	long long int sum = 0;
-	long long int i = 0;
+	//long long int sum = 0;
+	//long long int i = 0;
 
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
 		Mat image, outputImg;
-		int Width = 0;
-		int Height = 0;
+		int Width = 1024;
+		int Height = 768;
 		int Bpp = 0;
 		std::vector<std::uint8_t> Pixels;
 
 		ImageFromDisplay(Pixels, Width, Height, Bpp);
-
+	
 		Mat img = Mat(Height, Width, Bpp > 24 ? CV_8UC4 : CV_8UC3, &Pixels[0]); //Mat(Size(Height, Width), Bpp > 24 ? CV_8UC4 : CV_8UC3, &Pixels[0]); 
 		cv::Rect myROI(896, 312, 1024, 768);
 		image = img(myROI);
-
 
 		// Mat to GpuMat
 		//cuda::GpuMat imageGPU;
 		//imageGPU.upload(image);
 
-		medianBlur(image, image, 3); 
+		//medianBlur(image, image, 3); 
 		//cv::cuda::bilateralFilter(imageGPU, imageGPU, );
 
 		int width = 1024, height = 768;
@@ -122,6 +123,7 @@ int main() {
 		double avr_center_to_left = 0;
 		double avr_center_to_right = 0;
 
+		//#pragma omp parallel for
 		for(int i=240; i>30; i--){
 			double center_to_right = -1;
 			double center_to_left = -1;
@@ -152,61 +154,51 @@ int main() {
 		}
 
 		// 컨트롤러 입력
-		
 		int diff = 0;
 		if (count_centerline!=0) {
-		diff = sum_centerline/count_centerline - bottom_center;
+			diff = sum_centerline/count_centerline - bottom_center;
+			int degree = atan2 (last_centerline - first_centerline, count_centerline) * 180 / PI;
+			//diff = (90 - degree);
 	
-		int move_mouse_pixel = diff/4;
-/*
-		goDirection(counter - move_mouse_pixel);
-		cout << diff << ", " << counter - move_mouse_pixel << ", "<< counter <<endl;
-		counter = move_mouse_pixel;
-*/
-		
-
-		if (abs(move_mouse_pixel)< 5) {
-			goDirection(0 - counter/3);
-			counter -= counter/3;
-		} else if (abs(move_mouse_pixel) < 4) {
-			goDirection(0 - counter/2);
-			counter -= counter/2;
-		} else if (abs (move_mouse_pixel) < 2) {
-			goDirection(0 - counter);
-			counter = 0;
-		} else {
+			int move_mouse_pixel = 0 - counter + diff;
+			cout << move_mouse_pixel <<" ";
 			goDirection(move_mouse_pixel);
-			counter += move_mouse_pixel;
-		}
-		
+			counter = diff;
+/*
 
+			if (abs(move_mouse_pixel)< 5) {
+				goDirection(0 - counter/3);
+				counter -= counter/3;
+			} else if (abs(move_mouse_pixel) < 4) {
+				goDirection(0 - counter/2);
+				counter -= counter/2;
+			} else if (abs (move_mouse_pixel) < 2) {
+				goDirection(0 - counter);
+				counter = 0;
+			} else {
+				goDirection(move_mouse_pixel);
+				counter += move_mouse_pixel;
+			}	
+*/
+			
 		} else {}
+	
 		
-		/*
-		double diff = 0;
-		if (count_centerline != 0) {
-			diff = (last_centerline - first_centerline) / count_centerline;
-			diff = atan2 (last_centerline - first_centerline, count_centerline) * 180 / PI;
-			int theta = (90 - diff);
-			cout << theta << ", " << counter - theta << endl;
-			goDirection(counter - theta);
-			counter = theta;
-		} else {
-		}
-		*/
 		////////////////////////////////////////////
 		
 		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		imshow("Test", outputImg);
 		waitKey(1);
-		/*
+		
+		
 		auto end = chrono::high_resolution_clock::now();
 		auto dur = end - begin;
 		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
 		ms++;
-		sum += ms;
-		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
-		*/
+		//cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
+		cout << 1000 / ms << "fps" << endl;
+		
 	}
 	return 0;
 }
+
