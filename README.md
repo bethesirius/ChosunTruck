@@ -10,7 +10,7 @@ The basic model implements the simple and robust GoogLeNet-OverFeat algorithm. W
 algorithm, reproducing state-of-the-art detection results on the highly occluded TUD crossing and brainwash datasets.
 
 ## OverFeat Installation & Training
-First, [install TensorFlow from source or pip](https://www.tensorflow.org/versions/r0.7/get_started/os_setup.html#pip-installation)
+First, [install TensorFlow from source or pip](https://www.tensorflow.org/versions/r0.7/get_started/os_setup.html#pip-installation) (NB: source installs currently break threading on 0.11)
     
     $ git clone http://github.com/russell91/tensorbox
     $ cd tensorbox
