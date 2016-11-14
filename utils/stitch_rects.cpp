@@ -85,7 +85,7 @@ void filter_rects(const vector<vector<vector<Rect> > >& all_rects,
 
       vector<int> bad;
       for (int k = 0; k < (int)assignment.size(); ++k) {
-        if (k < current_rects.size() && assignment[k] < relevant_rects.size()) {
+        if (k < (int)current_rects.size() && assignment[k] < (int)relevant_rects.size()) {
           Rect& c = current_rects[k];
           Rect& a = relevant_rects[assignment[k]];
           if (c.confidence_ > max_threshold) {
