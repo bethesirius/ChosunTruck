@@ -85,20 +85,22 @@ void filter_rects(const vector<vector<vector<Rect> > >& all_rects,
 
       vector<int> bad;
       for (int k = 0; k < (int)assignment.size(); ++k) {
-        Rect& c = current_rects[k];
-        Rect& a = relevant_rects[assignment[k]];
-        if (c.confidence_ > max_threshold) {
-          bad.push_back(k);
-          continue;
-        }
-        if (c.overlaps(a, tau)) {
-          if (c.confidence_ > a.confidence_ && c.iou(a) > 0.7) {
-            c.true_confidence_ = a.confidence_;
-            stitched_rects->erase(std::find(stitched_rects->begin(), stitched_rects->end(), a));
-          } else {
+        if (k < current_rects.size() && assignment[k] < relevant_rects.size()) {
+          Rect& c = current_rects[k];
+          Rect& a = relevant_rects[assignment[k]];
+          if (c.confidence_ > max_threshold) {
             bad.push_back(k);
+            continue;
           }
-        } 
+          if (c.overlaps(a, tau)) {
+            if (c.confidence_ > a.confidence_ && c.iou(a) > 0.7) {
+              c.true_confidence_ = a.confidence_;
+              stitched_rects->erase(std::find(stitched_rects->begin(), stitched_rects->end(), a));
+            } else {
+              bad.push_back(k);
+            }
+          }
+        }
       }
 
       for (int k = 0; k < (int)current_rects.size(); ++k) {
