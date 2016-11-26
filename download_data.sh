@@ -11,7 +11,7 @@ wget --continue http://russellsstewart.com/s/tensorbox/inception_v1.ckpt
 mkdir -p overfeat_rezoom && cd overfeat_rezoom
 wget --continue http://russellsstewart.com/s/tensorbox/overfeat_rezoom/save.ckpt-150000v2
 cd ..
-wget --continue http://russellsstewart.com/s/tensorbox/brainwash.tar.gz
+wget --continue https://stacks.stanford.edu/file/druid:sx925dc9385/brainwash.tar.gz
 echo "Extracting..."
 tar xf brainwash.tar.gz
 
