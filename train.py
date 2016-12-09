@@ -7,6 +7,7 @@ import time
 import string
 import argparse
 import os
+import threading
 from scipy import misc
 import tensorflow as tf
 import numpy as np
@@ -454,7 +455,7 @@ def train(H, test_images):
             gen = train_utils.load_data_gen(H, phase, jitter=H['solver']['use_jitter'])
             d = gen.next()
             sess.run(enqueue_op[phase], feed_dict=make_feed(d))
-            t = tf.train.threading.Thread(target=thread_loop,
+            t = threading.Thread(target=thread_loop,
                                  args=(sess, enqueue_op, phase, gen))
             t.daemon = True
             t.start()
