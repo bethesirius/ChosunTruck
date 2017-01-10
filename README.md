@@ -1,14 +1,15 @@
 # ChosunTruck
 
 ## Introduction
-Chosun Truck is a Euro Truck Simulator 2 autonomous driving solution.
-In recent years, autonomous driving technology has become a big issue and we have studied the technology related to this.
-It was developed in a simulator environment called Euro Truck Simulator 2 to study with real vehicles.
-Because this simulator provides an environment similar to a real road, we determined it to be a good test environment.
+Chosun Truck is autonomous driving solution on Euro Truck Simulator 2(https://eurotrucksimulator2.com/).
+Recently, autonomous driving technology has become a big issue and we have studied the technology related to this.
+It is being develop in a simulator environment called Euro Truck Simulator 2 to study it with vehicles.
+Because this simulator provides a good test environment that is similar to the real road, we choose it.
 
-## This Project...
-* help to understand the principle of autonomous driving.
-* Autonomous driving only works on the expressway.
+## Features
+* You can drive a vehicle without handling.
+* You can understand the principle of autonomous driving.
+* This feature only works on the expressway.
 
 ## master
 OS: window 7 64bits
@@ -24,5 +25,16 @@ OpenCV version: 3.0
 g++ -o auto_drive main2.cpp IPM.cpp lineinder.cpp uinput.c `pkg-config opencv --cflags --libs` -std=c++11 -lX11 -Wall -fopenmp -O3 -march=native
 ```
 
-## Video URL
+## Demo Video
 https://drive.google.com/open?id=0B0NMsYygQ6icMXUzcEJhS1RRT2M
+
+## Contributers
+Chiwan Song, songchi1234@naver.com
+JaeCheol Sim, ssimpcp@gmail.com
+Seongjoon Chu, hs4393@gmail.com
+
+## How to Contribute
+Anyone who is interest in this procject is welcome! Just Fork it and Pull Requests!
+
+## LiCENSE
+GNU GENERAL PUBLIC LICENSE v3.0
