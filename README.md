@@ -36,5 +36,5 @@ Seongjoon Chu, hs4393@gmail.com
 ## How to Contribute
 Anyone who is interest in this procject is welcome! Just Fork it and Pull Requests!
 
-## LiCENSE
+## License
 GNU GENERAL PUBLIC LICENSE v3.0
