@@ -37,4 +37,18 @@ Seongjoon Chu, hs4393@gmail.com
 Anyone who is interest in this procject is welcome! Just Fork it and Pull Requests!
 
 ## License
-GNU GENERAL PUBLIC LICENSE v3.0
+ChosunTruck, Euro Truck Simulator 2 auto driving solution
+Copyright (C) 2017 chi3236, bethesirius, uoyssim
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
