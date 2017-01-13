@@ -9,7 +9,7 @@ Because this simulator provides a good test environment that is similar to the r
 ## Features
 * You can drive a vehicle without handling.
 * You can understand the principle of autonomous driving.
-* This feature only works on the expressway.
+* This feature only works on the highway.
 
 ## master
 OS: window 7 64bits
