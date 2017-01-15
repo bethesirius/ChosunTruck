@@ -1,7 +1,7 @@
 # ChosunTruck
 
 ## Introduction
-Chosun Truck is autonomous driving solution on Euro Truck Simulator 2(https://eurotrucksimulator2.com/).
+ChosunTruck is autonomous driving solution on Euro Truck Simulator 2(https://eurotrucksimulator2.com/).
 Recently, autonomous driving technology has become a big issue and we have studied the technology related to this.
 It is being develop in a simulator environment called Euro Truck Simulator 2 to study it with vehicles.
 Because this simulator provides a good test environment that is similar to the real road, we choose it.
@@ -9,21 +9,39 @@ Because this simulator provides a good test environment that is similar to the r
 ## Features
 * You can drive a vehicle without handling.
 * You can understand the principle of autonomous driving.
-* This feature only works on the highway.
+* These features only work on a highway.
 
-## master
-OS: window 7 64bits
-Development Tool: Visual Studio 2015
+## How To Run It
+### Windows
+OS: Windows 7 64bits
+
+IDE: Visual Studio 2015
+
 OpenCV version: 3.0
 
-Because mouse movements or keyboard input do not work in Windows to navigate the truck in Euro Truck Simulator 2, the master version is only available for lane detection.
+** **NOTICE: Because mouse and keyboard input DOES NOT work on Windows, this is only available for lane detection. For more informations, see also [#4](https://github.com/bethesirius/ChosunTruck/issues/4)**
 
-## linux
-OS: ubuntu
+Open visual studio project and build it. Run ETS2 with window mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
+
+### Linux
+OS: ubuntu 16.04 LTS
+
 OpenCV version: 3.0
+
+First, clone linux branch.
+```
+git clone -b linux https://github.com/bethesirius/ChosunTruck.git
+```
+And, build source code with below command.
 ```
 g++ -o auto_drive main2.cpp IPM.cpp lineinder.cpp uinput.c `pkg-config opencv --cflags --libs` -std=c++11 -lX11 -Wall -fopenmp -O3 -march=native
 ```
+Run ETS2 with window mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.) It can not find the ETS2 window automatically, You should move the ETS2 window to right-down corner. Go to a highway and set truck's speed to 40~60km/h. I recommend you turn on cruise mode to set speed easily. Finally, run this program as root!
+```
+sudo ./auto_drive
+```
+----
+If you have some problems to run this project, reference the demo video below. Or, open a issue to contact our team.
 
 ## Demo Video
 https://goo.gl/photos/aHQ5ZMKdTQJyMuaM9
@@ -33,7 +51,7 @@ Chiwan Song, chi3236@gmail.com
 JaeCheol Sim, ssimpcp@gmail.com
 Seongjoon Chu, hs4393@gmail.com
 
-## How to Contribute
+## How To Contribute
 Anyone who is interest in this procject is welcome! Just Fork it and Pull Requests!
 
 ## License
