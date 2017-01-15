@@ -5,6 +5,7 @@
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/photo/cuda.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include "opencv2/cudaarithm.hpp"
 //#include <opencv2/cudaimgproc.hpp>
 //#include <opencv2/cudafilters.hpp>
 //#include <opencv2/gpu/gpu.hpp>
@@ -33,11 +34,11 @@ int main() {
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
-		HWND hWnd = FindWindow("prism3d", NULL);
+		HWND hwnd = FindWindow("prism3d", NULL);
 		// NOTEPAD
 		//HWND hWnd = FindWindow("Photo_Light", NULL);
 		Mat image, outputImg;
-		hwnd2mat(hWnd).copyTo(image);
+		hwnd2mat(hwnd).copyTo(image);
 
 		// Mat to GpuMat
 		//cuda::GpuMat imageGPU;
@@ -49,7 +50,7 @@ int main() {
 		int width = 0, height = 0;
 
 		RECT windowsize;
-		GetClientRect(hWnd, &windowsize);
+		GetClientRect(hwnd, &windowsize);
 
 		height = windowsize.bottom; // change this to whatever size you want to resize to
 		width = windowsize.right;

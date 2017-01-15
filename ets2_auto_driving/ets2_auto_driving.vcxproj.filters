@@ -44,4 +44,7 @@
       <Filter>소스 파일</Filter>
     </CudaCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
 </Project>
