@@ -6,6 +6,7 @@
 #include <opencv2/photo/cuda.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "opencv2/cudaarithm.hpp"
+#include <opencv2/highgui/highgui_c.h>
 //#include <opencv2/cudaimgproc.hpp>
 //#include <opencv2/cudafilters.hpp>
 //#include <opencv2/gpu/gpu.hpp>
@@ -41,19 +42,19 @@ int main() {
 		hwnd2mat(hwnd).copyTo(image);
 
 		// Mat to GpuMat
-		//cuda::GpuMat imageGPU;
-		//imageGPU.upload(image);
+		cuda::GpuMat imageGPU;
+		imageGPU.upload(image);
 
 		medianBlur(image, image, 3); 
-		//cv::cuda::bilateralFilter(imageGPU, imageGPU, );
+		bilateralFilter(imageGPU, imageGPU, 15, 80, 80);
 
 		int width = 0, height = 0;
 
 		RECT windowsize;
 		GetClientRect(hwnd, &windowsize);
 
-		height = 1920; // change this to whatever size you want to resize to
-		width = 1080;
+		height = 1080; // change this to whatever size you want to resize to
+		width = 1920;
 
 		// The 4-points at the input image	
 		vector<Point2f> origPoints;
@@ -82,7 +83,8 @@ int main() {
 		//printf("%.2f (ms)\r", 1000 * elapsed_secs);
 		//ipm.drawPoints(origPoints, image);
 
-		//Mat row = outputImg.row[0];
+		imageGPU.download(image);
+		//cv::Mat::row = outputImg.row[0];
 		cv::Mat gray;
 		cv::Mat blur;
 		cv::Mat sobel;
@@ -105,7 +107,7 @@ int main() {
 		std::vector<cv::Vec4i> li = ld.findLines(contours);
 		ld.drawDetectedLines(contours);
 		
-		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
+		cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		imshow("Test", contours);
 		waitKey(1);
 		/*
