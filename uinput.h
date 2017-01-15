@@ -8,5 +8,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
+void setPath(char*);
 int goDirection(int);
 

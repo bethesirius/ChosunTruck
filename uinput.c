@@ -1,8 +1,23 @@
+#include <string.h>
 #include "uinput.h"
+
+char path[20] = {0};
+
+void setPath(char *eventX) {
+	strcat(path, "/dev/input/");
+	strcat(path, eventX);
+	printf("%s",path);
+}
+
 
 int goDirection(int pixel) {
 struct input_event event, event_end;
-  int fd = open("/dev/input/event5", O_RDWR);
+  if(!path[0]) {
+    printf("Mouse device path is NULL. Call setPath() first.\n");
+    return -1;
+  }
+
+  int fd = open(path, O_RDWR);
   if (fd < 0) {
     printf("Error open mouse:%s\n", strerror(errno));
     return -1;
