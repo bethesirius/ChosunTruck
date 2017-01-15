@@ -34,7 +34,7 @@ int main() {
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
-		HWND hwnd = FindWindow("prism3d", NULL);
+		HWND hwnd = FindWindow("prism3d", 0);
 		// NOTEPAD
 		//HWND hWnd = FindWindow("Photo_Light", NULL);
 		Mat image, outputImg;
@@ -52,8 +52,8 @@ int main() {
 		RECT windowsize;
 		GetClientRect(hwnd, &windowsize);
 
-		height = windowsize.bottom; // change this to whatever size you want to resize to
-		width = windowsize.right;
+		height = 1920; // change this to whatever size you want to resize to
+		width = 1080;
 
 		// The 4-points at the input image	
 		vector<Point2f> origPoints;
