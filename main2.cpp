@@ -170,7 +170,7 @@ int main() {
 			//diff = (90 - degree);
 	
 			int move_mouse_pixel = 0 - counter + diff;
-			cout << move_mouse_pixel <<" ";
+			cout << "Steer: "<< move_mouse_pixel << "px ";
 			goDirection(move_mouse_pixel);
 			counter = diff;
 /*
