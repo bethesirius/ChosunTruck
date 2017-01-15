@@ -35,11 +35,11 @@ int main() {
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
-		HWND hwnd = FindWindow("prism3d", 0);
+		HWND hWnd = FindWindow("prism3d", 0);
 		// NOTEPAD
 		//HWND hWnd = FindWindow("Photo_Light", NULL);
 		Mat image, outputImg;
-		hwnd2mat(hwnd).copyTo(image);
+		hwnd2mat(hWnd).copyTo(image);
 
 		// Mat to GpuMat
 		cuda::GpuMat imageGPU;
@@ -51,7 +51,7 @@ int main() {
 		int width = 0, height = 0;
 
 		RECT windowsize;
-		GetClientRect(hwnd, &windowsize);
+		GetClientRect(hWnd, &windowsize);
 
 		height = 1080; // change this to whatever size you want to resize to
 		width = 1920;
@@ -118,6 +118,144 @@ int main() {
 		sum += ms;
 		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
 		*/
+		///////////////////////////////////////
+		typedef struct tagINPUT {
+			DWORD   type;
+
+			union
+			{
+				MOUSEINPUT      mi;
+				KEYBDINPUT      ki;
+				HARDWAREINPUT   hi;
+			};
+		} INPUT, *PINPUT, FAR* LPINPUT;
+
+		typedef struct tagKEYBDINPUT {
+			WORD    wVk;
+			WORD    wScan;
+			DWORD   dwFlags;
+			DWORD   time;
+			ULONG_PTR dwExtraInfo;
+		} KEYBDINPUT, *PKEYBDINPUT, FAR* LPKEYBDINPUT;
+
+		typedef struct tagMOUSEINPUT {
+			LONG    dx;
+			LONG    dy;
+			DWORD   mouseData;
+			DWORD   dwFlags;
+			DWORD   time;
+			ULONG_PTR dwExtraInfo;
+		} MOUSEINPUT, *PMOUSEINPUT, FAR* LPMOUSEINPUT;
+
+		typedef struct tagHARDWAREINPUT {
+			DWORD   uMsg;
+			WORD    wParamL;
+			WORD    wParamH;
+		} HARDWAREINPUT, *PHARDWAREINPUT, FAR* LPHARDWAREINPUT;
+		
+		unsigned char row_center = gray.at<unsigned char>(10, 160);
+		
+			unsigned char row_left = 0;
+			unsigned char row_right = 0;
+		
+			int left = 0;
+			int right = 0;
+			int i = 0;
+			int row_number = 5;
+			while (i < 150) {
+			if (i == 149) {
+				i = 0;
+				row_left = 0;
+				row_right = 0;
+				left = 0;
+				right = 0;
+				row_number++;
+				
+			}
+			if (row_left == 255 && row_right == 255) {
+				row_number = 5;
+				break;
+			}
+			if (row_left != 255) {
+				row_left = gray.at<unsigned char>(row_number, 159 + left);
+				left--;
+				
+			}
+			if (row_right != 255) {
+				row_right = gray.at<unsigned char>(row_number, 159 + right);
+				right++;
+				
+			}
+			i++;
+			
+		}
+		SetActiveWindow(hWnd);
+		int average = (left == -150 || right == 150) ? 0 : left + right;
+		if (left + right < -50){
+			cout << "go left ";
+								
+								SendMessage(hWnd, WM_KEYUP, 0x44, 0);
+								Sleep(100);
+								SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+								Sleep(100);
+								SendMessage(hWnd, WM_KEYUP, 0x74, 0);
+								
+								HKL kbl = GetKeyboardLayout(0);
+								
+								INPUT input[3];
+								input[0].type = INPUT_KEYBOARD;
+								input[0].ki.time = 0;
+								input[0].ki.dwFlags = KEYEVENTF_KEYUP;
+								input[0].ki.wScan = 0x74;
+								input[0].ki.wVk = 0;
+								input[0].ki.dwExtraInfo = 0;
+
+								input[1].type = INPUT_KEYBOARD;
+								input[1].ki.time = 0;
+								input[1].ki.dwFlags = 0;
+								input[1].ki.wScan = 0x74;
+								input[1].ki.wVk = 0;
+								input[1].ki.dwExtraInfo = 0;
+
+								input[2].type = INPUT_KEYBOARD;
+								input[2].ki.time = 0;
+								input[2].ki.dwFlags = KEYEVENTF_KEYUP;
+								input[2].ki.wScan = VK_LEFT;
+								input[2].ki.wVk = 0;
+								input[2].ki.dwExtraInfo = 0;
+								SendInput(3, &input, sizeof(input));
+
+		}
+		else if (left + right > -50 && left + right < 50){
+			cout << "go straight ";
+			for (int x = 0, y = 0; x < 700 && y<700; x += 10, y += 10)
+				 {
+				SendMessage(hWnd, WM_MOUSEMOVE, 0, MAKELPARAM(x, y));
+				Sleep(10);
+				}
+						/*
+						-			SendMessage(hWnd, WM_KEYUP, 0x44, 0);
+						-			Sleep(10);
+						-			SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+						-			*/
+		}
+		else{
+			cout << "go right ";
+			/*
+			-			SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+			-			Sleep(100);
+			-			SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+			-			Sleep(100);
+			-			SendMessage(hWnd, WM_KEYUP, 0x74, 0);
+			-			*/
+						//Sleep(1000);
+						//keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);
+		}
+		cout << "left: " << left << ", right: " << right << ", average: " << average << endl;
+				///////////////////////////////////////
+			
+			
+			imshow("Test", gray);
 	}
 	return 0;
 }

@@ -15,7 +15,7 @@
 using namespace cv;
 using namespace std;
 
-Mat hwnd2mat(HWND hwnd) {
+Mat hwnd2mat(HWND hWnd) {
 
 	HDC hwindowDC, hwindowCompatibleDC;
 
@@ -24,12 +24,12 @@ Mat hwnd2mat(HWND hwnd) {
 	Mat src;
 	BITMAPINFOHEADER  bi;
 
-	hwindowDC = GetDC(hwnd);
+	hwindowDC = GetDC(hWnd);
 	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);
 	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);
 
 	RECT windowsize;    // get the height and width of the screen
-	GetClientRect(hwnd, &windowsize);
+	GetClientRect(hWnd, &windowsize);
 
 	srcheight = windowsize.bottom ;// change this to whatever size you want to resize to
 	srcwidth = windowsize.right;
@@ -61,7 +61,7 @@ Mat hwnd2mat(HWND hwnd) {
 	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
 
 	// avoid memory leak
-	DeleteObject(hbwindow); DeleteDC(hwindowCompatibleDC); ReleaseDC(hwnd, hwindowDC);
+	DeleteObject(hbwindow); DeleteDC(hwindowCompatibleDC); ReleaseDC(hWnd, hwindowDC);
 
 	return src;
 }
