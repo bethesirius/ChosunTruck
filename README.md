@@ -21,22 +21,27 @@ OpenCV version: 3.0
 
 ** **NOTICE: Because mouse and keyboard input DOES NOT work on Windows, this is only available for lane detection. For more informations, see also [#4](https://github.com/bethesirius/ChosunTruck/issues/4)**
 
-Open visual studio project and build it. Run ETS2 with window mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
+- Open visual studio project and build it. 
+- Run ETS2 with window mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
 
 ### Linux
 OS: ubuntu 16.04 LTS
 
 OpenCV version: 3.0
 
-First, clone linux branch.
+- Clone linux branch.
 ```
 git clone -b linux https://github.com/bethesirius/ChosunTruck.git
 ```
-And, build source code with below command.
+- Build source code with below command.
 ```
 g++ -o auto_drive main2.cpp IPM.cpp lineinder.cpp uinput.c `pkg-config opencv --cflags --libs` -std=c++11 -lX11 -Wall -fopenmp -O3 -march=native
 ```
-Run ETS2 with window mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.) It can not find the ETS2 window automatically, You should move the ETS2 window to right-down corner. Go to a highway and set truck's speed to 40~60km/h. I recommend you turn on cruise mode to set speed easily. Finally, run this program as root!
+- Run ETS2 with window mode and set resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2)
+- It can not find the ETS2 window automatically, You should move the ETS2 window to right-down corner.
+- In ETS2 Options, set controls to`Keyboard + Mouse Steering`.
+- Go to a highway and set truck's speed to 40~60km/h. (I recommend you turn on cruise mode to set the speed easily)
+- Run this program as root!
 ```
 sudo ./auto_drive
 ```
