@@ -35,26 +35,26 @@ int main() {
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
-		HWND hWnd = FindWindow("prism3d", 0);
+		HWND hWnd = FindWindow("prism3d", NULL);
 		// NOTEPAD
 		//HWND hWnd = FindWindow("Photo_Light", NULL);
 		Mat image, outputImg;
 		hwnd2mat(hWnd).copyTo(image);
 
 		// Mat to GpuMat
-		cuda::GpuMat imageGPU;
-		imageGPU.upload(image);
+		//cuda::GpuMat imageGPU;
+		//imageGPU.upload(image);
 
 		medianBlur(image, image, 3); 
-		bilateralFilter(imageGPU, imageGPU, 15, 80, 80);
+		//bilateralFilter(imageGPU, imageGPU, 15, 80, 80);
 
 		int width = 0, height = 0;
 
 		RECT windowsize;
 		GetClientRect(hWnd, &windowsize);
 
-		height = 1080; // change this to whatever size you want to resize to
-		width = 1920;
+		height = 768; // change this to whatever size you want to resize to
+		width = 1024;
 
 		// The 4-points at the input image	
 		vector<Point2f> origPoints;
@@ -83,8 +83,7 @@ int main() {
 		//printf("%.2f (ms)\r", 1000 * elapsed_secs);
 		//ipm.drawPoints(origPoints, image);
 
-		imageGPU.download(image);
-		//cv::Mat::row = outputImg.row[0];
+		//cv::Mat row = cv::Mat::rows
 		cv::Mat gray;
 		cv::Mat blur;
 		cv::Mat sobel;
@@ -223,7 +222,7 @@ int main() {
 								input[2].ki.wScan = VK_LEFT;
 								input[2].ki.wVk = 0;
 								input[2].ki.dwExtraInfo = 0;
-								SendInput(3, &input, sizeof(input));
+								SendInput(3, 0, sizeof(input));
 
 		}
 		else if (left + right > -50 && left + right < 50){
@@ -233,23 +232,28 @@ int main() {
 				SendMessage(hWnd, WM_MOUSEMOVE, 0, MAKELPARAM(x, y));
 				Sleep(10);
 				}
-						/*
-						-			SendMessage(hWnd, WM_KEYUP, 0x44, 0);
-						-			Sleep(10);
-						-			SendMessage(hWnd, WM_KEYUP, 0x41, 0);
-						-			*/
+									SendMessage(hWnd, WM_KEYUP, 0x44, 0);
+									Sleep(10);
+									SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+									
 		}
 		else{
 			cout << "go right ";
-			/*
-			-			SendMessage(hWnd, WM_KEYUP, 0x41, 0);
-			-			Sleep(100);
-			-			SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
-			-			Sleep(100);
-			-			SendMessage(hWnd, WM_KEYUP, 0x74, 0);
-			-			*/
+						SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+						Sleep(100);
+						SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+						Sleep(100);
+						SendMessage(hWnd, WM_KEYUP, 0x74, 0);
 						//Sleep(1000);
-						//keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);
+						INPUT input;
+						input.type = INPUT_KEYBOARD;
+						input.ki.time = 0;
+						input.ki.dwFlags = KEYEVENTF_KEYUP;
+						input.ki.wScan = VK_RIGHT;
+						input.ki.wVk = 0;
+						input.ki.dwExtraInfo = 0;
+						SendInput(1, 0, sizeof(input));
+						// keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);
 		}
 		cout << "left: " << left << ", right: " << right << ", average: " << average << endl;
 				///////////////////////////////////////
