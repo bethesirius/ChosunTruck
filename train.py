@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import json
+import cv2
 import tensorflow.contrib.slim as slim
 import datetime
 import random
@@ -121,7 +122,7 @@ def build_forward(H, x, phase, reuse):
     outer_size = grid_size * H['batch_size']
     input_mean = 117.
     x -= input_mean
-    cnn, early_feat, _ = googlenet_load.model(x, H, reuse)
+    cnn, early_feat = googlenet_load.model(x, H, reuse)
     early_feat_channels = H['early_feat_channels']
     early_feat = early_feat[:, :, :, :early_feat_channels]
     
@@ -469,8 +470,11 @@ def train(H, test_images):
             saver.restore(sess, weights_str)
         else:
             init_fn = slim.assign_from_checkpoint_fn(
-                  '%s/data/inception_v1.ckpt' % os.path.dirname(os.path.realpath(__file__)),
-                  [x for x in tf.all_variables() if x.name.startswith('InceptionV1') and not H['solver']['opt'] in x.name])
+                  '%s/data/%s' % (os.path.dirname(os.path.realpath(__file__)), H['slim_ckpt']),
+                  [x for x in tf.all_variables() if x.name.startswith(H['slim_basename']) and H['solver']['opt'] not in x.name])
+            #init_fn = slim.assign_from_checkpoint_fn(
+                  #'%s/data/inception_v1.ckpt' % os.path.dirname(os.path.realpath(__file__)),
+                  #[x for x in tf.all_variables() if x.name.startswith('InceptionV1') and not H['solver']['opt'] in x.name])
             init_fn(sess)
 
         # train model for N iterations
