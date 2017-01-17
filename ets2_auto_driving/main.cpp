@@ -35,7 +35,7 @@ int main() {
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
-		HWND hWnd = FindWindow("prism3d", NULL);
+		HWND hWnd = FindWindow("prism3d", 0);
 		// NOTEPAD
 		//HWND hWnd = FindWindow("Photo_Light", NULL);
 		Mat image, outputImg;
@@ -83,7 +83,7 @@ int main() {
 		//printf("%.2f (ms)\r", 1000 * elapsed_secs);
 		//ipm.drawPoints(origPoints, image);
 
-		//cv::Mat row = cv::Mat::rows
+		//imageGPU.download(image);
 		cv::Mat gray;
 		cv::Mat blur;
 		cv::Mat sobel;
@@ -118,39 +118,6 @@ int main() {
 		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
 		*/
 		///////////////////////////////////////
-		typedef struct tagINPUT {
-			DWORD   type;
-
-			union
-			{
-				MOUSEINPUT      mi;
-				KEYBDINPUT      ki;
-				HARDWAREINPUT   hi;
-			};
-		} INPUT, *PINPUT, FAR* LPINPUT;
-
-		typedef struct tagKEYBDINPUT {
-			WORD    wVk;
-			WORD    wScan;
-			DWORD   dwFlags;
-			DWORD   time;
-			ULONG_PTR dwExtraInfo;
-		} KEYBDINPUT, *PKEYBDINPUT, FAR* LPKEYBDINPUT;
-
-		typedef struct tagMOUSEINPUT {
-			LONG    dx;
-			LONG    dy;
-			DWORD   mouseData;
-			DWORD   dwFlags;
-			DWORD   time;
-			ULONG_PTR dwExtraInfo;
-		} MOUSEINPUT, *PMOUSEINPUT, FAR* LPMOUSEINPUT;
-
-		typedef struct tagHARDWAREINPUT {
-			DWORD   uMsg;
-			WORD    wParamL;
-			WORD    wParamH;
-		} HARDWAREINPUT, *PHARDWAREINPUT, FAR* LPHARDWAREINPUT;
 		
 		unsigned char row_center = gray.at<unsigned char>(10, 160);
 		
@@ -193,37 +160,37 @@ int main() {
 		if (left + right < -50){
 			cout << "go left ";
 								
-								SendMessage(hWnd, WM_KEYUP, 0x44, 0);
-								Sleep(100);
-								SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
-								Sleep(100);
-								SendMessage(hWnd, WM_KEYUP, 0x74, 0);
+								//SendMessage(hWnd, WM_KEYUP, 0x44, 0);
+								//Sleep(100);
+								//SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+								//Sleep(100);
+								//SendMessage(hWnd, WM_KEYUP, 0x74, 0);
 								
 								HKL kbl = GetKeyboardLayout(0);
 								
-								INPUT input[3];
-								input[0].type = INPUT_KEYBOARD;
-								input[0].ki.time = 0;
-								input[0].ki.dwFlags = KEYEVENTF_KEYUP;
-								input[0].ki.wScan = 0x74;
-								input[0].ki.wVk = 0;
-								input[0].ki.dwExtraInfo = 0;
+								// Create a generic keyboard event structure
+								INPUT ip;
+								Sleep(5000);
+								ip.type = INPUT_KEYBOARD;
+								ip.ki.wScan = 0;
+								ip.ki.time = 0;
+								ip.ki.dwExtraInfo = 0;
+								while (1)
+								{
+									ip.ki.wVk = 0x74;
+									ip.ki.dwFlags = 0;
+									SendInput(1, &ip, sizeof(ip));
 
-								input[1].type = INPUT_KEYBOARD;
-								input[1].ki.time = 0;
-								input[1].ki.dwFlags = 0;
-								input[1].ki.wScan = 0x74;
-								input[1].ki.wVk = 0;
-								input[1].ki.dwExtraInfo = 0;
+									ip.ki.wVk = 0x74;
+									ip.ki.dwFlags = KEYEVENTF_KEYUP; // Releases 0x74
+									SendInput(1, &ip, sizeof(ip));
 
-								input[2].type = INPUT_KEYBOARD;
-								input[2].ki.time = 0;
-								input[2].ki.dwFlags = KEYEVENTF_KEYUP;
-								input[2].ki.wScan = VK_LEFT;
-								input[2].ki.wVk = 0;
-								input[2].ki.dwExtraInfo = 0;
-								SendInput(3, 0, sizeof(input));
-
+									ip.ki.dwFlags = 0;
+									ip.ki.wVk = 'D'; // Presses 'D'
+									SendInput(1, &ip, sizeof(ip));
+								}
+									Sleep(1000);
+								
 		}
 		else if (left + right > -50 && left + right < 50){
 			cout << "go straight ";
@@ -232,27 +199,57 @@ int main() {
 				SendMessage(hWnd, WM_MOUSEMOVE, 0, MAKELPARAM(x, y));
 				Sleep(10);
 				}
-									SendMessage(hWnd, WM_KEYUP, 0x44, 0);
-									Sleep(10);
-									SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+									//SendMessage(hWnd, WM_KEYUP, 0x44, 0);
+									//Sleep(10);
+									//SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+									
+									INPUT ip;
+									Sleep(5000);
+									ip.type = INPUT_KEYBOARD;
+									ip.ki.wScan = 0;
+									ip.ki.time = 0;
+									ip.ki.dwExtraInfo = 0;
+									while (1)
+										ip.ki.wVk = 0x44;
+										ip.ki.dwFlags = KEYEVENTF_KEYUP; // Releases 0x44
+										SendInput(1, &ip, sizeof(ip));
+
+										ip.ki.wVk = 0x41;
+										ip.ki.dwFlags = KEYEVENTF_KEYUP; // Releases 0x41
+										SendInput(1, &ip, sizeof(ip));
+										Sleep(1000);
 									
 		}
 		else{
 			cout << "go right ";
-						SendMessage(hWnd, WM_KEYUP, 0x41, 0);
-						Sleep(100);
-						SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
-						Sleep(100);
-						SendMessage(hWnd, WM_KEYUP, 0x74, 0);
-						//Sleep(1000);
-						INPUT input;
-						input.type = INPUT_KEYBOARD;
-						input.ki.time = 0;
-						input.ki.dwFlags = KEYEVENTF_KEYUP;
-						input.ki.wScan = VK_RIGHT;
-						input.ki.wVk = 0;
-						input.ki.dwExtraInfo = 0;
-						SendInput(1, 0, sizeof(input));
+						//SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+						//Sleep(100);
+						//SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+						//Sleep(100);
+						//SendMessage(hWnd, WM_KEYUP, 0x74, 0);
+
+						INPUT ip;
+						Sleep(1000);
+						ip.type = INPUT_KEYBOARD;
+						ip.ki.wScan = 0;
+						ip.ki.time = 0;
+						ip.ki.dwExtraInfo = 0;
+						while (1)
+						{
+							ip.ki.wVk = 0x74;
+							ip.ki.dwFlags = 0; // Presses 0x41
+							SendInput(1, &ip, sizeof(ip));
+
+							ip.ki.wVk = 0x74;
+							ip.ki.dwFlags = KEYEVENTF_KEYUP; // Releases 0x41
+							SendInput(1, &ip, sizeof(ip));
+
+							ip.ki.dwFlags = 0;
+							ip.ki.wVk = 0x41; // Presses 'A'
+							SendInput(1, &ip, sizeof(ip));
+
+							Sleep(1000);
+						}
 						// keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);
 		}
 		cout << "left: " << left << ", right: " << right << ", average: " << average << endl;
