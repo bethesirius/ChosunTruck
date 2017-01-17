@@ -98,9 +98,9 @@ int main() {
 		//ipm.drawPoints(origPoints, image);
 
 		//Mat row = outputImg.row[0];
-		cv::Mat gray;
-		cv::Mat blur;
-		cv::Mat sobel;
+		cv::UMat gray;
+		cv::UMat blur;
+		cv::UMat sobel;
 		cv::Mat contours;
 		cv::resize(outputImg, outputImg, cv::Size(320, 240));
 		cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
