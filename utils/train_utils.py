@@ -129,9 +129,11 @@ def add_rectangles(H, orig_image, confidences, boxes, use_stitching=False, rnn_l
         acc_rects = all_rects_r
 
 
-    pairs = [(acc_rects, (0, 255, 0))]
     if show_suppressed:
-        pairs.append((all_rects_r, (255, 0, 0)))
+        pairs = [(all_rects_r, (255, 0, 0))]
+    else:
+        pairs = []
+    pairs.append((acc_rects, (0, 255, 0)))
     for rect_set, color in pairs:
         for rect in rect_set:
             if rect.confidence > min_conf:

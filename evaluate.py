@@ -49,7 +49,7 @@ def get_results(args, H):
             pred_anno = al.Annotation()
             pred_anno.imageName = true_anno.imageName
             new_img, rects = add_rectangles(H, [img], np_pred_confidences, np_pred_boxes,
-                                            use_stitching=True, rnn_len=H['rnn_len'], min_conf=0.2, tau=args.tau)
+                                            use_stitching=True, rnn_len=H['rnn_len'], min_conf=args.min_conf, tau=args.tau, show_suppressed=args.show_suppressed)
         
             pred_anno.rects = rects
             pred_anno.imagePath = os.path.abspath(data_dir)
@@ -71,6 +71,8 @@ def main():
     parser.add_argument('--logdir', default='output')
     parser.add_argument('--iou_threshold', default=0.5, type=float)
     parser.add_argument('--tau', default=0.25, type=float)
+    parser.add_argument('--min_conf', default=0.5, type=float)
+    parser.add_argument('--show_suppressed', default=True, type=bool)
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
     hypes_file = '%s/hypes.json' % os.path.dirname(args.weights)
