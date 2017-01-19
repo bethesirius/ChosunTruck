@@ -35,7 +35,7 @@ int main() {
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
-		HWND hWnd = FindWindow("prism3d", 0);
+		HWND hWnd = FindWindow("prism3d", NULL);
 		// NOTEPAD
 		//HWND hWnd = FindWindow("Photo_Light", NULL);
 		Mat image, outputImg;
@@ -106,7 +106,7 @@ int main() {
 		std::vector<cv::Vec4i> li = ld.findLines(contours);
 		ld.drawDetectedLines(contours);
 		
-		cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
+		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		imshow("Test", contours);
 		waitKey(1);
 		/*
@@ -170,12 +170,12 @@ int main() {
 								
 								// Create a generic keyboard event structure
 								INPUT ip;
-								Sleep(5000);
+								Sleep(1000);
 								ip.type = INPUT_KEYBOARD;
 								ip.ki.wScan = 0;
 								ip.ki.time = 0;
 								ip.ki.dwExtraInfo = 0;
-								while (1)
+								//while (1)
 								{
 									ip.ki.wVk = 0x74;
 									ip.ki.dwFlags = 0;
@@ -186,10 +186,9 @@ int main() {
 									SendInput(1, &ip, sizeof(ip));
 
 									ip.ki.dwFlags = 0;
-									ip.ki.wVk = 'D'; // Presses 'D'
+									ip.ki.wVk = 0x44; // Presses 'D'
 									SendInput(1, &ip, sizeof(ip));
 								}
-									Sleep(1000);
 								
 		}
 		else if (left + right > -50 && left + right < 50){
