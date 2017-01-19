@@ -175,7 +175,7 @@ int main() {
 								ip.ki.wScan = 0;
 								ip.ki.time = 0;
 								ip.ki.dwExtraInfo = 0;
-								//while (1)
+								while (1)
 								{
 									ip.ki.wVk = 0x74;
 									ip.ki.dwFlags = 0;
