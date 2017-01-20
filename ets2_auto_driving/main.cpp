@@ -1,15 +1,13 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
-//#include <opencv2/imageproc/imageproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/photo/cuda.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include "opencv2/cudaarithm.hpp"
+#include <opencv2/cudaarithm.hpp>
 #include <opencv2/highgui/highgui_c.h>
-//#include <opencv2/cudaimgproc.hpp>
-//#include <opencv2/cudafilters.hpp>
-//#include <opencv2/gpu/gpu.hpp>
+#include <opencv2/cudaimgproc.hpp>
+#include <opencv2/cudafilters.hpp>
 #include <Windows.h>
 #include <iostream>
 #include <string>
@@ -35,17 +33,17 @@ int main() {
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
-		HWND hWnd = FindWindow("prism3d", NULL);
+		HWND hWnd = FindWindow("prism3d", NULL); // This finds the game window and sets the source for hWnd
 		// NOTEPAD
 		//HWND hWnd = FindWindow("Photo_Light", NULL);
-		Mat image, outputImg;
+		Mat image, outputImg; // Creates two Mats, image and outputImg. outputImg is used for showing what the program sees to user in a new window.
 		hwnd2mat(hWnd).copyTo(image);
 
 		// Mat to GpuMat
 		//cuda::GpuMat imageGPU;
 		//imageGPU.upload(image);
 
-		medianBlur(image, image, 3); 
+		medianBlur(image, image, 3);
 		//bilateralFilter(imageGPU, imageGPU, 15, 80, 80);
 
 		int width = 0, height = 0;
@@ -58,12 +56,12 @@ int main() {
 
 		// The 4-points at the input image	
 		vector<Point2f> origPoints;
-		
-		origPoints.push_back(Point2f(0, (height-50)));
-		origPoints.push_back(Point2f(width, height-50));
-		origPoints.push_back(Point2f(width/2+125, height/2+30));
-		origPoints.push_back(Point2f(width/2-125, height/2+30));
-		
+
+		origPoints.push_back(Point2f(0, (height - 50)));
+		origPoints.push_back(Point2f(width, height - 50));
+		origPoints.push_back(Point2f(width / 2 + 125, height / 2 + 30));
+		origPoints.push_back(Point2f(width / 2 - 125, height / 2 + 30));
+
 
 		// The 4-points correspondences in the destination image
 		vector<Point2f> dstPoints;
@@ -84,28 +82,28 @@ int main() {
 		//ipm.drawPoints(origPoints, image);
 
 		//imageGPU.download(image);
+		//Mat row = outputImg.row[0];
 		cv::Mat gray;
 		cv::Mat blur;
 		cv::Mat sobel;
 		cv::Mat contours;
 		cv::resize(outputImg, outputImg, cv::Size(320, 240));
-		cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
+		//cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
+		cv::cvtColor(outputImg, gray, COLOR_BGR2GRAY); // testing using BGR instead of RGB (https://stackoverflow.com/questions/7461075)
 		cv::blur(gray, blur, cv::Size(10, 10));
 		cv::Sobel(blur, sobel, blur.depth(), 1, 0, 3, 0.5, 127);
 		cv::threshold(sobel, contours, 145, 255, CV_THRESH_BINARY);
 		//Thinning(contours, contours.rows, contours.cols);
 		//cv::Canny(gray, contours, 125, 350);
-		
-		LineFinder ld; // 인스턴스 생성
 
-		// 확률적 허프변환 파라미터 설정하기
-		
+		LineFinder ld;
+
 		ld.setLineLengthAndGap(20, 120);
 		ld.setMinVote(55);
 
 		std::vector<cv::Vec4i> li = ld.findLines(contours);
 		ld.drawDetectedLines(contours);
-		
+
 		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		imshow("Test", contours);
 		waitKey(1);
@@ -118,17 +116,17 @@ int main() {
 		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
 		*/
 		///////////////////////////////////////
-		
+
 		unsigned char row_center = gray.at<unsigned char>(10, 160);
-		
-			unsigned char row_left = 0;
-			unsigned char row_right = 0;
-		
-			int left = 0;
-			int right = 0;
-			int i = 0;
-			int row_number = 5;
-			while (i < 150) {
+
+		unsigned char row_left = 0;
+		unsigned char row_right = 0;
+
+		int left = 0;
+		int right = 0;
+		int i = 0;
+		int row_number = 5;
+		while (i < 150) {
 			if (i == 149) {
 				i = 0;
 				row_left = 0;
@@ -136,126 +134,125 @@ int main() {
 				left = 0;
 				right = 0;
 				row_number++;
-				
+
 			}
 			if (row_left == 255 && row_right == 255) {
 				row_number = 5;
 				break;
 			}
 			if (row_left != 255) {
-				row_left = gray.at<unsigned char>(row_number, 159 + left);
+				row_left = gray.at<unsigned char>(row_number, 159 + left); // Access violation reading location - see results.txt
 				left--;
-				
+
 			}
 			if (row_right != 255) {
-				row_right = gray.at<unsigned char>(row_number, 159 + right);
+				row_right = gray.at<unsigned char>(row_number, 159 + right); // Access violation reading location - see results.txt
 				right++;
-				
+
 			}
 			i++;
-			
+
 		}
 		SetActiveWindow(hWnd);
 		int average = (left == -150 || right == 150) ? 0 : left + right;
-		if (left + right < -50){
+		if (left + right < -50)
+		{
 			cout << "go left ";
-								
-								//SendMessage(hWnd, WM_KEYUP, 0x44, 0);
-								//Sleep(100);
-								//SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
-								//Sleep(100);
-								//SendMessage(hWnd, WM_KEYUP, 0x74, 0);
-								
-								HKL kbl = GetKeyboardLayout(0);
-								
-								// Create a generic keyboard event structure
-								INPUT ip;
-								Sleep(1000);
-								ip.type = INPUT_KEYBOARD;
-								ip.ki.wScan = 0;
-								ip.ki.time = 0;
-								ip.ki.dwExtraInfo = 0;
-								while (1)
-								{
-									ip.ki.wVk = 0x74;
-									ip.ki.dwFlags = 0;
-									SendInput(1, &ip, sizeof(ip));
 
-									ip.ki.wVk = 0x74;
-									ip.ki.dwFlags = KEYEVENTF_KEYUP; // Releases 0x74
-									SendInput(1, &ip, sizeof(ip));
+			//SendMessage(hWnd, WM_KEYUP, 0x44, 0); // SendMessage not working for DirectX window, using SendInput instead
+			//Sleep(100);
+			//SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+			//Sleep(100);
+			//SendMessage(hWnd, WM_KEYUP, 0x74, 0);
 
-									ip.ki.dwFlags = 0;
-									ip.ki.wVk = 0x44; // Presses 'D'
-									SendInput(1, &ip, sizeof(ip));
-								}
-								
+			HKL kbl = GetKeyboardLayout(0);
+
+			// Create a generic keyboard event structure
+			INPUT ip; // Using SendInput to send input commands
+			ip.type = INPUT_KEYBOARD;
+			ip.ki.time = 0;
+			ip.ki.wVk = 0; // We're doing scan codes instead (not using virtual keys)
+			ip.ki.dwExtraInfo = 0;
+			//while (1)
+			//{
+			ip.ki.wScan = 0x74;
+			ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 0x74
+			SendInput(1, &ip, sizeof(ip));
+			Sleep(100);
+
+			ip.ki.dwFlags = KEYEVENTF_SCANCODE;
+			ip.ki.wScan = 0x41; // Presses 'A'
+			SendInput(1, &ip, sizeof(ip));
+			//}
 		}
 		else if (left + right > -50 && left + right < 50){
 			cout << "go straight ";
-			for (int x = 0, y = 0; x < 700 && y<700; x += 10, y += 10)
-				 {
+			for (int x = 0, y = 0; x < 700 && y < 700; x += 10, y += 10)
+			{
 				SendMessage(hWnd, WM_MOUSEMOVE, 0, MAKELPARAM(x, y));
-				Sleep(10);
-				}
-									//SendMessage(hWnd, WM_KEYUP, 0x44, 0);
-									//Sleep(10);
-									//SendMessage(hWnd, WM_KEYUP, 0x41, 0);
-									
-									INPUT ip;
-									Sleep(5000);
-									ip.type = INPUT_KEYBOARD;
-									ip.ki.wScan = 0;
-									ip.ki.time = 0;
-									ip.ki.dwExtraInfo = 0;
-									while (1)
-										ip.ki.wVk = 0x44;
-										ip.ki.dwFlags = KEYEVENTF_KEYUP; // Releases 0x44
-										SendInput(1, &ip, sizeof(ip));
+				Sleep(100);
 
-										ip.ki.wVk = 0x41;
-										ip.ki.dwFlags = KEYEVENTF_KEYUP; // Releases 0x41
-										SendInput(1, &ip, sizeof(ip));
-										Sleep(1000);
-									
+				//SendMessage(hWnd, WM_KEYUP, 0x44, 0);
+				//Sleep(10);
+				//SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+
+				INPUT ip; // Using SendInput to send input commands
+				ip.type = INPUT_KEYBOARD;
+				ip.ki.time = 0;
+				ip.ki.wVk = 0; // We're doing scan codes instead
+				ip.ki.dwExtraInfo = 0;
+
+				ip.ki.wScan = 0x44;
+				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 'D'
+				SendInput(1, &ip, sizeof(ip));
+				Sleep(100);
+
+				ip.ki.wScan = 0x41;
+				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 'A'
+				SendInput(1, &ip, sizeof(ip));
+				Sleep(100);
+			}
 		}
 		else{
 			cout << "go right ";
-						//SendMessage(hWnd, WM_KEYUP, 0x41, 0);
-						//Sleep(100);
-						//SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
-						//Sleep(100);
-						//SendMessage(hWnd, WM_KEYUP, 0x74, 0);
+			{
+				//SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+				//Sleep(100);
+				//SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+				//Sleep(100);
+				//SendMessage(hWnd, WM_KEYUP, 0x74, 0);
 
-						INPUT ip;
-						Sleep(1000);
-						ip.type = INPUT_KEYBOARD;
-						ip.ki.wScan = 0;
-						ip.ki.time = 0;
-						ip.ki.dwExtraInfo = 0;
-						while (1)
-						{
-							ip.ki.wVk = 0x74;
-							ip.ki.dwFlags = 0; // Presses 0x41
-							SendInput(1, &ip, sizeof(ip));
+				INPUT ip;
+				Sleep(100);
+				ip.type = INPUT_KEYBOARD;
+				ip.ki.time = 0;
+				ip.ki.wVk = 0; // We're doing scan codes instead
+				ip.ki.dwExtraInfo = 0;
+				//while (1)
+				//{
+				ip.ki.wScan = 0x44;
+				ip.ki.dwFlags = KEYEVENTF_SCANCODE; // Presses 0x41
+				SendInput(1, &ip, sizeof(ip));
+				Sleep(100);
 
-							ip.ki.wVk = 0x74;
-							ip.ki.dwFlags = KEYEVENTF_KEYUP; // Releases 0x41
-							SendInput(1, &ip, sizeof(ip));
+				ip.ki.wScan = 0x44;
+				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 'A'
+				SendInput(1, &ip, sizeof(ip));
+				Sleep(100);
 
-							ip.ki.dwFlags = 0;
-							ip.ki.wVk = 0x41; // Presses 'A'
-							SendInput(1, &ip, sizeof(ip));
-
-							Sleep(1000);
-						}
-						// keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);
+				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+				ip.ki.wScan = 0x41; // Presses 'A'
+				SendInput(1, &ip, sizeof(ip));
+				Sleep(100);
+				// keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);
+			}
 		}
 		cout << "left: " << left << ", right: " << right << ", average: " << average << endl;
-				///////////////////////////////////////
-			
-			
-			imshow("Test", gray);
+		///////////////////////////////////////
+
+
+		imshow("Test", gray);
+		waitKey(1);
 	}
 	return 0;
 }
