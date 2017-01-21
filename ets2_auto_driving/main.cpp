@@ -38,7 +38,6 @@ int main() {
 		//HWND hWnd = FindWindow("Photo_Light", NULL);
 		Mat image, outputImg; // Creates two Mats, image and outputImg. outputImg is used for showing what the program sees to user in a new window.
 		hwnd2mat(hWnd).copyTo(image);
-
 		// Mat to GpuMat
 		//cuda::GpuMat imageGPU;
 		//imageGPU.upload(image);
@@ -51,8 +50,8 @@ int main() {
 		RECT windowsize;
 		GetClientRect(hWnd, &windowsize);
 
-		height = 768; // change this to whatever size you want to resize to
-		width = 1024;
+		height = windowsize.bottom; // change this to whatever size you want to resize to
+		width = windowsize.right;
 
 		// The 4-points at the input image	
 		vector<Point2f> origPoints;
@@ -88,8 +87,8 @@ int main() {
 		cv::Mat sobel;
 		cv::Mat contours;
 		cv::resize(outputImg, outputImg, cv::Size(320, 240));
-		//cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
-		cv::cvtColor(outputImg, gray, COLOR_BGR2GRAY); // testing using BGR instead of RGB (https://stackoverflow.com/questions/7461075)
+		cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
+		//cv::cvtColor(outputImg, gray, COLOR_BGR2GRAY); // testing using BGR instead of RGB (https://stackoverflow.com/questions/7461075)
 		cv::blur(gray, blur, cv::Size(10, 10));
 		cv::Sobel(blur, sobel, blur.depth(), 1, 0, 3, 0.5, 127);
 		cv::threshold(sobel, contours, 145, 255, CV_THRESH_BINARY);
@@ -175,14 +174,22 @@ int main() {
 			ip.ki.dwExtraInfo = 0;
 			//while (1)
 			//{
-			ip.ki.wScan = 0x74;
-			ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 0x74
+			ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+			ip.ki.wScan = 0x44; // Releases 'D'
 			SendInput(1, &ip, sizeof(ip));
 			Sleep(100);
 
-			ip.ki.dwFlags = KEYEVENTF_SCANCODE;
-			ip.ki.wScan = 0x41; // Presses 'A'
+			ip.ki.wScan = 0x41;
+			ip.ki.dwFlags = KEYEVENTF_SCANCODE; // Pushes 'A'
 			SendInput(1, &ip, sizeof(ip));
+			Sleep(100);
+
+			ip.ki.wScan = 0x41;
+			ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 'A'
+			SendInput(1, &ip, sizeof(ip));
+			Sleep(100);
+
+
 			//}
 		}
 		else if (left + right > -50 && left + right < 50){
@@ -230,18 +237,18 @@ int main() {
 				ip.ki.dwExtraInfo = 0;
 				//while (1)
 				//{
-				ip.ki.wScan = 0x44;
-				ip.ki.dwFlags = KEYEVENTF_SCANCODE; // Presses 0x41
-				SendInput(1, &ip, sizeof(ip));
-				Sleep(100);
-
-				ip.ki.wScan = 0x44;
+				ip.ki.wScan = 0x41;
 				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 'A'
 				SendInput(1, &ip, sizeof(ip));
 				Sleep(100);
 
+				ip.ki.wScan = 0x44;
+				ip.ki.dwFlags = KEYEVENTF_SCANCODE; // Presses 'A'
+				SendInput(1, &ip, sizeof(ip));
+				Sleep(100);
+
 				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
-				ip.ki.wScan = 0x41; // Presses 'A'
+				ip.ki.wScan = 0x44; // Releases 'A'
 				SendInput(1, &ip, sizeof(ip));
 				Sleep(100);
 				// keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);

@@ -67,7 +67,7 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
-    <NuGetPackageImportStamp>b7659eb1</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>06b11406</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(IncludePath)</IncludePath>
@@ -99,7 +99,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\opencv\opencv\build\include\opencv2;C:\opencv\opencv\build\include;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_calib3d310.lib;opencv_core310.lib;opencv_features2d310.lib;opencv_flann310.lib;opencv_highgui310.lib;opencv_imgcodecs310.lib;opencv_imgproc310.lib;opencv_ml310.lib;opencv_objdetect310.lib;opencv_photo310.lib;opencv_shape310.lib;opencv_stitching310.lib;opencv_superres310.lib;opencv_ts310.lib;opencv_video310.lib;opencv_videoio310.lib;opencv_videostab310.lib;opencv_viz310.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_calib3d310.lib;opencv_core310.lib;opencv_features2d310.lib;opencv_flann310.lib;opencv_highgui310.lib;opencv_imgcodecs310.lib;opencv_imgproc310.lib;opencv_ml310.lib;opencv_objdetect310.lib;opencv_photo310.lib;opencv_shape310.lib;opencv_stitching310.lib;opencv_superres310.lib;opencv_ts310.lib;opencv_video310.lib;opencv_videoio310.lib;opencv_videostab310.lib;opencv_viz310.lib;opencv_calib3d310d.lib;opencv_core310d.lib;opencv_features2d310d.lib;opencv_flann310d.lib;opencv_highgui310d.lib;opencv_imgcodecs310d.lib;opencv_imgproc310d.lib;opencv_ml310d.lib;opencv_objdetect310d.lib;opencv_photo310d.lib;opencv_shape310d.lib;opencv_stitching310d.lib;opencv_superres310d.lib;opencv_ts310d.lib;opencv_video310d.lib;opencv_videoio310d.lib;opencv_videostab310d.lib;opencv_viz310d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImportLibrary>
       </ImportLibrary>
     </Link>
@@ -176,6 +176,10 @@
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.targets" />
     <Import Project="..\packages\opencvcuda-release.redist.3.1.0\build\native\opencvcuda-release.redist.targets" Condition="Exists('..\packages\opencvcuda-release.redist.3.1.0\build\native\opencvcuda-release.redist.targets')" />
     <Import Project="..\packages\opencvcuda-release.3.1.0\build\native\opencvcuda-release.targets" Condition="Exists('..\packages\opencvcuda-release.3.1.0\build\native\opencvcuda-release.targets')" />
+    <Import Project="..\packages\opencvdefault.redist.3.1.0\build\native\opencvdefault.redist.targets" Condition="Exists('..\packages\opencvdefault.redist.3.1.0\build\native\opencvdefault.redist.targets')" />
+    <Import Project="..\packages\opencvdefault.3.1.0\build\native\opencvdefault.targets" Condition="Exists('..\packages\opencvdefault.3.1.0\build\native\opencvdefault.targets')" />
+    <Import Project="..\packages\opencvcuda-debug.redist.3.1.0\build\native\opencvcuda-debug.redist.targets" Condition="Exists('..\packages\opencvcuda-debug.redist.3.1.0\build\native\opencvcuda-debug.redist.targets')" />
+    <Import Project="..\packages\opencvcuda-debug.3.1.0\build\native\opencvcuda-debug.targets" Condition="Exists('..\packages\opencvcuda-debug.3.1.0\build\native\opencvcuda-debug.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -183,5 +187,9 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\opencvcuda-release.redist.3.1.0\build\native\opencvcuda-release.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvcuda-release.redist.3.1.0\build\native\opencvcuda-release.redist.targets'))" />
     <Error Condition="!Exists('..\packages\opencvcuda-release.3.1.0\build\native\opencvcuda-release.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvcuda-release.3.1.0\build\native\opencvcuda-release.targets'))" />
+    <Error Condition="!Exists('..\packages\opencvdefault.redist.3.1.0\build\native\opencvdefault.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvdefault.redist.3.1.0\build\native\opencvdefault.redist.targets'))" />
+    <Error Condition="!Exists('..\packages\opencvdefault.3.1.0\build\native\opencvdefault.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvdefault.3.1.0\build\native\opencvdefault.targets'))" />
+    <Error Condition="!Exists('..\packages\opencvcuda-debug.redist.3.1.0\build\native\opencvcuda-debug.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvcuda-debug.redist.3.1.0\build\native\opencvcuda-debug.redist.targets'))" />
+    <Error Condition="!Exists('..\packages\opencvcuda-debug.3.1.0\build\native\opencvcuda-debug.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvcuda-debug.3.1.0\build\native\opencvcuda-debug.targets'))" />
   </Target>
 </Project>
