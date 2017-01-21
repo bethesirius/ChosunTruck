@@ -34,11 +34,9 @@ string exec(const char* cmd);
 int counter = 0;
 
 int main() {
-	char mouse_eventX[20] = {0};
-	strcat(mouse_eventX, exec("cat /proc/bus/input/devices | grep mouse | awk '{print $3}'").c_str());
-	size_t len = strlen(mouse_eventX) - 1;
-	mouse_eventX[len] = '\0';
-	setPath(mouse_eventX);
+	if(-1 == setUinput()) {
+		return -1;
+	}
 
 	//cudaf();
 
@@ -171,7 +169,8 @@ int main() {
 	
 			int move_mouse_pixel = 0 - counter + diff;
 			cout << "Steer: "<< move_mouse_pixel << "px ";
-			goDirection(move_mouse_pixel);
+			//goDirection(move_mouse_pixel);
+			moveMouse(move_mouse_pixel);
 			counter = diff;
 /*
 
