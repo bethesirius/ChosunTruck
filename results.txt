@@ -1,32 +1,49 @@
-Dr. Memory version 1.11.0 build 2 built on Aug 29 2016 02:41:18
-Dr. Memory results for pid 6088: "ets2_auto_driving.exe"
-Application cmdline: "C:\Users\brian\Desktop\ChosunTruck\x64\Release\ets2_auto_driving.exe"
-Recorded 115 suppression(s) from default C:\Program Files (x86)\Dr. Memory\bin64\suppress-default.txt
-
-Error #1: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
-# 0 main               [c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp:144]
-Note: refers to 2 byte(s) before next malloc
-
-Error #2: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
-# 0 main               [c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp:149]
-
-Error #3: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
-# 0 main               [c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp:144]
-Note: refers to 3 byte(s) before next malloc
-
-Error #4: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
-# 0 main               [c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp:149]
-
-Error #5: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
-# 0 main               [c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp:144]
-Note: refers to 3 byte(s) before next malloc
-
-Error #6: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
-# 0 main               [c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp:149]
-Note: refers to 16 byte(s) before memory that was freed here:
-Note: # 0 replace_operator_delete_nothrow_nomatch               [d:\drmemory_package\common\alloc_replace.c:3052]
-Note: # 1 opencv_imgproc310.dll!cv::ocl::Device::isAMD         +0x322e   (0x00007ffd0d81084f <opencv_imgproc310.dll+0x132084f>)
-Note: # 2 opencv_imgproc310.dll!cv::_InputArray::_InputArray   +0x2bde   (0x00007ffd0d7ebb2f <opencv_imgproc310.dll+0x12fbb2f>)
-Note: # 3 opencv_imgproc310.dll!cv::String::operator+=         +0x29b4   (0x00007ffd0d805fb5 <opencv_imgproc310.dll+0x1315fb5>)
-Note: # 4 opencv_imgproc310.dll!cv::String::operator+=         +0x1e63   (0x00007ffd0d805464 <opencv_imgproc310.dll+0x1315464>)
-Note: # 5 opencv_imgproc310.dll!cv::Mat::create                +0x188b   (0x00007ffd0d80791c <opencv_imgproc310.dll+0x131791c>)
+         Dr. Memory version 1.11.0
+         (Uninitialized read checking is not yet supported for 64-bit)
+         Running "C:\Users\brian\Desktop\ChosunTruck\x64\Release\ets2_auto_driving.exe"
+         
+         Error #1: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
+         main                 
+             c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp(144):
+         Note: refers to 2 byte(s) before next malloc
+         
+         Error #2: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
+         main                 
+             c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp(149):
+         Note: refers to 16 byte(s) before memory that was freed here:
+               replace_RtlFreeHeap
+                   d:\drmemory_package\common\alloc_replace.c(3850):
+               gdi32full.dll!UspAllocCache
+             ??:0
+               gdi32full.dll!ScriptBreak  
+             ??:0
+               gdi32full.dll!UspFreeMem   
+             ??:0
+               gdi32full.dll!ScriptBreak  
+             ??:0
+               gdi32full.dll!ScriptBreak  
+             ??:0
+go straight left: -15, right: 44, average: 29
+         
+         Error #3: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
+         main                 
+             c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp(144):
+         Note: refers to 3 byte(s) before next malloc
+         
+         Error #4: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
+         main                 
+             c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp(149):
+         Note: refers to 16 byte(s) before memory that was freed here:
+               replace_operator_delete_nothrow_nomatch
+                   d:\drmemory_package\common\alloc_replace.c(3052):
+               opencv_imgproc310.dll!cv::ocl::Device::isAMD
+             ??:0
+               opencv_imgproc310.dll!cv::_InputArray::_InputArray
+             ??:0
+               opencv_imgproc310.dll!cv::String::operator+=
+             ??:0
+               opencv_imgproc310.dll!cv::String::operator+=
+             ??:0
+               opencv_imgproc310.dll!cv::Mat::create      
+             ??:0
+         WARNING: application exited with abnormal code 0xcfffffff

@@ -126,10 +126,6 @@ int main() {
 		int right = 0;
 		int i = 0;
 		int row_number = 5;
-		cv::Size s = gray.size();
-		int rows = s.height;
-		int cols = s.width;
-		cout << "Rows: " << rows << "\nCols: " << cols << endl;
 		while (i < 150) {
 			if (i == 149) {
 				i = 0;
