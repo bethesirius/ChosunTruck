@@ -378,10 +378,10 @@ c:\program files\nvidia gpu computing toolkit\cuda\v7.5\include\host_defines.h
 c:\program files\nvidia gpu computing toolkit\cuda\v7.5\include\vector_functions.h
 c:\program files\nvidia gpu computing toolkit\cuda\v7.5\include\device_launch_parameters.h
 c:\program files\nvidia gpu computing toolkit\cuda\v7.5\include\vector_types.h
-C:\opencv\build\include\opencv2/core/core.hpp
-C:\opencv\build\include\opencv2/core.hpp
-C:\opencv\build\include\opencv2/core/cvdef.h
-C:\opencv\build\include\opencv2/core/hal/interface.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/core.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/cvdef.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/hal/interface.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\cstddef
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\intrin.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\crtdefs.h
@@ -400,8 +400,8 @@ C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\crtdefs.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\malloc.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\crtdefs.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\ammintrin.h
-C:\opencv\build\include\opencv2/core/version.hpp
-C:\opencv\build\include\opencv2/core/base.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/version.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/base.hpp
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\climits
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\algorithm
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xmemory
@@ -435,7 +435,7 @@ C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\crtdefs.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\type_traits
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xrefwrap
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xatomic0.h
-C:\opencv\build\include\opencv2/core/cvstd.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/cvstd.hpp
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\cctype
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\ctype.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\crtdefs.h
@@ -462,73 +462,77 @@ C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\cerrno
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\errno.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\crtdefs.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\share.h
-C:\opencv\build\include\opencv2/core/ptr.inl.hpp
-C:\opencv\build\include\opencv2/core/neon_utils.hpp
-C:\opencv\build\include\opencv2/core/traits.hpp
-C:\opencv\build\include\opencv2/core/matx.hpp
-C:\opencv\build\include\opencv2/core/saturate.hpp
-C:\opencv\build\include\opencv2/core/fast_math.hpp
-C:\opencv\build\include\opencv2/core/types.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/ptr.inl.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/neon_utils.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/traits.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/matx.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/saturate.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/fast_math.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/types.hpp
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\vector
-C:\opencv\build\include\opencv2/core/mat.hpp
-C:\opencv\build\include\opencv2/core/bufferpool.hpp
-C:\opencv\build\include\opencv2/core/mat.inl.hpp
-C:\opencv\build\include\opencv2/core/persistence.hpp
-C:\opencv\build\include\opencv2/core/operations.hpp
-C:\opencv\build\include\opencv2/core/cvstd.inl.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/mat.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/bufferpool.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/mat.inl.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/persistence.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/operations.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/cvstd.inl.hpp
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\complex
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\ccomplex
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\sstream
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xcomplex
-C:\opencv\build\include\opencv2/core/utility.hpp
-C:\opencv\build\include\opencv2/core.hpp
-C:\opencv\build\include\opencv2/core/core_c.h
-C:\opencv\build\include\opencv2/core/types_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/utility.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/core_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/types_c.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\assert.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\crtdefs.h
-C:\opencv\build\include\opencv2/core.hpp
-C:\opencv\build\include\opencv2/core/utility.hpp
-C:\opencv\build\include\opencv2/core/optim.hpp
-C:\opencv\build\include\opencv2/core.hpp
-C:\opencv\build\include\opencv2/opencv.hpp
-C:\opencv\build\include\opencv2/imgproc.hpp
-C:\opencv\build\include\opencv2/imgproc/imgproc_c.h
-C:\opencv\build\include\opencv2/imgproc/types_c.h
-C:\opencv\build\include\opencv2/photo.hpp
-C:\opencv\build\include\opencv2/photo/photo_c.h
-C:\opencv\build\include\opencv2/video.hpp
-C:\opencv\build\include\opencv2/video/tracking.hpp
-C:\opencv\build\include\opencv2/video/background_segm.hpp
-C:\opencv\build\include\opencv2/video/tracking_c.h
-C:\opencv\build\include\opencv2/features2d.hpp
-C:\opencv\build\include\opencv2/flann/miniflann.hpp
-C:\opencv\build\include\opencv2/flann/defines.h
-c:\opencv\build\include\opencv2\flann\config.h
-C:\opencv\build\include\opencv2/objdetect.hpp
-C:\opencv\build\include\opencv2/objdetect/detection_based_tracker.hpp
-C:\opencv\build\include\opencv2/objdetect/objdetect_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/utility.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/optim.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/opencv.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/opencv_modules.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/imgproc.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/imgproc/imgproc_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/imgproc/types_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/photo.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/photo/photo_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/video.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/video/tracking.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/video/background_segm.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/video/tracking_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/features2d.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/flann/miniflann.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/flann/defines.h
+c:\users\brian\desktop\chosuntruck\packages\opencvcuda-release.3.1.0\build\native\include\opencv2\flann\config.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/objdetect.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/objdetect/detection_based_tracker.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/objdetect/objdetect_c.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\deque
-C:\opencv\build\include\opencv2/calib3d.hpp
-C:\opencv\build\include\opencv2/core/affine.hpp
-C:\opencv\build\include\opencv2/calib3d/calib3d_c.h
-C:\opencv\build\include\opencv2/imgcodecs.hpp
-C:\opencv\build\include\opencv2/videoio.hpp
-C:\opencv\build\include\opencv2/highgui.hpp
-C:\opencv\build\include\opencv2/highgui/highgui_c.h
-C:\opencv\build\include\opencv2/imgcodecs/imgcodecs_c.h
-C:\opencv\build\include\opencv2/videoio/videoio_c.h
-C:\opencv\build\include\opencv2/ml.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/calib3d.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/affine.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/calib3d/calib3d_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/imgcodecs.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/videoio.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/highgui.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/highgui/highgui_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/imgcodecs/imgcodecs_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/videoio/videoio_c.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/ml.hpp
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\map
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\xtree
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\tuple
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\iostream
-C:\opencv\build\include\opencv2/highgui/highgui.hpp
-C:\opencv\build\include\opencv2/core/cuda.hpp
-C:\opencv\build\include\opencv2/core/cuda_types.hpp
-C:\opencv\build\include\opencv2/core/cuda.inl.hpp
-C:\opencv\build\include\opencv2/core/cuda.hpp
-C:\opencv\build\include\opencv2/photo/cuda.hpp
-C:\opencv\build\include\opencv2/imgproc/imgproc.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/highgui/highgui.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/cuda.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/cuda_types.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/cuda.inl.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/cuda.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/photo/cuda.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/imgproc/imgproc.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/cudaarithm.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/cudaimgproc.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/cudafilters.hpp
 C:\Program Files (x86)\Windows Kits\8.1\Include\um\Windows.h
 C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winapifamily.h
 C:\Program Files (x86)\Windows Kits\8.1\Include\shared\sdkddkver.h
@@ -736,12 +740,12 @@ C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdint.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\crtdefs.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\thr/xtimec.h
 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\thr/xthrcommon.h
-c:\users\caucse\documents\visual studio 2013\projects\ets2_auto_driving\ets2_auto_driving\ets2_self_driving.h
-C:\opencv\build\include\opencv2/core/core.hpp
-C:\opencv\build\include\opencv2/highgui/highgui.hpp
-C:\opencv\build\include\opencv2/imgproc/imgproc.hpp
-c:\users\caucse\documents\visual studio 2013\projects\ets2_auto_driving\ets2_auto_driving\IPM.h
-C:\opencv\build\include\opencv2/calib3d/calib3d.hpp
-C:\opencv\build\include\opencv2/highgui/highgui.hpp
-C:\opencv\build\include\opencv2/imgproc/imgproc.hpp
-C:\opencv\build\include\opencv2/features2d/features2d.hpp
+c:\users\brian\desktop\chosuntruck\ets2_auto_driving\ets2_self_driving.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/core/core.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/highgui/highgui.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/imgproc/imgproc.hpp
+c:\users\brian\desktop\chosuntruck\ets2_auto_driving\IPM.h
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/calib3d/calib3d.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/highgui/highgui.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/imgproc/imgproc.hpp
+C:\Users\brian\Desktop\ChosunTruck\packages\opencvcuda-release.3.1.0\build\native\../..//build/native/include/opencv2/features2d/features2d.hpp
