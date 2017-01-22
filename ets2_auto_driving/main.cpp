@@ -24,8 +24,7 @@ void Thinning(Mat input, int row, int col);
 
 int main() {
 
-	//cudaf();
-
+	// cudaf();
 
 	long long int sum = 0;
 	long long int i = 0;
@@ -35,15 +34,15 @@ int main() {
 		// ETS2
 		HWND hWnd = FindWindow("prism3d", NULL); // This finds the game window and sets the source for hWnd
 		// NOTEPAD
-		//HWND hWnd = FindWindow("Photo_Light", NULL);
+		// HWND hWnd = FindWindow("Photo_Light", NULL);
 		Mat image, outputImg; // Creates two Mats, image and outputImg. outputImg is used for showing what the program sees to user in a new window.
 		hwnd2mat(hWnd).copyTo(image);
 		// Mat to GpuMat
-		//cuda::GpuMat imageGPU;
-		//imageGPU.upload(image);
+		// cuda::GpuMat imageGPU;
+		// imageGPU.upload(image);
 
 		medianBlur(image, image, 3);
-		//bilateralFilter(imageGPU, imageGPU, 15, 80, 80);
+		// bilateralFilter(imageGPU, imageGPU, 15, 80, 80);
 
 		int width = 0, height = 0;
 
@@ -61,7 +60,6 @@ int main() {
 		origPoints.push_back(Point2f(width / 2 + 125, height / 2 + 30));
 		origPoints.push_back(Point2f(width / 2 - 125, height / 2 + 30));
 
-
 		// The 4-points correspondences in the destination image
 		vector<Point2f> dstPoints;
 		dstPoints.push_back(Point2f(0, height));
@@ -73,27 +71,27 @@ int main() {
 		IPM ipm(Size(width, height), Size(width, height), origPoints, dstPoints);
 
 		// Process
-		//clock_t begin = clock();
+		// clock_t begin = clock();
 		ipm.applyHomography(image, outputImg);
-		//clock_t end = clock();
-		//double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-		//printf("%.2f (ms)\r", 1000 * elapsed_secs);
-		//ipm.drawPoints(origPoints, image);
+		// clock_t end = clock();
+		// double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+		// printf("%.2f (ms)\r", 1000 * elapsed_secs);
+		// ipm.drawPoints(origPoints, image);
 
-		//imageGPU.download(image);
-		//Mat row = outputImg.row[0];
+		// imageGPU.download(image);
+		// Mat row = outputImg.row[0];
 		cv::Mat gray;
 		cv::Mat blur;
 		cv::Mat sobel;
 		cv::Mat contours;
 		cv::resize(outputImg, outputImg, cv::Size(320, 240));
 		cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
-		//cv::cvtColor(outputImg, gray, COLOR_BGR2GRAY); // testing using BGR instead of RGB (https://stackoverflow.com/questions/7461075)
+		// cv::cvtColor(outputImg, gray, COLOR_BGR2GRAY); // testing using BGR instead of RGB (https://stackoverflow.com/questions/7461075)
 		cv::blur(gray, blur, cv::Size(10, 10));
 		cv::Sobel(blur, sobel, blur.depth(), 1, 0, 3, 0.5, 127);
 		cv::threshold(sobel, contours, 145, 255, CV_THRESH_BINARY);
-		//Thinning(contours, contours.rows, contours.cols);
-		//cv::Canny(gray, contours, 125, 350);
+		// Thinning(contours, contours.rows, contours.cols);
+		// cv::Canny(gray, contours, 125, 350);
 
 		LineFinder ld;
 
@@ -103,7 +101,7 @@ int main() {
 		std::vector<cv::Vec4i> li = ld.findLines(contours);
 		ld.drawDetectedLines(contours);
 
-		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
+		// cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		imshow("Test", contours);
 		waitKey(1);
 		/*
@@ -114,7 +112,6 @@ int main() {
 		sum += ms;
 		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
 		*/
-		///////////////////////////////////////
 
 		unsigned char row_center = gray.at<unsigned char>(10, 160);
 
@@ -158,11 +155,11 @@ int main() {
 		{
 			cout << "go left ";
 
-			//SendMessage(hWnd, WM_KEYUP, 0x44, 0); // SendMessage not working for DirectX window, using SendInput instead
-			//Sleep(100);
-			//SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
-			//Sleep(100);
-			//SendMessage(hWnd, WM_KEYUP, 0x74, 0);
+			// SendMessage(hWnd, WM_KEYUP, 0x44, 0); // SendMessage not working for DirectX window, using SendInput instead
+			// Sleep(100);
+			// SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+			// Sleep(100);
+			// SendMessage(hWnd, WM_KEYUP, 0x74, 0);
 
 			HKL kbl = GetKeyboardLayout(0);
 
@@ -172,8 +169,8 @@ int main() {
 			ip.ki.time = 0;
 			ip.ki.wVk = 0; // We're doing scan codes instead (not using virtual keys)
 			ip.ki.dwExtraInfo = 0;
-			//while (1)
-			//{
+			// while (1)
+			// {
 			ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
 			ip.ki.wScan = 0x44; // Releases 'D'
 			SendInput(1, &ip, sizeof(ip));
@@ -190,7 +187,7 @@ int main() {
 			Sleep(100);
 
 
-			//}
+			// }
 		}
 		else if (left + right > -50 && left + right < 50){
 			cout << "go straight ";
@@ -199,9 +196,9 @@ int main() {
 				SendMessage(hWnd, WM_MOUSEMOVE, 0, MAKELPARAM(x, y));
 				Sleep(100);
 
-				//SendMessage(hWnd, WM_KEYUP, 0x44, 0);
-				//Sleep(10);
-				//SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+				// SendMessage(hWnd, WM_KEYUP, 0x44, 0);
+				// Sleep(10);
+				// SendMessage(hWnd, WM_KEYUP, 0x41, 0);
 
 				INPUT ip; // Using SendInput to send input commands
 				ip.type = INPUT_KEYBOARD;
@@ -223,11 +220,11 @@ int main() {
 		else{
 			cout << "go right ";
 			{
-				//SendMessage(hWnd, WM_KEYUP, 0x41, 0);
-				//Sleep(100);
-				//SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
-				//Sleep(100);
-				//SendMessage(hWnd, WM_KEYUP, 0x74, 0);
+				// SendMessage(hWnd, WM_KEYUP, 0x41, 0);
+				// Sleep(100);
+				// SendMessage(hWnd, WM_KEYDOWN, 0x74, 0);
+				// Sleep(100);
+				// SendMessage(hWnd, WM_KEYUP, 0x74, 0);
 
 				INPUT ip;
 				Sleep(100);
@@ -235,8 +232,8 @@ int main() {
 				ip.ki.time = 0;
 				ip.ki.wVk = 0; // We're doing scan codes instead
 				ip.ki.dwExtraInfo = 0;
-				//while (1)
-				//{
+				// while (1)
+				// {
 				ip.ki.wScan = 0x41;
 				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 'A'
 				SendInput(1, &ip, sizeof(ip));
@@ -255,8 +252,6 @@ int main() {
 			}
 		}
 		cout << "left: " << left << ", right: " << right << ", average: " << average << endl;
-		///////////////////////////////////////
-
 
 		imshow("Test", gray);
 		waitKey(1);
