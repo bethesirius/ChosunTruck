@@ -71,7 +71,7 @@ def main():
     parser.add_argument('--logdir', default='output')
     parser.add_argument('--iou_threshold', default=0.5, type=float)
     parser.add_argument('--tau', default=0.25, type=float)
-    parser.add_argument('--min_conf', default=0.5, type=float)
+    parser.add_argument('--min_conf', default=0.2, type=float)
     parser.add_argument('--show_suppressed', default=True, type=bool)
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
