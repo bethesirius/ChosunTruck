@@ -172,25 +172,24 @@ int main() {
 			ip.ki.time = 0;
 			ip.ki.wVk = 0; // We're doing scan codes instead (not using virtual keys)
 			ip.ki.dwExtraInfo = 0;
-			//while (1)
-			//{
+
+			// Releases 'D'
+			ip.ki.wScan = 0x44;
 			ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
-			ip.ki.wScan = 0x44; // Releases 'D'
 			SendInput(1, &ip, sizeof(ip));
 			Sleep(100);
 
+			// Presses 'A'
 			ip.ki.wScan = 0x41;
-			ip.ki.dwFlags = KEYEVENTF_SCANCODE; // Pushes 'A'
+			ip.ki.dwFlags = KEYEVENTF_SCANCODE;
 			SendInput(1, &ip, sizeof(ip));
 			Sleep(100);
 
+			// Releases 'A'
 			ip.ki.wScan = 0x41;
-			ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 'A'
+			ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
 			SendInput(1, &ip, sizeof(ip));
 			Sleep(100);
-
-
-			//}
 		}
 		else if (left + right > -50 && left + right < 50){
 			cout << "go straight ";
@@ -209,13 +208,15 @@ int main() {
 				ip.ki.wVk = 0; // We're doing scan codes instead
 				ip.ki.dwExtraInfo = 0;
 
+				// Releases 'D'
 				ip.ki.wScan = 0x44;
-				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 'D'
+				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
 				SendInput(1, &ip, sizeof(ip));
 				Sleep(100);
 
+				// Releases 'A'
 				ip.ki.wScan = 0x41;
-				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 'A'
+				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
 				SendInput(1, &ip, sizeof(ip));
 				Sleep(100);
 			}
@@ -235,28 +236,29 @@ int main() {
 				ip.ki.time = 0;
 				ip.ki.wVk = 0; // We're doing scan codes instead
 				ip.ki.dwExtraInfo = 0;
-				//while (1)
-				//{
+
+				// Releases 'A'
 				ip.ki.wScan = 0x41;
-				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Releases 'A'
-				SendInput(1, &ip, sizeof(ip));
-				Sleep(100);
-
-				ip.ki.wScan = 0x44;
-				ip.ki.dwFlags = KEYEVENTF_SCANCODE; // Presses 'A'
-				SendInput(1, &ip, sizeof(ip));
-				Sleep(100);
-
 				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
-				ip.ki.wScan = 0x44; // Releases 'A'
 				SendInput(1, &ip, sizeof(ip));
 				Sleep(100);
+
+				// Presses 'D'
+				ip.ki.wScan = 0x44;
+				ip.ki.dwFlags = KEYEVENTF_SCANCODE;
+				SendInput(1, &ip, sizeof(ip));
+				Sleep(100);
+
+				// Releases 'D'
+				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+				ip.ki.wScan = 0x44;
+				SendInput(1, &ip, sizeof(ip));
+				Sleep(100);
+
 				// keybd_event(VK_RIGHT, 0, KEYEVENTF_KEYUP, 0);
 			}
 		}
 		cout << "left: " << left << ", right: " << right << ", average: " << average << endl;
-		///////////////////////////////////////
-
 
 		imshow("Test", gray);
 		waitKey(1);

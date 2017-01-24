@@ -1,49 +1,68 @@
-         Dr. Memory version 1.11.0
-         (Uninitialized read checking is not yet supported for 64-bit)
-         Running "C:\Users\brian\Desktop\ChosunTruck\x64\Release\ets2_auto_driving.exe"
-         
-         Error #1: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
-         main                 
-             c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp(144):
-         Note: refers to 2 byte(s) before next malloc
-         
-         Error #2: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
-         main                 
-             c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp(149):
-         Note: refers to 16 byte(s) before memory that was freed here:
-               replace_RtlFreeHeap
-                   d:\drmemory_package\common\alloc_replace.c(3850):
-               gdi32full.dll!UspAllocCache
-             ??:0
-               gdi32full.dll!ScriptBreak  
-             ??:0
-               gdi32full.dll!UspFreeMem   
-             ??:0
-               gdi32full.dll!ScriptBreak  
-             ??:0
-               gdi32full.dll!ScriptBreak  
-             ??:0
-go straight left: -15, right: 44, average: 29
-         
-         Error #3: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
-         main                 
-             c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp(144):
-         Note: refers to 3 byte(s) before next malloc
-         
-         Error #4: UNADDRESSABLE ACCESS beyond heap bounds: reading 1 byte(s)
-         main                 
-             c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp(149):
-         Note: refers to 16 byte(s) before memory that was freed here:
-               replace_operator_delete_nothrow_nomatch
-                   d:\drmemory_package\common\alloc_replace.c(3052):
-               opencv_imgproc310.dll!cv::ocl::Device::isAMD
-             ??:0
-               opencv_imgproc310.dll!cv::_InputArray::_InputArray
-             ??:0
-               opencv_imgproc310.dll!cv::String::operator+=
-             ??:0
-               opencv_imgproc310.dll!cv::String::operator+=
-             ??:0
-               opencv_imgproc310.dll!cv::Mat::create      
-             ??:0
-         WARNING: application exited with abnormal code 0xcfffffff
+Dr. Memory version 1.11.0 build 2 built on Aug 29 2016 02:41:18
+Dr. Memory results for pid 7980: "ets2_auto_driving.exe"
+Application cmdline: "C:\Users\brian\Desktop\ChosunTruck\x64\Release\ets2_auto_driving.exe"
+Recorded 115 suppression(s) from default C:\Program Files (x86)\Dr. Memory\bin64\suppress-default.txt
+
+Error #1: UNADDRESSABLE ACCESS beyond heap bounds: reading 0x00000245dc0ef6ce-0x00000245dc0ef6cf 1 byte(s)
+# 0 main               [c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp:143]
+Note: @0:00:05.063 in thread 12772
+Note: refers to 2 byte(s) before next malloc
+Note: next higher malloc: 0x00000245dc0ef6d0-0x00000245dc0ef6d0
+Note: allocated here:
+Note: # 0 replace_malloc                              [d:\drmemory_package\common\alloc_replace.c:2576]
+Note: # 1 opencv_world310.dll!cv::fastMalloc         +0x1b     (0x00007ff8cbfcb59c <opencv_world310.dll+0x16bb59c>)
+Note: # 2 opencv_world310.dll!cv::Mat::adjustROI     +0xdb5    (0x00007ff8cc0ec8e6 <opencv_world310.dll+0x17dc8e6>)
+Note: # 3 opencv_world310.dll!cv::Mat::create        +0x274    (0x00007ff8cc0efaf5 <opencv_world310.dll+0x17dfaf5>)
+Note: # 4 opencv_world310.dll!cv::TLSDataContainer::getData+0x9a     (0x00007ff8cc17987b <opencv_world310.dll+0x186987b>)
+Note: # 5 opencv_world310.dll!cv::Mat::create        +0x52     (0x00007ff8cbfc8483 <opencv_world310.dll+0x16b8483>)
+Note: # 6 opencv_world310.dll!cv::_OutputArray::create+0x1a5    (0x00007ff8cc0f2306 <opencv_world310.dll+0x17e2306>)
+Note: # 7 opencv_world310.dll!cv::TLSDataContainer::getData+0x20     (0x00007ff8cc179801 <opencv_world310.dll+0x1869801>)
+Note: # 8 opencv_world310.dll!cv::_InputArray::getMat+0x49     (0x00007ff8cbfc944a <opencv_world310.dll+0x16b944a>)
+Note: # 9 opencv_world310.dll!cv::boxFilter          +0x134    (0x00007ff8cc370f85 <opencv_world310.dll+0x1a60f85>)
+Note: #10 opencv_world310.dll!cv::blur               +0x46     (0x00007ff8cc370e47 <opencv_world310.dll+0x1a60e47>)
+Note: #11 opencv_world310.dll!cv::cvtColor           +0x1e     (0x00007ff8cc20670f <opencv_world310.dll+0x18f670f>)
+Note: instruction: movzx  0x0000009f(%rax,%r14) -> %r11d
+
+Error #2: UNADDRESSABLE ACCESS beyond heap bounds: reading 0x00000245dc102330-0x00000245dc102331 1 byte(s)
+# 0 main               [c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp:148]
+Note: @0:00:05.154 in thread 12772
+Note: 0x00000245dc102330-0x00000245dc102331 is 16 byte(s) before memory 0x00000245dc102340-0x00000245dc103374 that was freed here:
+Note: # 0 replace_RtlFreeHeap               [d:\drmemory_package\common\alloc_replace.c:3850]
+Note: # 1 GDI32.dll!GetDIBits              +0x67     (0x00007ff907273208 <GDI32.dll+0x3208>)
+Note: # 2 USER32.dll!CreateWindowExW       +0x9f0    (0x00007ff9076ecee1 <USER32.dll+0xcee1>)
+Note: # 3 USER32.dll!GetClientRect         +0xb2d    (0x00007ff9076edb1e <USER32.dll+0xdb1e>)
+Note: # 4 USER32.dll!GetClassInfoExW       +0x185    (0x00007ff9076eae16 <USER32.dll+0xae16>)
+Note: # 5 USER32.dll!GetWindowTextW        +0x76b    (0x00007ff9076eed2c <USER32.dll+0xed2c>)
+Note: instruction: movzx  0x0000009f(%rax,%r10) -> %edx
+
+Error #3: UNADDRESSABLE ACCESS beyond heap bounds: reading 0x00000245dc06945d-0x00000245dc06945e 1 byte(s)
+# 0 main               [c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp:143]
+Note: @0:00:27.551 in thread 12772
+Note: refers to 3 byte(s) before next malloc
+Note: next higher malloc: 0x00000245dc069460-0x00000245dc069460
+Note: allocated here:
+Note: # 0 replace_malloc                              [d:\drmemory_package\common\alloc_replace.c:2576]
+Note: # 1 opencv_world310.dll!cv::fastMalloc         +0x1b     (0x00007ff8cbfcb59c <opencv_world310.dll+0x16bb59c>)
+Note: # 2 opencv_world310.dll!cv::Mat::adjustROI     +0xdb5    (0x00007ff8cc0ec8e6 <opencv_world310.dll+0x17dc8e6>)
+Note: # 3 opencv_world310.dll!cv::Mat::create        +0x274    (0x00007ff8cc0efaf5 <opencv_world310.dll+0x17dfaf5>)
+Note: # 4 opencv_world310.dll!cv::TLSDataContainer::getData+0x9a     (0x00007ff8cc17987b <opencv_world310.dll+0x186987b>)
+Note: # 5 opencv_world310.dll!cv::Mat::create        +0x52     (0x00007ff8cbfc8483 <opencv_world310.dll+0x16b8483>)
+Note: # 6 opencv_world310.dll!cv::_OutputArray::create+0x1a5    (0x00007ff8cc0f2306 <opencv_world310.dll+0x17e2306>)
+Note: # 7 opencv_world310.dll!cv::TLSDataContainer::getData+0x20     (0x00007ff8cc179801 <opencv_world310.dll+0x1869801>)
+Note: # 8 opencv_world310.dll!cv::_InputArray::getMat+0x49     (0x00007ff8cbfc944a <opencv_world310.dll+0x16b944a>)
+Note: # 9 opencv_world310.dll!cv::boxFilter          +0x134    (0x00007ff8cc370f85 <opencv_world310.dll+0x1a60f85>)
+Note: #10 opencv_world310.dll!cv::blur               +0x46     (0x00007ff8cc370e47 <opencv_world310.dll+0x1a60e47>)
+Note: #11 opencv_world310.dll!cv::cvtColor           +0x1e     (0x00007ff8cc20670f <opencv_world310.dll+0x18f670f>)
+Note: instruction: movzx  0x0000009f(%rax,%r14) -> %r11d
+
+Error #4: UNADDRESSABLE ACCESS beyond heap bounds: reading 0x00000245dc07c0c0-0x00000245dc07c0c1 1 byte(s)
+# 0 main               [c:\users\brian\desktop\chosuntruck\ets2_auto_driving\main.cpp:148]
+Note: @0:00:27.554 in thread 12772
+Note: 0x00000245dc07c0c0-0x00000245dc07c0c1 is 16 byte(s) before memory 0x00000245dc07c0d0-0x00000245dc0801f0 that was freed here:
+Note: # 0 replace_operator_delete_nothrow_nomatch               [d:\drmemory_package\common\alloc_replace.c:3052]
+Note: # 1 opencv_world310.dll!cv::filter2D                     +0x8dbe   (0x00007ff8cc28b99f <opencv_world310.dll+0x197b99f>)
+Note: # 2 opencv_world310.dll!cvGoodFeaturesToTrack            +0xf3e6   (0x00007ff8cc2677b7 <opencv_world310.dll+0x19577b7>)
+Note: # 3 opencv_world310.dll!cvGoodFeaturesToTrack            +0x28f95  (0x00007ff8cc281366 <opencv_world310.dll+0x1971366>)
+Note: # 4 opencv_world310.dll!cvGoodFeaturesToTrack            +0x28a13  (0x00007ff8cc280de4 <opencv_world310.dll+0x1970de4>)
+Note: # 5 opencv_world310.dll!cvGoodFeaturesToTrack            +0x2a7fb  (0x00007ff8cc282bcc <opencv_world310.dll+0x1972bcc>)
+Note: instruction: movzx  0x0000009f(%rax,%r10) -> %edx
