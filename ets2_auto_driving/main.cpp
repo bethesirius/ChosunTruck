@@ -56,9 +56,9 @@ int main() {
 		vector<Point2f> origPoints;
 
 		origPoints.push_back(Point2f(0, (height - 50)));
-		origPoints.push_back(Point2f(width, height - 50));
-		origPoints.push_back(Point2f(width / 2 + 125, height / 2 + 30));
-		origPoints.push_back(Point2f(width / 2 - 125, height / 2 + 30));
+		origPoints.push_back(Point2f(width, (height - 50)));
+		origPoints.push_back(Point2f((width / 2 + 125), (height / 2 + 30)));
+		origPoints.push_back(Point2f((width / 2 - 125), (height / 2 + 30)));
 
 		// The 4-points correspondences in the destination image
 		vector<Point2f> dstPoints;
@@ -101,9 +101,9 @@ int main() {
 		std::vector<cv::Vec4i> li = ld.findLines(contours);
 		ld.drawDetectedLines(contours);
 
-		// cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		imshow("Test", contours);
 		waitKey(1);
+		// cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		/*
 		auto end = chrono::high_resolution_clock::now();
 		auto dur = end - begin;
@@ -113,7 +113,7 @@ int main() {
 		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
 		*/
 
-		unsigned char row_center = gray.at<unsigned char>(10, 160);
+		unsigned char row_center = gray.at<uchar>(10, 160);
 
 		unsigned char row_left = 0;
 		unsigned char row_right = 0;
@@ -137,12 +137,12 @@ int main() {
 				break;
 			}
 			if (row_left != 255) {
-				row_left = gray.at<unsigned char>(row_number, 159 + left); // Access violation reading location - see results.txt
+				row_left = gray.at<uchar>(row_number, 159 + left);  // If matrix is of type CV_8U then use Mat.at<uchar>(y,x) (http://bit.ly/2kINZBI)
 				left--;
 
 			}
 			if (row_right != 255) {
-				row_right = gray.at<unsigned char>(row_number, 159 + right); // Access violation reading location - see results.txt
+				row_right = gray.at<uchar>(row_number, 159 + right); // If matrix is of type CV_8U then use Mat.at<uchar>(y,x) (http://bit.ly/2kINZBI)
 				right++;
 
 			}
@@ -172,19 +172,19 @@ int main() {
 
 			// Releases 'D'
 			ip.ki.wScan = 0x44;
-			ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+			ip.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
 			SendInput(1, &ip, sizeof(ip));
 			Sleep(100);
 
 			// Presses 'A'
 			ip.ki.wScan = 0x41;
-			ip.ki.dwFlags = KEYEVENTF_SCANCODE;
+			ip.ki.dwFlags = KEYEVENTF_UNICODE;
 			SendInput(1, &ip, sizeof(ip));
 			Sleep(100);
 
 			// Releases 'A'
 			ip.ki.wScan = 0x41;
-			ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+			ip.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
 			SendInput(1, &ip, sizeof(ip));
 			Sleep(100);
 			// }
@@ -193,8 +193,8 @@ int main() {
 			cout << "go straight ";
 			for (int x = 0, y = 0; x < 700 && y < 700; x += 10, y += 10)
 			{
-				SendMessage(hWnd, WM_MOUSEMOVE, 0, MAKELPARAM(x, y));
-				Sleep(100);
+				//SendMessage(hWnd, WM_MOUSEMOVE, 0, MAKELPARAM(x, y));
+				//Sleep(100);
 
 				// SendMessage(hWnd, WM_KEYUP, 0x44, 0);
 				// Sleep(10);
@@ -208,13 +208,13 @@ int main() {
 
 				// Releases 'D'
 				ip.ki.wScan = 0x44;
-				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+				ip.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
 				SendInput(1, &ip, sizeof(ip));
 				Sleep(100);
 
 				// Releases 'A'
 				ip.ki.wScan = 0x41;
-				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+				ip.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
 				SendInput(1, &ip, sizeof(ip));
 				Sleep(100);
 			}
@@ -237,19 +237,19 @@ int main() {
 
 				// Releases 'A'
 				ip.ki.wScan = 0x41;
-				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+				ip.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
 				SendInput(1, &ip, sizeof(ip));
 				Sleep(100);
 
 				// Presses 'D'
 				ip.ki.wScan = 0x44;
-				ip.ki.dwFlags = KEYEVENTF_SCANCODE;
+				ip.ki.dwFlags = KEYEVENTF_UNICODE;
 				SendInput(1, &ip, sizeof(ip));
 				Sleep(100);
 
 				// Releases 'D'
 				ip.ki.wScan = 0x44;
-				ip.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+				ip.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
 				SendInput(1, &ip, sizeof(ip));
 				Sleep(100);
 
@@ -257,9 +257,6 @@ int main() {
 			}
 		}
 		cout << "left: " << left << ", right: " << right << ", average: " << average << endl;
-
-		imshow("Test", gray);
-		waitKey(1);
 	}
 	return 0;
 }
