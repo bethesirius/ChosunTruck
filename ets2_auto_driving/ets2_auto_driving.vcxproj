@@ -66,8 +66,15 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Label="UserMacros">
+    <NuGetPackageImportStamp>06b11406</NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(IncludePath)</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -86,12 +93,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\opencv\build\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include;C:\opencv\myBuild\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\opencv\opencv\build\include;C:\opencv\build\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include;C:\opencv\myBuild\include;%(AdditionalIncludeDirectories);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\x64;C:\opencv\myBuild\install\x64\vc12\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_calib3d310d.lib;opencv_core310d.lib;opencv_cudaarithm310d.lib;opencv_cudabgsegm310d.lib;opencv_cudacodec310d.lib;opencv_cudafeatures2d310d.lib;opencv_cudafilters310d.lib;opencv_cudaimgproc310d.lib;opencv_cudalegacy310d.lib;opencv_cudaobjdetect310d.lib;opencv_cudaoptflow310d.lib;opencv_cudastereo310d.lib;opencv_cudawarping310d.lib;opencv_cudev310d.lib;opencv_features2d310d.lib;opencv_flann310d.lib;opencv_highgui310d.lib;opencv_imgcodecs310d.lib;opencv_imgproc310d.lib;opencv_ml310d.lib;opencv_objdetect310d.lib;opencv_photo310d.lib;opencv_shape310d.lib;opencv_stitching310d.lib;opencv_superres310d.lib;opencv_ts310d.lib;opencv_video310d.lib;opencv_videoio310d.lib;opencv_videostab310d.lib;cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\opencv\opencv\build\include\opencv2;C:\opencv\opencv\build\include;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_calib3d310.lib;opencv_core310.lib;opencv_features2d310.lib;opencv_flann310.lib;opencv_highgui310.lib;opencv_imgcodecs310.lib;opencv_imgproc310.lib;opencv_ml310.lib;opencv_objdetect310.lib;opencv_photo310.lib;opencv_shape310.lib;opencv_stitching310.lib;opencv_superres310.lib;opencv_ts310.lib;opencv_video310.lib;opencv_videoio310.lib;opencv_videostab310.lib;opencv_viz310.lib;opencv_calib3d310d.lib;opencv_core310d.lib;opencv_features2d310d.lib;opencv_flann310d.lib;opencv_highgui310d.lib;opencv_imgcodecs310d.lib;opencv_imgproc310d.lib;opencv_ml310d.lib;opencv_objdetect310d.lib;opencv_photo310d.lib;opencv_shape310d.lib;opencv_stitching310d.lib;opencv_superres310d.lib;opencv_ts310d.lib;opencv_video310d.lib;opencv_videoio310d.lib;opencv_videostab310d.lib;opencv_viz310d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImportLibrary>
       </ImportLibrary>
     </Link>
@@ -123,20 +131,25 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\opencv\build\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include;C:\opencv\myBuild\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\opencv\opencv\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\opencv\opencv\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OpenMPSupport>true</OpenMPSupport>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\lib\x64;C:\opencv\myBuild\lib\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_calib3d310.lib;opencv_core310.lib;opencv_cudaarithm310.lib;opencv_cudabgsegm310.lib;opencv_cudacodec310.lib;opencv_cudafeatures2d310.lib;opencv_cudafilters310.lib;opencv_cudaimgproc310.lib;opencv_cudalegacy310.lib;opencv_cudaobjdetect310.lib;opencv_cudaoptflow310.lib;opencv_cudastereo310.lib;opencv_cudawarping310.lib;opencv_cudev310.lib;opencv_features2d310.lib;opencv_flann310.lib;opencv_highgui310.lib;opencv_imgcodecs310.lib;opencv_imgproc310.lib;opencv_ml310.lib;opencv_objdetect310.lib;opencv_photo310.lib;opencv_shape310.lib;opencv_stitching310.lib;opencv_superres310.lib;opencv_ts310.lib;opencv_video310.lib;opencv_videoio310.lib;opencv_videostab310.lib;cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\opencv\opencv\build\include;C:\opencv\opencv\build\include\opencv2;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_calib3d310.lib;opencv_core310.lib;opencv_features2d310.lib;opencv_flann310.lib;opencv_highgui310.lib;opencv_imgcodecs310.lib;opencv_imgproc310.lib;opencv_ml310.lib;opencv_objdetect310.lib;opencv_photo310.lib;opencv_shape310.lib;opencv_stitching310.lib;opencv_superres310.lib;opencv_ts310.lib;opencv_video310.lib;opencv_videoio310.lib;opencv_videostab310.lib;opencv_viz310.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CudaCompile>
       <Include>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5\include;%(Include)</Include>
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="guassian_filter.cpp" />
@@ -155,8 +168,28 @@
     <ClInclude Include="ets2_self_driving.h" />
     <ClInclude Include="IPM.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 7.5.targets" />
+    <Import Project="..\packages\opencvcuda-release.redist.3.1.0\build\native\opencvcuda-release.redist.targets" Condition="Exists('..\packages\opencvcuda-release.redist.3.1.0\build\native\opencvcuda-release.redist.targets')" />
+    <Import Project="..\packages\opencvcuda-release.3.1.0\build\native\opencvcuda-release.targets" Condition="Exists('..\packages\opencvcuda-release.3.1.0\build\native\opencvcuda-release.targets')" />
+    <Import Project="..\packages\opencvdefault.redist.3.1.0\build\native\opencvdefault.redist.targets" Condition="Exists('..\packages\opencvdefault.redist.3.1.0\build\native\opencvdefault.redist.targets')" />
+    <Import Project="..\packages\opencvdefault.3.1.0\build\native\opencvdefault.targets" Condition="Exists('..\packages\opencvdefault.3.1.0\build\native\opencvdefault.targets')" />
+    <Import Project="..\packages\opencvcuda-debug.redist.3.1.0\build\native\opencvcuda-debug.redist.targets" Condition="Exists('..\packages\opencvcuda-debug.redist.3.1.0\build\native\opencvcuda-debug.redist.targets')" />
+    <Import Project="..\packages\opencvcuda-debug.3.1.0\build\native\opencvcuda-debug.targets" Condition="Exists('..\packages\opencvcuda-debug.3.1.0\build\native\opencvcuda-debug.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\opencvcuda-release.redist.3.1.0\build\native\opencvcuda-release.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvcuda-release.redist.3.1.0\build\native\opencvcuda-release.redist.targets'))" />
+    <Error Condition="!Exists('..\packages\opencvcuda-release.3.1.0\build\native\opencvcuda-release.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvcuda-release.3.1.0\build\native\opencvcuda-release.targets'))" />
+    <Error Condition="!Exists('..\packages\opencvdefault.redist.3.1.0\build\native\opencvdefault.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvdefault.redist.3.1.0\build\native\opencvdefault.redist.targets'))" />
+    <Error Condition="!Exists('..\packages\opencvdefault.3.1.0\build\native\opencvdefault.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvdefault.3.1.0\build\native\opencvdefault.targets'))" />
+    <Error Condition="!Exists('..\packages\opencvcuda-debug.redist.3.1.0\build\native\opencvcuda-debug.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvcuda-debug.redist.3.1.0\build\native\opencvcuda-debug.redist.targets'))" />
+    <Error Condition="!Exists('..\packages\opencvcuda-debug.3.1.0\build\native\opencvcuda-debug.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\opencvcuda-debug.3.1.0\build\native\opencvcuda-debug.targets'))" />
+  </Target>
 </Project>

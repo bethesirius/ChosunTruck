@@ -43,7 +43,7 @@ public:
 	std::vector<cv::Vec4i> findLines(cv::Mat& binary);
 	void drawDetectedLines(cv::Mat &image, cv::Scalar color = cv::Scalar(112, 112, 0));
 };
-Mat hwnd2mat(HWND hwnd);
+Mat hwnd2mat(HWND hWnd);
 void cudaf();
 
 #endif
