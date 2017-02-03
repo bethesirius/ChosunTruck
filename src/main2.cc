@@ -19,8 +19,8 @@
 #include <array>
 #include "ets2_self_driving.h"
 #include "IPM.h"
-#include "getScreen_linux.cc"
-#include "uinput.h"
+#include "getScreen_linux.h"
+#include "uinput.c"
 
 
 
