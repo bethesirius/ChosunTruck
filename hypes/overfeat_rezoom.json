@@ -1,7 +1,7 @@
 {
     "data": {
-        "train_idl": "./data/brainwash/train_boxes.json",
-        "test_idl": "./data/brainwash/val_boxes.json",
+        "train_idl": "./data/train_image/train.json",
+        "test_idl": "./data/train_image/train2.json",
         "truncate_data": false
     },
     "logging": {
