@@ -1,15 +1,15 @@
 # ChosunTruck
 
 ## Introduction
-ChosunTruck is autonomous driving solution on Euro Truck Simulator 2(https://eurotrucksimulator2.com/).
+ChosunTruck is an autonomous driving solution for [Euro Truck Simulator 2](https://eurotrucksimulator2.com/).
 Recently, autonomous driving technology has become a big issue and we have studied the technology related to this.
-It is being develop in a simulator environment called Euro Truck Simulator 2 to study it with vehicles.
-Because this simulator provides a good test environment that is similar to the real road, we choose it.
+It is being developed in a simulator environment called Euro Truck Simulator 2 to study it with vehicles.
+Because this simulator provides a good test environment that is similar to the real road, we chose it.
 
 ## Features
-* You can drive a vehicle without handling.
+* You can drive a vehicle without handling it yourself.
 * You can understand the principle of autonomous driving.
-* These features only work on a highway.
+* These features only work while driving on a highway.
 
 ## How To Run It
 ### Windows
@@ -21,24 +21,24 @@ OpenCV version: 3.0
 
 ** **NOTICE: Because mouse and keyboard input DOES NOT work on Windows, this is only available for lane detection. For more informations, see also [#4](https://github.com/bethesirius/ChosunTruck/issues/4)**
 
-- Open visual studio project and build it. 
-- Run ETS2 with window mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
+- Open the visual studio project and build it. 
+- Run ETS2 in windowed mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
 
 ### Linux
-OS: ubuntu 16.04 LTS
+OS: Ubuntu 16.04 LTS
 
 OpenCV version: 3.0
 
-- Clone linux branch.
+- Clone the linux branch.
 ```
 git clone -b linux https://github.com/bethesirius/ChosunTruck.git
 ```
-- Build source code with below command.
+- Build the source code with below command.
 ```
 g++ -o auto_drive main2.cpp IPM.cpp lineinder.cpp uinput.c `pkg-config opencv --cflags --libs` -std=c++11 -lX11 -Wall -fopenmp -O3 -march=native
 ```
-- Run ETS2 with window mode and set resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2)
-- It can not find the ETS2 window automatically, You should move the ETS2 window to right-down corner.
+- Run ETS2 in windowed mode and set resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2)
+- It cannot find the ETS2 window automatically, you should move the ETS2 window to right-down corner to fix this.
 - In ETS2 Options, set controls to`Keyboard + Mouse Steering`.
 - Go to a highway and set truck's speed to 40~60km/h. (I recommend you turn on cruise mode to set the speed easily)
 - Run this program as root!
