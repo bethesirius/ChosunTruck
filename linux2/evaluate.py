@@ -45,56 +45,56 @@ def get_results(args, H):
         image_dir = get_image_dir(args)
         subprocess.call('mkdir -p %s' % image_dir, shell=True)
 
-	vc = cv2.VideoCapture('/home/caucse/images/ets.mp4')
-	c=1
+	#ivc = cv2.VideoCapture('/home/caucse/images/ets.mp4')
+	#c=1
 
-	if vc.isOpened():
-    	    rval , frame = vc.read()
-	else:
-	    rval = False
+	#if vc.isOpened():
+    	#    rval , frame = vc.read()
+	#else:
+	#    rval = False
 
-	memory = sysv_ipc.SharedMemory(123456)
+	memory = sysv_ipc.SharedMemory(123463)
 	size = 768, 1024, 3
 
-	while rval:
-	    rval, frame = vc.read()
-	    c = c + 1
-	    if c % 6 is 0:
-		    c = c + 1
-		    time.sleep(0.1)
-		    cv2.waitKey(1)
+	while True:
+	    #rval, frame = vc.read()
+	    #c = c + 1
+	    #if c % 6 is 0:
+		#    c = c + 1
+	    time.sleep(0.5)
+	    cv2.waitKey(1)
 
-		    frameCount = bytearray(memory.read())
-   		    m = np.array(frameCount, dtype=np.uint8)
-		    m = m.reshape(size)
-		    #print m[0]
-		    #cv2.imshow('1', m)
+	    frameCount = bytearray(memory.read())
+	    m = np.array(frameCount, dtype=np.uint8)
+	    orig_img = m.reshape(size)
+	    #print orig_img[0]
+	    #cv2.imshow('1', m)
 
-		    #true_anno = true_annolist[i]
-		    #orig_img = imread('%s/%s' % (data_dir, true_anno.imageName))[:,:,:3]
-		    #orig_img = imread('/home/caucse/images/1.jpg')
-		    orig_img = m
-		    img = imresize(orig_img, (H["image_height"], H["image_width"]), interp='cubic')
-		    feed = {x_in: img}
-		    (np_pred_boxes, np_pred_confidences) = sess.run([pred_boxes, pred_confidences], feed_dict=feed)
-		    pred_anno = al.Annotation()
-		    #pred_anno.imageName = true_anno.imageName
-		    new_img, rects = add_rectangles(H, [img], np_pred_confidences, np_pred_boxes,
-		                                    use_stitching=True, rnn_len=H['rnn_len'], min_conf=args.min_conf, tau=args.tau, show_suppressed=args.show_suppressed)
-		    
-		    #for rect in rects:
-			#print(rect.x1, rect.y1, rect.x2, rect.y2)
-		    	
-		    pred_anno.rects = rects
-		    pred_anno.imagePath = os.path.abspath(data_dir)
-		    pred_anno = rescale_boxes((H["image_height"], H["image_width"]), pred_anno, orig_img.shape[0], orig_img.shape[1])
-		    pred_annolist.append(pred_anno)
-		    #imname = '%s/%s' % (image_dir, os.path.basename(true_anno.imageName))
-		    imname = '/home/caucse/images/_%s.jpg' % (c)
-		    cv2.imshow(str(c)+'.jpg', new_img)
-		    #misc.imsave(imname, new_img)
-		    if c % 25 == 0:
-		        print(c)
+	    #true_anno = true_annolist[i]
+	    #orig_img = imread('%s/%s' % (data_dir, true_anno.imageName))[:,:,:3]
+	    #orig_img = imread('/home/caucse/images/1.jpg')
+	    #orig_img = m
+	    img = imresize(orig_img, (H["image_height"], H["image_width"]), interp='cubic')
+	    feed = {x_in: img}
+	    (np_pred_boxes, np_pred_confidences) = sess.run([pred_boxes, pred_confidences], feed_dict=feed)
+	    pred_anno = al.Annotation()
+	    #pred_anno.imageName = true_anno.imageName
+	    new_img, rects = add_rectangles(H, [img], np_pred_confidences, np_pred_boxes,
+					    use_stitching=True, rnn_len=H['rnn_len'], min_conf=args.min_conf, tau=args.tau, show_suppressed=args.show_suppressed)
+	    
+	    #for rect in rects:
+		#print(rect.x1, rect.y1, rect.x2, rect.y2)
+		
+	    pred_anno.rects = rects
+	    pred_anno.imagePath = os.path.abspath(data_dir)
+	    pred_anno = rescale_boxes((H["image_height"], H["image_width"]), pred_anno, orig_img.shape[0], orig_img.shape[1])
+	    pred_annolist.append(pred_anno)
+	    #imname = '%s/%s' % (image_dir, os.path.basename(true_anno.imageName))
+	    #imname = '/home/caucse/images/_%s.jpg' % (c)
+	    cv2.imshow('.jpg', new_img)
+	    #misc.imsave(imname, new_img)
+	    #if c % 25 == 0:
+		#print(c)
 
 
 
