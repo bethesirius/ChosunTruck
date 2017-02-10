@@ -65,6 +65,22 @@ int main() {
                  exit(1);
         }
 
+	int curve;
+	key = 123464;
+	char *shared_curve;
+	if ((curve = shmget(key, 4, IPC_CREAT | 0666)) < 0)
+        {
+                printf("Error getting shared memory curve");
+                exit(1);
+        }
+        // Attached shared memory
+        if ((shared_curve = static_cast<char*>(shmat(curve, NULL, 0))) == (char *) -1)
+        {
+                 printf("Error attaching shared memory curve");
+                 exit(1);
+        }
+
+
 
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
@@ -200,8 +216,10 @@ int main() {
 			cout << "Steer: "<< move_mouse_pixel << "px ";
 			//goDirection(move_mouse_pixel);
 			moveMouse(move_mouse_pixel);
-			counter = diff;
-/*
+			memcpy(shared_curve, &move_mouse_pixel, sizeof(int));
+		
+			counter = diff;/*
+			
 
 			if (abs(move_mouse_pixel)< 5) {
 				goDirection(0 - counter/3);
@@ -224,7 +242,7 @@ int main() {
 		////////////////////////////////////////////
 		
 		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
-		//imshow("Test", outputImg);
+		imshow("Test", outputImg);
 		waitKey(1);
 		
 		
