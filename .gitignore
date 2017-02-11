@@ -368,3 +368,6 @@ ChosunTruck
 
 # Build files
 build/
+
+# pyc files
+*.pyc
