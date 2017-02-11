@@ -50,6 +50,7 @@ If you have some problems to run this project, reference the demo video below. O
 
 ## Demo Video
 ↓↓↓Click image to play the demo video(Youtube link)
+
 [![click youtube link](http://img.youtube.com/vi/vF7J_uC045Q/0.jpg)](http://www.youtube.com/watch?v=vF7J_uC045Q)
 
 ## Founders
