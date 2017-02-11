@@ -1,0 +1,61 @@
+{
+    "deconv": false, 
+    "lstm_size": 500, 
+    "later_feat_channels": 832, 
+    "slim_basename": "InceptionV1", 
+    "image_width": 640, 
+    "rezoom_h_coords": [
+        -0.25, 
+        0.25
+    ], 
+    "grid_width": 20, 
+    "exp_name": "overfeat_rezoom", 
+    "use_lstm": false, 
+    "region_size": 32, 
+    "num_lstm_layers": 2, 
+    "focus_size": 1.8, 
+    "avg_pool_size": 5, 
+    "early_feat_channels": 256, 
+    "grid_height": 15, 
+    "use_rezoom": true, 
+    "slim_top_lname": "Mixed_5b", 
+    "rezoom_w_coords": [
+        -0.25, 
+        0.25
+    ], 
+    "rezoom_change_loss": "center", 
+    "batch_size": 1, 
+    "reregress": true, 
+    "data": {
+        "test_idl": "./data/truckdata/val.json", 
+        "truncate_data": false, 
+        "train_idl": "./data/truckdata/train.json"
+    }, 
+    "num_classes": 2, 
+    "logging": {
+        "save_iter": 10000, 
+        "display_iter": 50
+    }, 
+    "rnn_len": 1, 
+    "solver": {
+        "opt": "RMS", 
+        "rnd_seed": 1, 
+        "epsilon": 1e-05, 
+        "learning_rate": 0.001, 
+        "use_jitter": false, 
+        "hungarian_iou": 0.25, 
+        "weights": "", 
+        "learning_rate_step": 33000, 
+        "gpu": 0, 
+        "head_weights": [
+            1.0, 
+            0.1
+        ]
+    }, 
+    "clip_norm": 1.0, 
+    "image_height": 480, 
+    "save_dir": "output/overfeat_rezoom_2017_02_09_13.28", 
+    "slim_attention_lname": "Mixed_3b", 
+    "slim_ckpt": "inception_v1.ckpt", 
+    "biggest_box_px": 10000
+}
