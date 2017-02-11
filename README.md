@@ -49,7 +49,7 @@ make
 If you have some problems to run this project, reference the demo video below. Or, open a issue to contact our team.
 
 ## Demo Video
-https://youtu.be/vF7J_uC045Q
+[![click youtube link](http://img.youtube.com/vi/vF7J_uC045Q/0.jpg)](http://www.youtube.com/watch?v=vF7J_uC045Q)
 
 ## Founders
 Chiwan Song, chi3236@gmail.com
