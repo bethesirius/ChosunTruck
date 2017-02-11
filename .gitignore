@@ -1,4 +1,3 @@
-
 # Created by https://www.gitignore.io/api/c,c++,cuda,opencv,visualstudio,windows
 
 ### C ###
@@ -363,3 +362,9 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# Generated files
+ChosunTruck
+
+# Build files
+build/
