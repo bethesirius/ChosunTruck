@@ -9,7 +9,7 @@ Because this simulator provides a good test environment that is similar to the r
 ## Features
 * You can drive a vehicle without handling it yourself.
 * You can understand the principle of autonomous driving.
-* These features only work while driving on a highway.
+* (Experimental) You can detect where other vehicles are.
 
 ## How To Run It
 ### Windows
@@ -27,34 +27,41 @@ OpenCV version: 3.0
 ### Linux
 OS: Ubuntu 16.04 LTS
 
-OpenCV version: 3.0
+#### Dependencies
+OpenCV version: 3.1
 
-- Clone the linux branch.
+(Optional)Tensorflow version: 0.12.1
+
+- Build the source code with below command (in linux directory).
 ```
-git clone -b linux https://github.com/bethesirius/ChosunTruck.git
-```
-- Build the source code with below command.
-```
-g++ -o auto_drive main2.cpp IPM.cpp lineinder.cpp uinput.c `pkg-config opencv --cflags --libs` -std=c++11 -lX11 -Wall -fopenmp -O3 -march=native
+make
 ```
 - Run ETS2 in windowed mode and set resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2)
 - It cannot find the ETS2 window automatically, you should move the ETS2 window to right-down corner to fix this.
 - In ETS2 Options, set controls to`Keyboard + Mouse Steering`.
 - Go to a highway and set truck's speed to 40~60km/h. (I recommend you turn on cruise mode to set the speed easily)
-- Run this program as root!
+- When you want to enable the car detection mode, add an option -D or --Car_Detection.
+- Run this program!
 ```
-sudo ./auto_drive
+./ChosunTruck [-D|--Car_Detection]
 ```
 ----
 If you have some problems to run this project, reference the demo video below. Or, open a issue to contact our team.
 
 ## Demo Video
-https://goo.gl/photos/aHQ5ZMKdTQJyMuaM9
+↓↓↓Click this image to play the demo video(Youtube link)
+
+[![click youtube link](http://img.youtube.com/vi/vF7J_uC045Q/0.jpg)](http://www.youtube.com/watch?v=vF7J_uC045Q)
+
+## Founders
+Chiwan Song, chi3236@gmail.com
+
+JaeCheol Sim, simjaecheol@naver.com
+
+Seongjoon Chu, hs4393@gmail.com
 
 ## Contributers
-Chiwan Song, chi3236@gmail.com
-JaeCheol Sim, ssimpcp@gmail.com
-Seongjoon Chu, hs4393@gmail.com
+@zappybiby
 
 ## How To Contribute
 Anyone who is interest in this procject is welcome! Just Fork it and Pull Requests!
