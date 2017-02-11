@@ -55,7 +55,9 @@ If you have some problems to run this project, reference the demo video below. O
 
 ## Founders
 Chiwan Song, chi3236@gmail.com
+
 JaeCheol Sim, simjaecheol@naver.com
+
 Seongjoon Chu, hs4393@gmail.com
 
 ## Contributers
