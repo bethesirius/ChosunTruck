@@ -1,3 +1,10 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <unistd.h>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
 //#include <opencv2/imageproc/imageproc.hpp>
@@ -33,21 +40,77 @@ void input(int, int, int);
 string exec(const char* cmd);
 int counter = 0;
 
-int main() {
+int main(int argc, char** argv) {
 	if(-1 == setUinput()) {
 		return -1;
 	}
+	bool detection = false;
+	bool python_on = false;
+	if(argc == 2){
+		if(strcmp(argv[1], "--Car_Detection")){
+			detection = true;
+			cout<<"Car Detection Enabled"<<endl;
+		}
 
+		else if(strcmp(argv[1], "-D")){
+			detection = true;
+			cout<<"Car Detection Enabled"<<endl;	
+		}
+		else{
+			
+			cout<<"Option: -D, --Car_Detection Enable car"<<endl;
+			cout<<"Usage: ./ChosunTruck [--Car_Detection|-D]"<<endl;
+		}
+			
+	}
 	//cudaf();
 
 
-	//long long int sum = 0;
-	//long long int i = 0;
+	char *shared_curve;
+	char *shared_memory;
+	pid_t pid;
 
+	if(detection == true) {
+		pid = fork();
+		if(pid==0) {
+			system("python tensorbox/Car_detection.py");
+			exit(0);
+		} else {
+			//long long int sum = 0;
+			//long long int i = 0;
+			int shmid;
+			key_t key = 123463;
+			if ((shmid = shmget(key, 2359296, IPC_CREAT | 0666)) < 0)
+			{
+				printf("Error getting shared memory id");
+				exit(1);
+			}
+			// Attached shared memory
+			if ((shared_memory = static_cast<char*>(shmat(shmid, NULL, 0))) == (char *) -1)
+			{
+				 printf("Error attaching shared memory id");
+				 exit(1);
+			}
+
+			int curve;
+			key = 123464;
+			if ((curve = shmget(key, 4, IPC_CREAT | 0666)) < 0)
+			{
+				printf("Error getting shared memory curve");
+				exit(1);
+			}
+			// Attached shared memory
+			if ((shared_curve = static_cast<char*>(shmat(curve, NULL, 0))) == (char *) -1)
+			{
+				 printf("Error attaching shared memory curve");
+				 exit(1);
+			}
+		}
+	}
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
-		Mat image, outputImg;
+		Mat image, sendImg, outputImg;
 		int Width = 1024;
 		int Height = 768;
 		int Bpp = 0;
@@ -55,9 +118,19 @@ int main() {
 
 		ImageFromDisplay(Pixels, Width, Height, Bpp);
 	
-		Mat img = Mat(Height, Width, Bpp > 24 ? CV_8UC4 : CV_8UC3, &Pixels[0]); //Mat(Size(Height, Width), Bpp > 24 ? CV_8UC4 : CV_8UC3, &Pixels[0]); 
+		Mat img = Mat(Height, Width, Bpp > 24 ? CV_8UC4 : CV_8UC3, &Pixels[0]); //Mat(Size(Height, Width), Bpp > 24 ? CV_8UC4 : CV_8UC3, &Pixels[0]);
 		cv::Rect myROI(896, 312, 1024, 768);
 		image = img(myROI);
+
+		//------------------------
+		//cv::cvtColor(image, sendImg, CV_YUV2RGBA_NV21);
+		cv::cvtColor(image, sendImg, CV_RGBA2RGB);
+		//printf("%d\n", sendImg.dataend - sendImg.datastart);
+
+		if(detection == true) {
+			memcpy(shared_memory, sendImg.datastart, sendImg.dataend - sendImg.datastart);
+		}
+		//
 
 		// Mat to GpuMat
 		//cuda::GpuMat imageGPU;
@@ -171,8 +244,14 @@ int main() {
 			cout << "Steer: "<< move_mouse_pixel << "px ";
 			//goDirection(move_mouse_pixel);
 			moveMouse(move_mouse_pixel);
-			counter = diff;
-/*
+			int road_curve = (int)((sum_centerline/count_centerline-bottom_center));
+			
+			if(detection == true) {
+				memcpy(shared_curve, &road_curve, sizeof(int));
+			}
+		
+			counter = diff;/*
+			
 
 			if (abs(move_mouse_pixel)< 5) {
 				goDirection(0 - counter/3);
@@ -197,7 +276,6 @@ int main() {
 		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		imshow("Test", outputImg);
 		waitKey(1);
-		
 		
 		auto end = chrono::high_resolution_clock::now();
 		auto dur = end - begin;

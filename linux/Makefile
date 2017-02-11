@@ -1,5 +1,4 @@
 OUT_O_DIR = build
-OUT_BIN_DIR = bin
 
 OBJS = $(OUT_O_DIR)/getScreen_linux.o $(OUT_O_DIR)/main2.o $(OUT_O_DIR)/IPM.o $(OUT_O_DIR)/linefinder.o $(OUT_O_DIR)/uinput.o
 
@@ -10,8 +9,7 @@ CPPFLAGS = `pkg-config opencv --cflags --libs` -std=c++11 -lX11 -Wall -fopenmp -
 
 TARGET = ChosunTruck
 
-$(OUT_BIN_DIR)/$(TARGET) : $(OBJS)
-	mkdir -p $(@D)
+$(TARGET) : $(OBJS)
 	$(CPP) $(OBJS) $(CPPFLAGS) -o $@
 
 $(OUT_O_DIR)/main2.o : src/main2.cc
@@ -31,4 +29,4 @@ $(OUT_O_DIR)/uinput.o : src/uinput.c
 	$(CC) -c $< $(CFLAGS) -o $@
 
 clean : 
-	rm -f $(OBJS) ./bin/$(TARGET)
+	rm -f $(OBJS) ./$(TARGET)
