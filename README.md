@@ -19,7 +19,9 @@ IDE: Visual Studio 2015
 
 OpenCV version: 3.0
 
-** **NOTICE: Because mouse and keyboard input DOES NOT work on Windows, this is only available for lane detection. For more informations, see also [#4](https://github.com/bethesirius/ChosunTruck/issues/4)**
+** **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from di8.keyboard/fusion.mouse to sys.keyboard/sys.mouse.** (thanks Komat!)
+
+
 
 - Open the visual studio project and build it. 
 - Run ETS2 in windowed mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
