@@ -19,9 +19,11 @@ IDE: Visual Studio 2015
 
 OpenCV version: 3.0
 
-** **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from di8.keyboard/fusion.mouse to sys.keyboard/sys.mouse.** (thanks Komat!)
+### Required to allow input to work in Windows:
 
+**Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from di8.keyboard/fusion.mouse to sys.keyboard/sys.mouse.** (thanks Komat!)
 
+#### Then:
 
 - Open the visual studio project and build it. 
 - Run ETS2 in windowed mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
@@ -32,7 +34,7 @@ OS: Ubuntu 16.04 LTS
 #### Dependencies
 OpenCV version: 3.1
 
-(Optional)Tensorflow version: 0.12.1
+(Optional) Tensorflow version: 0.12.1
 
 - Build the source code with below command (in linux directory).
 ```
