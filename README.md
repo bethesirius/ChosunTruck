@@ -38,7 +38,7 @@ make
 ```
 - Run ETS2 in windowed mode and set resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2)
 - It cannot find the ETS2 window automatically, you should move the ETS2 window to right-down corner to fix this.
-- In ETS2 Options, set controls to`Keyboard + Mouse Steering`.
+- In ETS2 Options, set controls to`Keyboard + Mouse Steering`, `left click` to acclerate, and `right click` to brake.
 - Go to a highway and set truck's speed to 40~60km/h. (I recommend you turn on cruise mode to set the speed easily)
 - When you want to enable the car detection mode, add an option -D or --Car_Detection.
 - Run this program!
