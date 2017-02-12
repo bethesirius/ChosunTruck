@@ -49,9 +49,13 @@ make
 If you have some problems to run this project, reference the demo video below. Or, open a issue to contact our team.
 
 ## Demo Video
-↓↓↓Click this image to play the demo video(Youtube link)
+Lane Detection(Youtube link)
 
-[![click youtube link](http://img.youtube.com/vi/vF7J_uC045Q/0.jpg)](http://www.youtube.com/watch?v=vF7J_uC045Q)
+[![youtube link](http://img.youtube.com/vi/vF7J_uC045Q/0.jpg)](http://www.youtube.com/watch?v=vF7J_uC045Q)
+
+Lane Detection + Vehicle Detection(Youtube link)
+
+[![youtube link](http://img.youtube.com/vi/w6H2eGEvzvw/0.jpg)](http://www.youtube.com/watch?v=w6H2eGEvzvw)
 
 ## Founders
 Chiwan Song, chi3236@gmail.com
@@ -61,7 +65,7 @@ JaeCheol Sim, simjaecheol@naver.com
 Seongjoon Chu, hs4393@gmail.com
 
 ## Contributers
-@zappybiby
+[zappybiby](https://github.com/zappybiby)
 
 ## How To Contribute
 Anyone who is interest in this procject is welcome! Just Fork it and Pull Requests!
