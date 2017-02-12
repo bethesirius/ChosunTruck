@@ -13,39 +13,42 @@ Because this simulator provides a good test environment that is similar to the r
 
 ## How To Run It
 ### Windows
-OS: Windows 7 64bits
 
-IDE: Visual Studio 2015
+#### Dependencies
+- OS: Windows 7 64bits
 
-OpenCV version: 3.0
+- IDE: Visual Studio 2015
 
-### Required to allow input to work in Windows:
+- OpenCV version: 3.0
 
-**Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from di8.keyboard/fusion.mouse to sys.keyboard/sys.mouse.** (thanks Komat!)
+#### Required to allow input to work in Windows:
+Note: Input is not currently working correctly.
+- **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from di8.keyboard/fusion.mouse to sys.keyboard/sys.mouse.** (thanks Komat!)
 
 #### Then:
-
 - Open the visual studio project and build it. 
 - Run ETS2 in windowed mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
 
 ### Linux
-OS: Ubuntu 16.04 LTS
-
 #### Dependencies
-OpenCV version: 3.1
+- OS: Ubuntu 16.04 LTS
 
-(Optional) Tensorflow version: 0.12.1
+- OpenCV version: 3.1
 
-- Build the source code with below command (in linux directory).
+- (Optional) Tensorflow version: 0.12.1
+
+### Build the source code with the following command (inside the linux directory).
 ```
 make
 ```
-- Run ETS2 in windowed mode and set resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2)
-- It cannot find the ETS2 window automatically, you should move the ETS2 window to right-down corner to fix this.
+
+- Run ETS2 in windowed mode and set its resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 windowed mode ETS2)
+- It cannot find the ETS2 window automatically, move the ETS2 window to the right-down corner to fix this.
 - In ETS2 Options, set controls to`Keyboard + Mouse Steering`, `left click` to acclerate, and `right click` to brake.
 - Go to a highway and set truck's speed to 40~60km/h. (I recommend you turn on cruise mode to set the speed easily)
-- When you want to enable the car detection mode, add an option -D or --Car_Detection.
 - Run this program!
+
+#### To enable car detection mode, add an option -D or --Car_Detection.
 ```
 ./ChosunTruck [-D|--Car_Detection]
 ```
