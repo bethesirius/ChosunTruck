@@ -2,27 +2,27 @@
 
 ## Introduction
 ChosunTruck is an autonomous driving solution for [Euro Truck Simulator 2](https://eurotrucksimulator2.com/).
-Recently, autonomous driving technology has become a big issue and we have studied the technology related to this.
-It is being developed in a simulator environment called Euro Truck Simulator 2 to study it with vehicles.
-Because this simulator provides a good test environment that is similar to the real road, we chose it.
+Recently, autonomous driving technology has become a big issue and as a result we have been studying technology that incorporates this.
+It is being developed in a simulated environment called Euro Truck Simulator 2 to allow us to study it using vehicles.
+We chose Euro Truck Simulator 2 because this simulator provides a good test environment that is similar to the real road.
 
 ## Features
 * You can drive a vehicle without handling it yourself.
-* You can understand the principle of autonomous driving.
+* You can understand the principles of autonomous driving.
 * (Experimental) You can detect where other vehicles are.
 
 ## How To Run It
 ### Windows
 
 #### Dependencies
-- OS: Windows 7 64bits
+- OS: Windows 7 (64bit)
 
 - IDE: Visual Studio 2015
 
 - OpenCV version: 3.0
 
 #### Required to allow input to work in Windows:
-Note: Input is not currently working correctly.
+##### Note: Input is not currently working correctly.
 - **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from di8.keyboard/fusion.mouse to sys.keyboard/sys.mouse.** (thanks Komat!)
 
 #### Then:
@@ -41,41 +41,41 @@ Note: Input is not currently working correctly.
 ```
 make
 ```
-
+#### Then:
 - Run ETS2 in windowed mode and set its resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 windowed mode ETS2)
-- It cannot find the ETS2 window automatically, move the ETS2 window to the right-down corner to fix this.
-- In ETS2 Options, set controls to`Keyboard + Mouse Steering`, `left click` to acclerate, and `right click` to brake.
-- Go to a highway and set truck's speed to 40~60km/h. (I recommend you turn on cruise mode to set the speed easily)
+- It cannot find the ETS2 window automatically. Move the ETS2 window to the right-down corner to fix this.
+- In ETS2 Options, set controls to 'Keyboard + Mouse Steering', 'left click' to acclerate, and 'right click' to brake.
+- Go to a highway and set the truck's speed to 40~60km/h. (I recommend you turn on cruise mode to set the speed easily)
 - Run this program!
 
-#### To enable car detection mode, add an option -D or --Car_Detection.
+#### To enable car detection mode, add -D or --Car_Detection.
 ```
 ./ChosunTruck [-D|--Car_Detection]
 ```
 ----
-If you have some problems to run this project, reference the demo video below. Or, open a issue to contact our team.
+If you have some problems running this project, reference the demo video below. Or, [open a issue to contact our team](https://github.com/bethesirius/ChosunTruck/issues).
 
 ## Demo Video
-Lane Detection(Youtube link)
+Lane Detection (Youtube link)
 
 [![youtube link](http://img.youtube.com/vi/vF7J_uC045Q/0.jpg)](http://www.youtube.com/watch?v=vF7J_uC045Q)
 
-Lane Detection + Vehicle Detection(Youtube link)
+Lane Detection + Vehicle Detection (Youtube link)
 
 [![youtube link](http://img.youtube.com/vi/w6H2eGEvzvw/0.jpg)](http://www.youtube.com/watch?v=w6H2eGEvzvw)
 
 ## Founders
-Chiwan Song, chi3236@gmail.com
+- Chiwan Song, chi3236@gmail.com
 
-JaeCheol Sim, simjaecheol@naver.com
+- JaeCheol Sim, simjaecheol@naver.com
 
-Seongjoon Chu, hs4393@gmail.com
+- Seongjoon Chu, hs4393@gmail.com
 
-## Contributers
-[zappybiby](https://github.com/zappybiby)
+## Contributors
+- [zappybiby](https://github.com/zappybiby)
 
 ## How To Contribute
-Anyone who is interest in this procject is welcome! Just Fork it and Pull Requests!
+Anyone who is interested in this project is welcome! Just fork it and pull requests!
 
 ## License
 ChosunTruck, Euro Truck Simulator 2 auto driving solution
