@@ -68,7 +68,7 @@ Seongjoon Chu, hs4393@gmail.com
 [zappybiby](https://github.com/zappybiby)
 
 ## How To Contribute
-Anyone who is interest in this procject is welcome! Just Fork it and Pull Requests!
+Anyone who is interest in this project is welcome! Just Fork it and Pull Requests!
 
 ## License
 ChosunTruck, Euro Truck Simulator 2 auto driving solution
