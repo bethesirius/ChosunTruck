@@ -177,11 +177,11 @@ int main() {
 			for (int x = 0, y = 0; x < 700 && y < 700; x += 10, y += 10)
 			{
 				/*
-				INPUT input; // Using SendInput to send input commands
-				input.type = INPUT_KEYBOARD;
+				INPUT input[2]; // Using SendInput to send input commands
+				input[0].type = INPUT_KEYBOARD;
 				// Translating 'A' to Scan Code, then releasing key
-				input[1].ki.wScan = MapVirtualKey(0x41, MAPVK_VK_TO_VSC);
-				input[1].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+				input[0].ki.wScan = MapVirtualKey(0x41, MAPVK_VK_TO_VSC);
+				input[0].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
 				// Translating 'D' to Scan Code, then releasing key
 				input[1].ki.wScan = MapVirtualKey(0x44, MAPVK_VK_TO_VSC);
 				input[1].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
