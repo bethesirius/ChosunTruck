@@ -1,74 +1,125 @@
 # <img src="https://github.com/bethesirius/ChosunTruck/blob/master/README/Logo.png", width="64">ChosunTruck
 
+# ChosunTruck
+
 ## Introduction
 ChosunTruck is an autonomous driving solution for [Euro Truck Simulator 2](https://eurotrucksimulator2.com/).
-Recently, autonomous driving technology has become a big issue and we have studied the technology related to this.
-It is being developed in a simulator environment called Euro Truck Simulator 2 to study it with vehicles.
-Because this simulator provides a good test environment that is similar to the real road, we chose it.
+Recently, autonomous driving technology has become a big issue and as a result we have been studying technology that incorporates this.
+It is being developed in a simulated environment called Euro Truck Simulator 2 to allow us to study it using vehicles.
+We chose Euro Truck Simulator 2 because this simulator provides a good test environment that is similar to the real road.
 
 ## Features
 * You can drive a vehicle without handling it yourself.
-* You can understand the principle of autonomous driving.
+* You can understand the principles of autonomous driving.
 * (Experimental) You can detect where other vehicles are.
 
 ## How To Run It
 ### Windows
-OS: Windows 7 64bits
 
-IDE: Visual Studio 2015
+#### Dependencies
+- OS: Windows 7 (64bit)
 
-OpenCV version: 3.0
+- IDE: Visual Studio 2015
 
-** **NOTICE: Because mouse and keyboard input DOES NOT work on Windows, this is only available for lane detection. For more informations, see also [#4](https://github.com/bethesirius/ChosunTruck/issues/4)**
+- OpenCV version: 3.0
 
+#### Required to allow input to work in Windows:
+##### Note: Input is not currently working correctly.
+- **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from di8.keyboard/fusion.mouse to sys.keyboard/sys.mouse.** (thanks Komat!)
+
+#### Then:
 - Open the visual studio project and build it. 
 - Run ETS2 in windowed mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
 
 ### Linux
-OS: Ubuntu 16.04 LTS
-
 #### Dependencies
-OpenCV version: 3.1
+- OS: Ubuntu 16.04 LTS
 
-(Optional)Tensorflow version: 0.12.1
+- [OpenCV version: 3.1](http://embedonix.com/articles/image-processing/installing-opencv-3-1-0-on-ubuntu/)
 
-- Build the source code with below command (in linux directory).
+- (Optional) Tensorflow version: 0.12.1
+
+### Build the source code with the following command (inside the linux directory).
 ```
 make
 ```
-- Run ETS2 in windowed mode and set resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2)
-- It cannot find the ETS2 window automatically, you should move the ETS2 window to right-down corner to fix this.
-- In ETS2 Options, set controls to`Keyboard + Mouse Steering`, `left click` to acclerate, and `right click` to brake.
-- Go to a highway and set truck's speed to 40~60km/h. (I recommend you turn on cruise mode to set the speed easily)
-- When you want to enable the car detection mode, add an option -D or --Car_Detection.
+#### Then:
+- Run ETS2 in windowed mode and set its resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 windowed mode ETS2)
+- It cannot find the ETS2 window automatically. Move the ETS2 window to the right-down corner to fix this.
+- In ETS2 Options, set controls to 'Keyboard + Mouse Steering', 'left click' to acclerate, and 'right click' to brake.
+- Go to a highway and set the truck's speed to 40~60km/h. (I recommend you turn on cruise mode to set the speed easily)
 - Run this program!
+
+#### To enable car detection mode, add -D or --Car_Detection.
 ```
 ./ChosunTruck [-D|--Car_Detection]
 ```
 ----
-If you have some problems to run this project, reference the demo video below. Or, open a issue to contact our team.
+
+## Troubleshooting
+### OpenCV CUDA Libraries
+
+**Having trouble building OpenCV libraries with CMake? No worries, just use the prebuilt OpenCV libraries provided through nuget.**
+
+- For Release Libaries: https://www.nuget.org/packages/opencvcuda-release/
+- For Debug Libraries: https://www.nuget.org/packages/opencvcuda-debug/
+
+### Linker Errors
+
+**Getting Linker Errors (LNKxxxx)?**
+
+Go to: 
+
+```
+ My Project --> properties --> linker --> input --> additional dependencies
+```
+and change the path of your Linker dependencies to
+
+```
+opencv_calib3d310.lib;opencv_core310.lib;opencv_features2d310.lib;opencv_flann310.lib;opencv_highgui310.lib;opencv_imgcodecs310.lib;opencv_imgproc310.lib;opencv_ml310.lib;opencv_objdetect310.lib;opencv_photo310.lib;opencv_shape310.lib;opencv_stitching310.lib;opencv_superres310.lib;opencv_ts310.lib;opencv_video310.lib;opencv_videoio310.lib;opencv_videostab310.lib;opencv_viz310.lib;%(AdditionalDependencies)
+```
+
+Then, go to 
+```
+C/C++ --> general --> additional #include dependencies
+```
+
+and change the path to where your opencv libraries are located
+
+### Assertion failed
+
+**Getting an error that looks like this when in Debug mode?**
+
+```
+OpenCV Error: Assertion failed (src.checkVector(2, CV_32F) == 4 && dst.checkVect or(2, CV_32F) == 4) in cv::getPerspectiveTransform, file ...\opencv_sources\modules\imgproc\src\imgwarp.cpp, line 6353
+```
+- Switch to Release build for now. Usually this is caused by a wrong Mat type being used (in this case, CV_32F).
+
+----
+
+If you have some problems running this project, reference the demo video below. Or, [open a issue to contact our team](https://github.com/bethesirius/ChosunTruck/issues).
 
 ## Demo Video
-Lane Detection(Youtube link)
+Lane Detection (Youtube link)
 
 [![youtube link](http://img.youtube.com/vi/vF7J_uC045Q/0.jpg)](http://www.youtube.com/watch?v=vF7J_uC045Q)
 
-Lane Detection + Vehicle Detection(Youtube link)
+Lane Detection + Vehicle Detection (Youtube link)
 
 [![youtube link](http://img.youtube.com/vi/w6H2eGEvzvw/0.jpg)](http://www.youtube.com/watch?v=w6H2eGEvzvw)
 
 ## Founders
-Chiwan Song, chi3236@gmail.com
+- Chiwan Song, chi3236@gmail.com
 
-JaeCheol Sim, simjaecheol@naver.com
+- JaeCheol Sim, simjaecheol@naver.com
 
-Seongjoon Chu, hs4393@gmail.com
+- Seongjoon Chu, hs4393@gmail.com
 
-## Contributers
-[zappybiby](https://github.com/zappybiby)
+## Contributors
+- [zappybiby](https://github.com/zappybiby)
 
 ## How To Contribute
-Anyone who is interest in this procject is welcome! Just Fork it and Pull Requests!
+Anyone who is interested in this project is welcome! Just fork it and pull requests!
 
 ## License
 ChosunTruck, Euro Truck Simulator 2 auto driving solution
