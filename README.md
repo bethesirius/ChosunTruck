@@ -35,6 +35,7 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 #### Dependencies
 - OS: Ubuntu 16.04 LTS
 
+
 - [OpenCV version: 3.1](http://embedonix.com/articles/image-processing/installing-opencv-3-1-0-on-ubuntu/)
 
 - (Optional) Tensorflow version: 0.12.1
@@ -54,8 +55,6 @@ make
 ```
 ./ChosunTruck [-D|--Car_Detection]
 ```
-----
-
 ## Troubleshooting
 ### OpenCV CUDA Libraries
 
@@ -94,8 +93,6 @@ and change the path to where your opencv libraries are located
 OpenCV Error: Assertion failed (src.checkVector(2, CV_32F) == 4 && dst.checkVect or(2, CV_32F) == 4) in cv::getPerspectiveTransform, file ...\opencv_sources\modules\imgproc\src\imgwarp.cpp, line 6353
 ```
 - Switch to Release build for now. Usually this is caused by a wrong Mat type being used (in this case, CV_32F).
-
-----
 
 If you have some problems running this project, reference the demo video below. Or, [open a issue to contact our team](https://github.com/bethesirius/ChosunTruck/issues).
 
