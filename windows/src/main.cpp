@@ -57,10 +57,10 @@ int main() {
 		// The 4-points at the input image	
 		vector<Point2f> origPoints;
 		
-		origPoints.push_back(Point2f(0, (height-50)));
-		origPoints.push_back(Point2f(width, height-50));
-		origPoints.push_back(Point2f(width/2+125, height/2+30));
-		origPoints.push_back(Point2f(width/2-125, height/2+30));
+		origPoints.push_back(Point2f(0-400, (height-50)));
+		origPoints.push_back(Point2f(width+400, height-50));
+		origPoints.push_back(Point2f(width/2+80, height/2+30));
+		origPoints.push_back(Point2f(width/2-80, height/2+30));
 		
 
 		// The 4-points correspondences in the destination image
