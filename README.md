@@ -21,7 +21,7 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 
 - IDE: Visual Studio 2015
 
-- OpenCV version: 3.0
+- OpenCV version: 3.2
 
 #### Required to allow input to work in Windows:
 ##### Note: Input is not currently working correctly.
