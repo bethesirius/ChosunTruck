@@ -31,7 +31,7 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 - Open the visual studio project and build it. 
 - Run ETS2 in windowed mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
 
-#### Note: "OpenCV Error: Assertion failed (ssize.area() > 0) in cv::remapBilinear, file C:\opencv\sources\modules\imgproc\src\imgwarp.cpp, line 3868" will occur ONLY at the first execution after build, but it can be ignored. Program runs well and no assertion error occurs after the second execution
+
 
 ### Linux
 #### Dependencies
@@ -95,6 +95,13 @@ and change the path to where your opencv libraries are located
 OpenCV Error: Assertion failed (src.checkVector(2, CV_32F) == 4 && dst.checkVect or(2, CV_32F) == 4) in cv::getPerspectiveTransform, file ...\opencv_sources\modules\imgproc\src\imgwarp.cpp, line 6353
 ```
 - Switch to Release build for now. Usually this is caused by a wrong Mat type being used (in this case, CV_32F).
+
+**This error occurs ONLY at the first execution after the build, but you can ignore it.**
+
+```
+OpenCV Error: Assertion failed (ssize.area() > 0) in cv::remapBilinear, file ...\opencv\sources\modules\imgproc\src\imgwarp.cpp, line 3868 
+```
+- Program still runs well and no assertion error occurs after the second execution
 
 If you have some problems running this project, reference the demo video below. Or, [open a issue to contact our team](https://github.com/bethesirius/ChosunTruck/issues).
 
