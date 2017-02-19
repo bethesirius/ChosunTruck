@@ -23,6 +23,8 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 
 - OpenCV version: 3.2
 
+- [Cuda Toolkit 7.5](https://developer.nvidia.com/cuda-75-downloads-archive) (Note: Do an ADVANCED INSTALLATION. ONLY install the Toolkit + Integration to Visual Studio. Do NOT install the drivers + other stuff it would normally give you.
+
 #### Required to allow input to work in Windows:
 ##### Note: Input is not currently working correctly.
 - **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from di8.keyboard/fusion.mouse to sys.keyboard/sys.mouse.** (thanks Komat!)
