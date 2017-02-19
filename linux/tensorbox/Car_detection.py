@@ -72,17 +72,17 @@ def get_results(args, H):
 	    road_center = 320 + int(curve)
 	    print(road_center)
 	    for rect in rects:
-			print(rect.x1, rect.x2, rect.y2)
-			if (rect.x1 < road_center and rect.x2 > road_center and rect.y2 > 200) and (rect.x2 - rect.x1 > 30):
-				flag = 1
+		print(rect.x1, rect.x2, rect.y2)
+		if (rect.x1 < road_center and rect.x2 > road_center and rect.y2 > 200) and (rect.x2 - rect.x1 > 30):
+			flag = 1
 
 	    if flag is 1:
-			pedal.press(2)
-			print("break!")
+		pedal.press(2)
+		print("break!")
 	    else:
-			pedal.release(2)
-			pedal.press(1)
-			print("acceleration!")
+		pedal.release(2)
+		pedal.press(1)
+		print("acceleration!")
 		
 	    pred_anno.rects = rects
 	    pred_anno.imagePath = os.path.abspath(data_dir)
