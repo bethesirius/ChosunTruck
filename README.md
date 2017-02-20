@@ -98,13 +98,6 @@ OpenCV Error: Assertion failed (src.checkVector(2, CV_32F) == 4 && dst.checkVect
 ```
 - Switch to Release build for now. Usually this is caused by a wrong Mat type being used (in this case, CV_32F).
 
-**This error occurs ONLY at the first execution after the build, but you can ignore it.**
-
-```
-OpenCV Error: Assertion failed (ssize.area() > 0) in cv::remapBilinear, file ...\opencv\sources\modules\imgproc\src\imgwarp.cpp, line 3868 
-```
-- Program still runs well and no assertion error occurs after the second execution
-
 If you have some problems running this project, reference the demo video below. Or, [open a issue to contact our team](https://github.com/bethesirius/ChosunTruck/issues).
 
 ## Demo Video
