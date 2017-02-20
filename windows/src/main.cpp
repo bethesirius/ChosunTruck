@@ -105,8 +105,7 @@ int main() {
 		ld.drawDetectedLines(contours);
 		
 		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
-		imshow("Test", contours);
-		waitKey(1);
+		
 		/*
 		auto end = chrono::high_resolution_clock::now();
 		auto dur = end - begin;
@@ -115,7 +114,48 @@ int main() {
 		sum += ms;
 		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
 		*/
-		
+
+		int bottom_center = 160;
+		int sum_centerline = 0;
+		int count_centerline = 0;
+		int first_centerline = 0;
+		int last_centerline = 0;
+		double avr_center_to_left = 0;
+		double avr_center_to_right = 0;
+
+		//#pragma omp parallel for
+		for (int i = 240; i>10; i--) {
+			double center_to_right = -1;
+			double center_to_left = -1;
+
+			for (int j = 0; j<150; j++) {
+				if (contours.at<unsigned char>(i, bottom_center + j) == 112 && center_to_right == -1) {
+					center_to_right = j;
+				}
+				if (contours.at<unsigned char>(i, bottom_center - j) == 112 && center_to_left == -1) {
+					center_to_left = j;
+				}
+			}
+			if (center_to_left != -1 && center_to_right != -1) {
+				int centerline = (center_to_right - center_to_left + 2 * bottom_center) / 2;
+				if (first_centerline == 0) {
+					first_centerline = centerline;
+				}
+				cv::circle(outputImg, Point(centerline, i), 1, Scalar(30, 255, 30), 3);
+				cv::circle(outputImg, Point(centerline + center_to_right+20, i), 1, Scalar(255, 30, 30), 3);
+				cv::circle(outputImg, Point(centerline - center_to_left+10, i), 1, Scalar(255, 30, 30), 3);
+				sum_centerline += centerline;
+				avr_center_to_left = (avr_center_to_left * count_centerline + center_to_left) / count_centerline + 1;
+				avr_center_to_right = (avr_center_to_right * count_centerline + center_to_right) / count_centerline + 1;
+				last_centerline = centerline;
+				count_centerline++;
+			}
+			else {
+			}
+		}
+
+		imshow("Test", outputImg);
+		waitKey(1);
 		// WORK IN PROGRESS FOR INPUT IMPLEMENTATION
 		/*
 		unsigned char row_center = gray.at<uchar>(10, 160);
