@@ -129,10 +129,10 @@ int main() {
 			double center_to_left = -1;
 
 			for (int j = 0; j<150; j++) {
-				if (contours.at<unsigned char>(i, bottom_center + j) == 112 && center_to_right == -1) {
+				if (contours.at<uchar>(i, bottom_center + j) == 112 && center_to_right == -1) {
 					center_to_right = j;
 				}
-				if (contours.at<unsigned char>(i, bottom_center - j) == 112 && center_to_left == -1) {
+				if (contours.at<uchar>(i, bottom_center - j) == 112 && center_to_left == -1) {
 					center_to_left = j;
 				}
 			}
