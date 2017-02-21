@@ -45,7 +45,6 @@ def get_results(args, H):
         data_dir = os.path.dirname(args.test_boxes)
         image_dir = get_image_dir(args)
         subprocess.call('mkdir -p %s' % image_dir, shell=True)
-
 	
 	memory = sysv_ipc.SharedMemory(123463)
 	memory2 = sysv_ipc.SharedMemory(123464)
@@ -55,7 +54,6 @@ def get_results(args, H):
 	pedal.press(1)
 	road_center = 320
 	while True:
-	   
 	    cv2.waitKey(1)
 	    frameCount = bytearray(memory.read())
 	    curve = bytearray(memory2.read())
