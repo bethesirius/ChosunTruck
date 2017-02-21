@@ -7,14 +7,10 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
-//#include <opencv2/imageproc/imageproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/photo/cuda.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-//#include <opencv2/cudaimgproc.hpp>
-//#include <opencv2/cudafilters.hpp>
-//#include <opencv2/gpu/gpu.hpp>
 #include <omp.h>
 #include <iostream>
 #include <string>
@@ -28,8 +24,6 @@
 #include "IPM.h"
 #include "getScreen_linux.h"
 #include "uinput.c"
-
-
 
 #define PI 3.1415926
 
@@ -209,10 +203,10 @@ int main(int argc, char** argv) {
 			double center_to_left = -1;
 
 			for (int j=0;j<150;j++) {
-				if (contours.at<unsigned char>(i, bottom_center+j) == 112 && center_to_right == -1) {
+				if (contours.at<uchar>(i, bottom_center+j) == 112 && center_to_right == -1) {
 					center_to_right = j;
 				}
-				if (contours.at<unsigned char>(i, bottom_center-j) == 112 && center_to_left == -1) {
+				if (contours.at<uchar>(i, bottom_center-j) == 112 && center_to_left == -1) {
 					center_to_left = j;
 				}
 			}
@@ -222,8 +216,8 @@ int main(int argc, char** argv) {
 					first_centerline = centerline;
 				}
 				cv::circle(outputImg, Point(centerline, i), 1, Scalar(30, 255, 30) , 3);
-				cv::circle(outputImg, Point(centerline + center_to_right, i), 1, Scalar(255, 30, 30) , 3);
-				cv::circle(outputImg, Point(centerline - center_to_left, i), 1, Scalar(255, 30, 30) , 3);
+				cv::circle(outputImg, Point(centerline + center_to_right+20, i), 1, Scalar(255, 30, 30) , 3);
+				cv::circle(outputImg, Point(centerline - center_to_left+10, i), 1, Scalar(255, 30, 30) , 3);
 				sum_centerline += centerline;
 				avr_center_to_left = (avr_center_to_left * count_centerline + center_to_left)/count_centerline+1;
 				avr_center_to_right = (avr_center_to_right * count_centerline + center_to_right)/count_centerline+1;
