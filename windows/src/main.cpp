@@ -114,6 +114,10 @@ int main() {
 		sum += ms;
 		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
 		*/
+		SetActiveWindow(hWnd);
+		POINT pt;
+		GetCursorPos(&pt);
+		cout << "current mouse pos: " << "x: " << pt.x << "y: " << pt.y << endl;
 
 		int bottom_center = 160;
 		int sum_centerline = 0;
@@ -124,11 +128,11 @@ int main() {
 		double avr_center_to_right = 0;
 
 		//#pragma omp parallel for
-		for (int i = 240; i>10; i--) {
+		for (int i = 240; i > 30; i--){
 			double center_to_right = -1;
 			double center_to_left = -1;
 
-			for (int j = 0; j<150; j++) {
+			for (int j = 0; j < 150; j++) {
 				if (contours.at<uchar>(i, bottom_center + j) == 112 && center_to_right == -1) {
 					center_to_right = j;
 				}
@@ -136,115 +140,55 @@ int main() {
 					center_to_left = j;
 				}
 			}
-			if (center_to_left != -1 && center_to_right != -1) {
+			if (center_to_left != -1 && center_to_right != -1){
 				int centerline = (center_to_right - center_to_left + 2 * bottom_center) / 2;
 				if (first_centerline == 0) {
 					first_centerline = centerline;
 				}
 				cv::circle(outputImg, Point(centerline, i), 1, Scalar(30, 255, 30), 3);
-				cv::circle(outputImg, Point(centerline + center_to_right+20, i), 1, Scalar(255, 30, 30), 3);
-				cv::circle(outputImg, Point(centerline - center_to_left+10, i), 1, Scalar(255, 30, 30), 3);
+				cv::circle(outputImg, Point(centerline + center_to_right + 20, i), 1, Scalar(255, 30, 30), 3);
+				cv::circle(outputImg, Point(centerline - center_to_left + 10, i), 1, Scalar(255, 30, 30), 3);
 				sum_centerline += centerline;
 				avr_center_to_left = (avr_center_to_left * count_centerline + center_to_left) / count_centerline + 1;
 				avr_center_to_right = (avr_center_to_right * count_centerline + center_to_right) / count_centerline + 1;
 				last_centerline = centerline;
 				count_centerline++;
 			}
+			else {}
+		}
+		int diffOld = 0;
+		int diff = 0;
+		pt.x = width / 2;
+		if (count_centerline != 0) {
+			// -25 is magic number
+			diff = sum_centerline / count_centerline - bottom_center - 25;
+
+			int diff_max = 70;
+
+			// jerk_factor = how fast the wheel will turn
+			// (1/70) = Move 1 pixel at MAX every time step.
+			double jerk_factor = 1 / 70;
+
+			// linearized_diff = diff on a scale of -1 to 1
+			double linearized_diff = diff / diff_max;
+
+			// our new wheel position is determined by adding a number, turn_amount, to the previous wheel position
+			double turn_amount = linearized_diff * jerk_factor;
+
+			if (turn_amount < .5){
+				turn_amount = 0;
+			}
 			else {
+				turn_amount = 1;
 			}
+			int moveMouse = (pt.x + diffOld + turn_amount);
+
+			cout << "Steer: " << moveMouse << "px ";
+
+			SetCursorPos(moveMouse, height / 2);
+			int degree = atan2(last_centerline - first_centerline, count_centerline) * 180 / PI;
+			diffOld = diff;
 		}
-
-		imshow("Test", outputImg);
-		waitKey(1);
-		// WORK IN PROGRESS FOR INPUT IMPLEMENTATION
-		/*
-		unsigned char row_center = gray.at<uchar>(10, 160);
-
-		unsigned char row_left = 0;
-		unsigned char row_right = 0;
-
-		int left = 0;
-		int right = 0;
-		int i = 0;
-		int row_number = 5;
-		while (i < 150) {
-			if (i == 149) {
-				i = 0;
-				row_left = 0;
-				row_right = 0;
-				left = 0;
-				right = 0;
-				row_number++;
-
-			}
-			if (row_left == 255 && row_right == 255) {
-				row_number = 5;
-				break;
-			}
-			if (row_left != 255) {
-				// If matrix is of type CV_8U then use Mat.at<uchar>(y,x) (http://bit.ly/2kINZBI)
-				row_left = gray.at<uchar>(row_number, 159 + left);  
-				left--;
-
-			}
-			if (row_right != 255) {
-				row_right = gray.at<uchar>(row_number, 159 + right); 
-				right++;
-
-			}
-			i++;
-
-		}
-		SetActiveWindow(hWnd);
-
-		int average = (left == -150 || right == 150) ? 0 : left + right;
-		if (left + right < -50)
-		{
-			cout << "go left ";
-
-			INPUT input[2];
-			input[0].type = INPUT_KEYBOARD;
-			// Translating 'A' to Scan Code, then pressing down
-			input[0].ki.wScan = MapVirtualKey(0x41, MAPVK_VK_TO_VSC);
-			input[0].ki.dwFlags = KEYEVENTF_SCANCODE;
-			// Translating 'A' to Scan Code, then releasing key
-			input[1].ki.wScan = MapVirtualKey(0x41, MAPVK_VK_TO_VSC);
-			input[1].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
-			SendInput(2, input, sizeof(INPUT));
-		}
-		else if (left + right > -50 && left + right < 50){
-			cout << "go straight ";
-			for (int x = 0, y = 0; x < 700 && y < 700; x += 10, y += 10)
-			{
-				/*
-				INPUT input[2]; // Using SendInput to send input commands
-				input[0].type = INPUT_KEYBOARD;
-				// Translating 'A' to Scan Code, then releasing key
-				input[0].ki.wScan = MapVirtualKey(0x41, MAPVK_VK_TO_VSC);
-				input[0].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
-				// Translating 'D' to Scan Code, then releasing key
-				input[1].ki.wScan = MapVirtualKey(0x44, MAPVK_VK_TO_VSC);
-				input[1].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
-				SendInput(2, input, sizeof(INPUT));
-				
-			}
-		}
-		/* else{
-			cout << "go right ";
-			{
-				INPUT input[2];
-				input[0].type = INPUT_KEYBOARD;
-				// Translating 'D' to Scan Code, then pressing down
-				input[0].ki.wScan = MapVirtualKey(0x44, MAPVK_VK_TO_VSC);
-				input[0].ki.dwFlags = KEYEVENTF_SCANCODE;
-				// Translating 'D' to Scan Code, then releasing key
-				input[1].ki.wScan = MapVirtualKey(0x44, MAPVK_VK_TO_VSC);
-				input[1].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
-				SendInput(2, input, sizeof(INPUT));
-			}
-		}
-	cout << "left: " << left << ", right: " << right << ", average: " << average << endl;
-	*/
 	}
 	return 0;
 }
