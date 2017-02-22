@@ -34,8 +34,8 @@ int main() {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
 		HWND hWnd = FindWindow("prism3d", NULL);
-		// NOTEPAD
-		//HWND hWnd = FindWindow("Photo_Light", NULL);
+		HWND consoleWindow = GetConsoleWindow();
+		
 		Mat image, outputImg;
 		hwnd2mat(hWnd).copyTo(image);
 
@@ -154,7 +154,12 @@ int main() {
 			}
 		}
 
-		imshow("Test", outputImg);
+		imshow("Lines", contours);
+		imshow("Road", outputImg);
+		cv::moveWindow("Lines", width / 1.6, height / (10.8));
+		cv::moveWindow("Road", width / (128/101), height / (10.8));
+		SetWindowPos(consoleWindow, 0, width / 1.6, height / 2.7, 600, 400, SWP_NOZORDER);
+		SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 		waitKey(1);
 		// WORK IN PROGRESS FOR INPUT IMPLEMENTATION
 		/*
