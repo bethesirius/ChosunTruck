@@ -104,7 +104,7 @@ int main() {
 		std::vector<cv::Vec4i> li = ld.findLines(contours);
 		ld.drawDetectedLines(contours);
 		
-		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
+		// cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		
 		/*
 		auto end = chrono::high_resolution_clock::now();
@@ -114,9 +114,14 @@ int main() {
 		sum += ms;
 		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
 		*/
+		
 		SetActiveWindow(hWnd);
+		
+		// Creates pt.x and pt.y which are the coordinates of the mouse position.
 		POINT pt;
+		// Find current mouse position.
 		GetCursorPos(&pt);
+		
 		cout << "current mouse pos: " << "x: " << pt.x << "y: " << pt.y << endl;
 
 		int bottom_center = 160;
@@ -156,15 +161,19 @@ int main() {
 			}
 			else {}
 		}
+		
 		int diffOld = 0;
 		int diff = 0;
+		
+		// Sets the x-coordinate of the mouse position to the center
 		pt.x = width / 2;
+		
 		if (count_centerline != 0) {
-			// -25 is magic number
+			// In testing, we found that "bottom_center - 25" gave the best results.
 			diff = sum_centerline / count_centerline - bottom_center - 25;
 
 			// diff_max was determined by finding the maxmimum diff that can be used to go from center to the very edge of the lane.
-			// it is an approximation. In testing, 65px was the farthest we could go from center in-game without losing lane.
+			// It is an approximation. In testing, 65px was the farthest we could go from center in-game without losing lane.
 			int diff_max = 70;
 
 			// jerk_factor = how fast the wheel will turn
@@ -183,12 +192,14 @@ int main() {
 			else {
 				turn_amount = 1;
 			}
+			
 			int moveMouse = (pt.x + diffOld + turn_amount);
 
 			cout << "Steer: " << moveMouse << "px ";
 
 			SetCursorPos(moveMouse, height / 2);
-			int degree = atan2(last_centerline - first_centerline, count_centerline) * 180 / PI;
+			
+			// int degree = atan2(last_centerline - first_centerline, count_centerline) * 180 / PI;
 			diffOld = diff;
 		}
 	}
