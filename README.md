@@ -1,7 +1,5 @@
 # <img src="https://github.com/bethesirius/ChosunTruck/blob/master/README/Logo.png", width="64">ChosunTruck
 
-# ChosunTruck
-
 ## Introduction
 ChosunTruck is an autonomous driving solution for [Euro Truck Simulator 2](https://eurotrucksimulator2.com/).
 Recently, autonomous driving technology has become a big issue and as a result we have been studying technology that incorporates this.
@@ -32,8 +30,6 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 #### Then:
 - Open the visual studio project and build it. 
 - Run ETS2 in windowed mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
-
-
 
 ### Linux
 #### Dependencies
