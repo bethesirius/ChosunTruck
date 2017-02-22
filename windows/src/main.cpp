@@ -22,19 +22,37 @@ using namespace std;
 
 void Thinning(Mat input, int row, int col);
 
+void GetDesktopResolution(int& monitorHorizontal, int& monitorVertical)
+{
+	RECT desktop;
+	// Get a handle to the desktop window
+	const HWND hDesktop = GetDesktopWindow();
+	// Get the size of screen to the variable desktop
+	GetWindowRect(hDesktop, &desktop);
+	// The top left corner will have coordinates (0,0)
+	// and the bottom right corner will have coordinates
+	// (horizontal, vertical)
+	monitorHorizontal = desktop.right;
+	monitorVertical = desktop.bottom;
+}
+
 int main() {
 
 	//cudaf();
 
-
+	int monitorHorizontal = 0;
+	int monitorVertical = 0;
 	long long int sum = 0;
 	long long int i = 0;
 
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
-		// ETS2
+		// Grab the game window
 		HWND hWnd = FindWindow("prism3d", NULL);
+		// Grab the console window
 		HWND consoleWindow = GetConsoleWindow();
+		// Grab Monitor
+		GetDesktopResolution(monitorHorizontal, monitorVertical);
 		
 		Mat image, outputImg;
 		hwnd2mat(hWnd).copyTo(image);
@@ -156,9 +174,9 @@ int main() {
 
 		imshow("Lines", contours);
 		imshow("Road", outputImg);
-		cv::moveWindow("Lines", width / 1.6, height / (10.8));
-		cv::moveWindow("Road", width / (128/101), height / (10.8));
-		SetWindowPos(consoleWindow, 0, width / 1.6, height / 2.7, 600, 400, SWP_NOZORDER);
+		cv::moveWindow("Lines", monitorHorizontal / 1.6, monitorVertical / 10.8);
+		cv::moveWindow("Road", monitorHorizontal / 1.2673, monitorVertical / 10.8);
+		SetWindowPos(consoleWindow, 0, monitorHorizontal / 1.6, monitorVertical / 2.7, 600, 400, SWP_NOZORDER);
 		SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 		waitKey(1);
 		// WORK IN PROGRESS FOR INPUT IMPLEMENTATION
