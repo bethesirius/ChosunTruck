@@ -163,6 +163,8 @@ int main() {
 			// -25 is magic number
 			diff = sum_centerline / count_centerline - bottom_center - 25;
 
+			// diff_max was determined by finding the maxmimum diff that can be used to go from center to the very edge of the lane.
+			// it is an approximation. In testing, 65px was the farthest we could go from center in-game without losing lane.
 			int diff_max = 70;
 
 			// jerk_factor = how fast the wheel will turn
