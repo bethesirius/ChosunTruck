@@ -26,9 +26,9 @@ int main() {
 
 	//cudaf();
 
-
 	long long int sum = 0;
 	long long int i = 0;
+	int diffOld = 0;
 
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
@@ -162,7 +162,6 @@ int main() {
 			else {}
 		}
 		
-		int diffOld = 0;
 		int diff = 0;
 		
 		// Sets the x-coordinate of the mouse position to the center
