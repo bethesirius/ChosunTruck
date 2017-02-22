@@ -26,7 +26,20 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 - [Cuda Toolkit 7.5](https://developer.nvidia.com/cuda-75-downloads-archive) (Note: Do an ADVANCED INSTALLATION. ONLY install the Toolkit + Integration to Visual Studio. Do NOT install the drivers + other stuff it would normally give you. Once installed, your project properties should look like this: https://i.imgur.com/e7IRtjy.png)
 
 #### Required to allow input to work in Windows:
-- **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from di8.keyboard/fusion.mouse to sys.keyboard/sys.mouse.** (thanks Komat!)
+- **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from** 
+```
+di8.keyboard/fusion.mouse
+```
+to 
+```
+sys.keyboard/sys.mouse.
+```
+(thanks Komat!)
+- **While you are in controls.sii, make sure your sensitivity is set to:**
+```
+ config_lines[33]: "constant c_rsteersens 0.775000"
+ config_lines[34]: "constant c_asteersens 4.650000"
+```
 ##### Note: Input for Windows is experimental!
 
 #### Then:
