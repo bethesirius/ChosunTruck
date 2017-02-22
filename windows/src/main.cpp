@@ -195,7 +195,7 @@ int main() {
 			
 			int moveMouse = (pt.x + diffOld + turn_amount);
 
-			cout << "Steer: " << moveMouse << "px ";
+			cout << "Steer: " << diff << "px ";
 
 			SetCursorPos(moveMouse, height / 2);
 			
