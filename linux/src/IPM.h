@@ -33,6 +33,8 @@ public:
 	// Draw
 	void drawPoints( const std::vector<cv::Point2f>& _points, cv::Mat& _img ) const; 
 
+	void setIPM( const cv::Size& _origSize, const cv::Size& _dstSize, 
+		const std::vector<cv::Point2f>& _origPoints, const std::vector<cv::Point2f>& _dstPoints );
 private:
 	void createMaps();
 

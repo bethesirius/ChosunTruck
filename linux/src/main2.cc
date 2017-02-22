@@ -40,6 +40,7 @@ int main(int argc, char** argv) {
 	}
 	bool detection = false;
 	bool python_on = false;
+	int width = 1024, height = 768;
 	if(argc == 2){
 		if(strcmp(argv[1], "--Car_Detection")){
 			detection = true;
@@ -101,6 +102,7 @@ int main(int argc, char** argv) {
 			}
 		}
 	}
+	int move_mouse_pixel = 0;
 	while (true) {
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
@@ -133,26 +135,25 @@ int main(int argc, char** argv) {
 		//medianBlur(image, image, 3); 
 		//cv::cuda::bilateralFilter(imageGPU, imageGPU, );
 
-		int width = 1024, height = 768;
-
-		// The 4-points at the input image	
+		IPM ipm;
 		vector<Point2f> origPoints;
-		
+		vector<Point2f> dstPoints;
+		// The 4-points at the input image	
+	
 		origPoints.push_back(Point2f(0-400, (height-50)));
 		origPoints.push_back(Point2f(width+400, height-50));
-		origPoints.push_back(Point2f(width/2+80, height/2+30));
-		origPoints.push_back(Point2f(width/2-80, height/2+30));
-		
+		origPoints.push_back(Point2f(width/2+100, height/2+30));
+		origPoints.push_back(Point2f(width/2-100, height/2+30));	
 
 		// The 4-points correspondences in the destination image
-		vector<Point2f> dstPoints;
+			
 		dstPoints.push_back(Point2f(0, height));
 		dstPoints.push_back(Point2f(width, height));
 		dstPoints.push_back(Point2f(width, 0));
 		dstPoints.push_back(Point2f(0, 0));
 
 		// IPM object
-		IPM ipm(Size(width, height), Size(width, height), origPoints, dstPoints);
+		ipm.setIPM(Size(width, height), Size(width, height), origPoints, dstPoints);
 
 		// Process
 		//clock_t begin = clock();
@@ -167,6 +168,8 @@ int main(int argc, char** argv) {
 		cv::UMat blur;
 		cv::UMat sobel;
 		cv::Mat contours;
+		LineFinder ld; // 인스턴스 생성
+
 		cv::resize(outputImg, outputImg, cv::Size(320, 240));
 		cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
 		cv::blur(gray, blur, cv::Size(10, 10));
@@ -174,17 +177,15 @@ int main(int argc, char** argv) {
 		cv::threshold(sobel, contours, 145, 255, CV_THRESH_BINARY);
 		//Thinning(contours, contours.rows, contours.cols);
 		//cv::Canny(gray, contours, 125, 350);
-		
-		LineFinder ld; // 인스턴스 생성
-
+			
+			
 		// 확률적 허프변환 파라미터 설정하기
-		
+			
 		ld.setLineLengthAndGap(20, 120);
 		ld.setMinVote(55);
 
 		std::vector<cv::Vec4i> li = ld.findLines(contours);
 		ld.drawDetectedLines(contours);
-
 
 		////////////////////////////////////////////
 		// 자율 주행 
@@ -215,9 +216,9 @@ int main(int argc, char** argv) {
 				if (first_centerline == 0 ) {
 					first_centerline = centerline;
 				}
-				cv::circle(outputImg, Point(centerline, i), 1, Scalar(30, 255, 30) , 3);
-				cv::circle(outputImg, Point(centerline + center_to_right+20, i), 1, Scalar(255, 30, 30) , 3);
-				cv::circle(outputImg, Point(centerline - center_to_left+10, i), 1, Scalar(255, 30, 30) , 3);
+				//cv::circle(outputImg, Point(centerline, i), 1, Scalar(30, 255, 30) , 3);
+				//cv::circle(outputImg, Point(centerline + center_to_right+20, i), 1, Scalar(255, 30, 30) , 3);
+				//cv::circle(outputImg, Point(centerline - center_to_left+10, i), 1, Scalar(255, 30, 30) , 3);
 				sum_centerline += centerline;
 				avr_center_to_left = (avr_center_to_left * count_centerline + center_to_left)/count_centerline+1;
 				avr_center_to_right = (avr_center_to_right * count_centerline + center_to_right)/count_centerline+1;
@@ -234,9 +235,40 @@ int main(int argc, char** argv) {
 			int degree = atan2 (last_centerline - first_centerline, count_centerline) * 180 / PI;
 			//diff = (90 - degree);
 	
-			int move_mouse_pixel = 0 - counter + diff;
+			move_mouse_pixel = 0 - counter + diff;
 			cout << "Steer: "<< move_mouse_pixel << "px ";
 			//goDirection(move_mouse_pixel);
+			origPoints[2]=Point2f((width/2+100)+(move_mouse_pixel*7), height/2+30);
+			origPoints[3]=Point2f((width/2-100)+(move_mouse_pixel*7), height/2+30);
+		
+
+			// IPM object
+			ipm.setIPM(Size(width, height), Size(width, height), origPoints, dstPoints);
+
+			// Process
+			//clock_t begin = clock();
+			ipm.applyHomography(image, outputImg);
+			//clock_t end = clock();
+			//double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+			//printf("%.2f (ms)\r", 1000 * elapsed_secs);
+			//ipm.drawPoints(origPoints, image);
+
+			//Mat row = outputImg.row[0];
+			cv::resize(outputImg, outputImg, cv::Size(320, 240));
+			cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
+			cv::blur(gray, blur, cv::Size(10, 10));
+			cv::Sobel(blur, sobel, blur.depth(), 1, 0, 3, 0.5, 127);
+			cv::threshold(sobel, contours, 145, 255, CV_THRESH_BINARY);
+			//Thinning(contours, contours.rows, contours.cols);
+			//cv::Canny(gray, contours, 125, 350);
+
+		// 확률적 허프변환 파라미터 설정하기
+		
+			ld.setLineLengthAndGap(20, 120);
+			ld.setMinVote(55);
+
+			std::vector<cv::Vec4i> li = ld.findLines(contours);
+			ld.drawDetectedLines(contours);
 			moveMouse(move_mouse_pixel);
 			int road_curve = (int)((sum_centerline/count_centerline-bottom_center));
 			
@@ -268,7 +300,10 @@ int main(int argc, char** argv) {
 		////////////////////////////////////////////
 		
 		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
-		imshow("Test", outputImg);
+		imshow("Road", outputImg);
+		imshow("Lines", contours);
+		moveWindow("Lines", 200, 100);
+		moveWindow("Road", 530, 100);
 		waitKey(1);
 		
 		auto end = chrono::high_resolution_clock::now();
@@ -289,7 +324,8 @@ std::string exec(const char* cmd) {
     std::array<char, 128> buffer;
     std::string result;
     std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
-    if (!pipe) throw std::runtime_error("popen() failed!");
+    if (!pipe) 
+    	throw std::runtime_error("popen() failed!");
     while (!feof(pipe.get())) {
         if (fgets(buffer.data(), 128, pipe.get()) != NULL)
             result += buffer.data();
