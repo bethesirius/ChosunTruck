@@ -31,11 +31,11 @@ int main() {
 	long long int i = 0;
 
 	while (true) {
-		// Press '+' on NUMPAD to pause
-		if (GetAsyncKeyState(VK_ADD) & 0x8000){
+		// Press '+' to pause
+		if (GetAsyncKeyState(VK_OEM_PLUS) & 0x8000){
 			while (true) {
-				// Press '*' on NUMPAD to start
-				if (GetAsyncKeyState(VK_MULTIPLY) & 0x8000){
+				// Press '-' to start
+				if (GetAsyncKeyState(VK_OEM_MINUS) & 0x8000){
 					break;
 				}
 			}
