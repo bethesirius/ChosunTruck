@@ -168,7 +168,7 @@ int main() {
 			int diff_max = 70;
 
 			// jerk_factor = how fast the wheel will turn
-			// (1/70) = Move 1 pixel at MAX every time step.
+			// (1/70) = Limits steering to move 1px MAXMIMUM every time step (1 second).
 			double jerk_factor = 1 / 70;
 
 			// linearized_diff = diff on a scale of -1 to 1
