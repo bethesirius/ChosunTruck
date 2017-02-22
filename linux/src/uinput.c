@@ -15,7 +15,7 @@ int setUinput() {
     if(fd < 0) {
         fd=open("/dev/input/uinput",O_WRONLY|O_NONBLOCK);
         if(fd<0){
-            die("error: open");
+            die("error: Can't open an uinput file. see #17.(https://github.com/bethesirius/ChosunTruck/issues/17)");
             return -1;
         }
     }
