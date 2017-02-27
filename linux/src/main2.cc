@@ -41,6 +41,11 @@ int main(int argc, char** argv) {
 	bool detection = false;
 	bool python_on = false;
 	int width = 1024, height = 768;
+	double IPM_BOTTOM_RIGHT = width+400;
+	double IPM_BOTTOM_LEFT = -400;
+	double IPM_RIGHT = width/2+100;
+	double IPM_LEFT = width/2-100;
+	int IPM_diff = 0;
 	if(argc == 2){
 		if(strcmp(argv[1], "--Car_Detection")){
 			detection = true;
@@ -140,10 +145,10 @@ int main(int argc, char** argv) {
 		vector<Point2f> dstPoints;
 		// The 4-points at the input image	
 	
-		origPoints.push_back(Point2f(0-400, (height-50)));
-		origPoints.push_back(Point2f(width+400, height-50));
-		origPoints.push_back(Point2f(width/2+100, height/2+30));
-		origPoints.push_back(Point2f(width/2-100, height/2+30));	
+		origPoints.push_back(Point2f(IPM_BOTTOM_LEFT, (height-50)));
+		origPoints.push_back(Point2f(IPM_BOTTOM_RIGHT, height-50));
+		origPoints.push_back(Point2f(IPM_RIGHT, height/2+30));
+		origPoints.push_back(Point2f(IPM_LEFT, height/2+30));	
 
 		// The 4-points correspondences in the destination image
 			
@@ -238,37 +243,35 @@ int main(int argc, char** argv) {
 			move_mouse_pixel = 0 - counter + diff;
 			cout << "Steer: "<< move_mouse_pixel << "px ";
 			//goDirection(move_mouse_pixel);
-			origPoints[2]=Point2f((width/2+100)+(move_mouse_pixel*7), height/2+30);
-			origPoints[3]=Point2f((width/2-100)+(move_mouse_pixel*7), height/2+30);
-		
-
-			// IPM object
-			ipm.setIPM(Size(width, height), Size(width, height), origPoints, dstPoints);
-
-			// Process
-			//clock_t begin = clock();
-			ipm.applyHomography(image, outputImg);
-			//clock_t end = clock();
-			//double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-			//printf("%.2f (ms)\r", 1000 * elapsed_secs);
-			//ipm.drawPoints(origPoints, image);
-
-			//Mat row = outputImg.row[0];
-			cv::resize(outputImg, outputImg, cv::Size(320, 240));
-			cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
-			cv::blur(gray, blur, cv::Size(10, 10));
-			cv::Sobel(blur, sobel, blur.depth(), 1, 0, 3, 0.5, 127);
-			cv::threshold(sobel, contours, 145, 255, CV_THRESH_BINARY);
-			//Thinning(contours, contours.rows, contours.cols);
-			//cv::Canny(gray, contours, 125, 350);
-
-		// 확률적 허프변환 파라미터 설정하기
-		
-			ld.setLineLengthAndGap(20, 120);
-			ld.setMinVote(55);
-
-			std::vector<cv::Vec4i> li = ld.findLines(contours);
-			ld.drawDetectedLines(contours);
+			if(move_mouse_pixel == 0){
+				if(IPM_diff > 0){
+					IPM_RIGHT -= 1;
+					IPM_LEFT -= 1;
+					IPM_diff -= 1;
+				}
+				else if(IPM_diff < 0){
+					IPM_RIGHT += 1;
+					IPM_LEFT += 1;
+					IPM_diff += 1;
+				}
+				else{
+					IPM_RIGHT = width/2+100;
+					IPM_LEFT = width/2-100;
+					IPM_diff = 0;
+				}
+			}
+			else{
+				if (IPM_diff >= -30 && IPM_diff <= 30){
+					IPM_RIGHT += move_mouse_pixel;
+					IPM_LEFT += move_mouse_pixel;
+					if(move_mouse_pixel > 0){
+						IPM_diff++;
+					}
+					else{
+						IPM_diff--;
+					}
+				}
+			}
 			moveMouse(move_mouse_pixel);
 			int road_curve = (int)((sum_centerline/count_centerline-bottom_center));
 			
