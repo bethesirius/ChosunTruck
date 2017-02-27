@@ -112,6 +112,9 @@ Lane Detection + Vehicle Detection (Youtube link)
 
 [![youtube link](http://img.youtube.com/vi/w6H2eGEvzvw/0.jpg)](http://www.youtube.com/watch?v=w6H2eGEvzvw)
 
+Lane Detection with Adaptive IPM Area (Youtube link)
+
+[![youtube link](http://img.youtube.com/vi/qb99czlIklA/0.jpg)](http://www.youtube.com/watch?v=qb99czlIklA)
 ## Founders
 - Chiwan Song, chi3236@gmail.com
 
