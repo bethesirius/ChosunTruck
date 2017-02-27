@@ -305,8 +305,8 @@ int main(int argc, char** argv) {
 		//cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		imshow("Road", outputImg);
 		imshow("Lines", contours);
-		moveWindow("Lines", 200, 100);
-		moveWindow("Road", 530, 100);
+		moveWindow("Lines", 200, 400);
+		moveWindow("Road", 530, 400);
 		waitKey(1);
 		
 		auto end = chrono::high_resolution_clock::now();
