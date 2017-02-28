@@ -190,53 +190,15 @@ int main() {
 			}
 			else {}
 		}
-		
+
 		int diff = 0;
-		
+
 		// Sets the x-coordinate of the mouse position to the center
 		pt.x = width / 2;
-		
+
 		if (count_centerline != 0) {
 			// In testing, we found that "bottom_center - 25" gave the best results.
 			diff = sum_centerline / count_centerline - bottom_center - 25;
-
-
-		imshow("Lines", contours);
-		imshow("Road", outputImg);
-		cv::moveWindow("Lines", monitorHorizontal / 1.6, monitorVertical / 10.8);
-		cv::moveWindow("Road", monitorHorizontal / 1.2673, monitorVertical / 10.8);
-		SetWindowPos(consoleWindow, 0, monitorHorizontal / 1.6, monitorVertical / 2.7, 600, 400, SWP_NOZORDER);
-		SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-		waitKey(1);
-		// WORK IN PROGRESS FOR INPUT IMPLEMENTATION
-		/*
-		unsigned char row_center = gray.at<uchar>(10, 160);
-
-		unsigned char row_left = 0;
-		unsigned char row_right = 0;
-
-		int left = 0;
-		int right = 0;
-		int i = 0;
-		int row_number = 5;
-		while (i < 150) {
-			if (i == 149) {
-				i = 0;
-				row_left = 0;
-				row_right = 0;
-				left = 0;
-				right = 0;
-				row_number++;
-
-			}
-			if (row_left == 255 && row_right == 255) {
-				row_number = 5;
-				break;
-			}
-			if (row_left != 255) {
-				// If matrix is of type CV_8U then use Mat.at<uchar>(y,x) (http://bit.ly/2kINZBI)
-				row_left = gray.at<uchar>(row_number, 159 + left);  
-				left--;
 
 			// diff_max was determined by finding the maxmimum diff that can be used to go from center to the very edge of the lane.
 			// It is an approximation. In testing, 65px was the farthest we could go from center in-game without losing lane.
@@ -252,22 +214,29 @@ int main() {
 			// our new wheel position is determined by adding a number, turn_amount, to the previous wheel position
 			double turn_amount = linearized_diff * jerk_factor;
 
-			if (turn_amount < .5){
+			if (turn_amount < .5) {
 				turn_amount = 0;
 			}
 			else {
 				turn_amount = 1;
 			}
-			
+
 			int moveMouse = (pt.x + diffOld + turn_amount);
 
 			cout << "Steer: " << turn_amount << "px ";
 
 			SetCursorPos(moveMouse, height / 2);
-			
+
 			// int degree = atan2(last_centerline - first_centerline, count_centerline) * 180 / PI;
 			diffOld = diff;
 		}
+		imshow("Lines", contours);
+		imshow("Road", outputImg);
+		cv::moveWindow("Lines", monitorHorizontal / 1.6, monitorVertical / 10.8);
+		cv::moveWindow("Road", monitorHorizontal / 1.2673, monitorVertical / 10.8);
+		SetWindowPos(consoleWindow, 0, monitorHorizontal / 1.6, monitorVertical / 2.7, 600, 400, SWP_NOZORDER);
+		SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+		waitKey(1);
 	}
 	return 0;
 }
