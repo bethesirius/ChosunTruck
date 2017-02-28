@@ -1,7 +1,5 @@
 # <img src="https://github.com/bethesirius/ChosunTruck/blob/master/README/Logo.png", width="64">ChosunTruck
 
-# ChosunTruck
-
 ## Introduction
 ChosunTruck is an autonomous driving solution for [Euro Truck Simulator 2](https://eurotrucksimulator2.com/).
 Recently, autonomous driving technology has become a big issue and as a result we have been studying technology that incorporates this.
@@ -21,19 +19,30 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 
 - IDE: Visual Studio 2013
 
-- OpenCV version: 3.2
+- OpenCV version: 3.1+
 
 - [Cuda Toolkit 7.5](https://developer.nvidia.com/cuda-75-downloads-archive) (Note: Do an ADVANCED INSTALLATION. ONLY install the Toolkit + Integration to Visual Studio. Do NOT install the drivers + other stuff it would normally give you. Once installed, your project properties should look like this: https://i.imgur.com/e7IRtjy.png)
 
 #### Required to allow input to work in Windows:
-##### Note: Input is not currently working correctly.
-- **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from di8.keyboard/fusion.mouse to sys.keyboard/sys.mouse.** (thanks Komat!)
+- **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from** 
+```
+di8.keyboard/fusion.mouse
+```
+to 
+```
+sys.keyboard/sys.mouse.
+```
+(thanks Komat!)
+- **While you are in controls.sii, make sure your sensitivity is set to:**
+```
+ config_lines[33]: "constant c_rsteersens 0.775000"
+ config_lines[34]: "constant c_asteersens 4.650000"
+```
+##### Note: Input for Windows is experimental!
 
 #### Then:
 - Open the visual studio project and build it. 
 - Run ETS2 in windowed mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
-
-
 
 ### Linux
 #### Dependencies
@@ -77,7 +86,6 @@ Go to:
  My Project --> properties --> linker --> input --> additional dependencies
 ```
 and change the path of your Linker dependencies to
-
 ```
 opencv_calib3d310.lib;opencv_core310.lib;opencv_features2d310.lib;opencv_flann310.lib;opencv_highgui310.lib;opencv_imgcodecs310.lib;opencv_imgproc310.lib;opencv_ml310.lib;opencv_objdetect310.lib;opencv_photo310.lib;opencv_shape310.lib;opencv_stitching310.lib;opencv_superres310.lib;opencv_ts310.lib;opencv_video310.lib;opencv_videoio310.lib;opencv_videostab310.lib;opencv_viz310.lib;%(AdditionalDependencies)
 ```
@@ -116,6 +124,9 @@ Lane Detection + Vehicle Detection (Youtube link)
 
 [![youtube link](http://img.youtube.com/vi/w6H2eGEvzvw/0.jpg)](http://www.youtube.com/watch?v=w6H2eGEvzvw)
 
+Lane Detection with Adaptive IPM Area (Youtube link)
+
+[![youtube link](http://img.youtube.com/vi/qb99czlIklA/0.jpg)](http://www.youtube.com/watch?v=qb99czlIklA)
 ## Founders
 - Chiwan Song, chi3236@gmail.com
 
