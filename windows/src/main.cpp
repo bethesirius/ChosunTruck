@@ -31,6 +31,15 @@ int main() {
 	long long int i = 0;
 
 	while (true) {
+		// Press '+' to pause
+		if (GetAsyncKeyState(VK_OEM_PLUS) & 0x8000){
+			while (true) {
+				// Press '-' to start
+				if (GetAsyncKeyState(VK_OEM_MINUS) & 0x8000){
+					break;
+				}
+			}
+		}
 		auto begin = chrono::high_resolution_clock::now();
 		// ETS2
 		HWND hWnd = FindWindow("prism3d", NULL);
