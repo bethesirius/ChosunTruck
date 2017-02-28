@@ -26,11 +26,13 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 #### Required to allow input to work in Windows:
 - **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from** 
 ```
-di8.keyboard/fusion.mouse
+config_lines[0]: "device keyboard `di8.keyboard`"
+config_lines[1]: "device mouse `fusion.mouse`"
 ```
 to 
 ```
-sys.keyboard/sys.mouse.
+config_lines[0]: "device keyboard `sys.keyboard`"
+config_lines[1]: "device mouse `sys.mouse`"
 ```
 (thanks Komat!)
 - **While you are in controls.sii, make sure your sensitivity is set to:**
