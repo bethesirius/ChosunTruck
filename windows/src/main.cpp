@@ -136,7 +136,7 @@ int main()
 		cout << 1000 / ms << "fps       avr:" << 1000 / (sum / (++i)) << endl;
 		*/
 		imshow("Lines", contours);
-		imshow("Road", sobel);
+		imshow("Road", outputImg);
 		cv::moveWindow("Lines", monitorWidth / 1.6, monitorHeight / 10.8);
 		cv::moveWindow("Road", monitorWidth / 1.2673, monitorHeight / 10.8);
 		SetWindowPos(consoleWindow, 0, monitorWidth / 1.6, monitorHeight / 2.7, 600, 400, SWP_NOZORDER);
