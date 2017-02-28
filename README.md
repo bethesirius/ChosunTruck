@@ -9,7 +9,7 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 ## Features
 * You can drive a vehicle without handling it yourself.
 * You can understand the principles of autonomous driving.
-* (Experimental) You can detect where other vehicles are.
+* (Experimental/Linux only) You can detect where other vehicles are.
 
 ## How To Run It
 ### Windows
@@ -38,8 +38,6 @@ sys.keyboard/sys.mouse.
  config_lines[33]: "constant c_rsteersens 0.775000"
  config_lines[34]: "constant c_asteersens 4.650000"
 ```
-##### Note: Input for Windows is experimental!
-
 #### Then:
 - Open the visual studio project and build it. 
 - Run ETS2 in windowed mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
