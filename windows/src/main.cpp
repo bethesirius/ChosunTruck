@@ -22,10 +22,27 @@ using namespace std;
 
 void Thinning(Mat input, int row, int col);
 
+void GetDesktopResolution(int& monitorHorizontal, int& monitorVertical)
+{
+	RECT desktop;
+	// Get a handle to the desktop window
+	const HWND hDesktop = GetDesktopWindow();
+	// Get the size of screen to the variable desktop
+	GetWindowRect(hDesktop, &desktop);
+	// The top left corner will have coordinates (0,0)
+	// and the bottom right corner will have coordinates
+	// (horizontal, vertical)
+	monitorHorizontal = desktop.right;
+	monitorVertical = desktop.bottom;
+}
+
 int main() {
 
 	//cudaf();
 
+
+	int monitorHorizontal = 0;
+	int monitorVertical = 0;
 	long long int sum = 0;
 	long long int i = 0;
 	int diffOld = 0;
@@ -41,10 +58,13 @@ int main() {
 			}
 		}
 		auto begin = chrono::high_resolution_clock::now();
-		// ETS2
+		// Grab the game window
 		HWND hWnd = FindWindow("prism3d", NULL);
-		// NOTEPAD
-		//HWND hWnd = FindWindow("Photo_Light", NULL);
+		// Grab the console window
+		HWND consoleWindow = GetConsoleWindow();
+		// Grab Monitor
+		GetDesktopResolution(monitorHorizontal, monitorVertical);
+		
 		Mat image, outputImg;
 		hwnd2mat(hWnd).copyTo(image);
 
@@ -179,6 +199,44 @@ int main() {
 		if (count_centerline != 0) {
 			// In testing, we found that "bottom_center - 25" gave the best results.
 			diff = sum_centerline / count_centerline - bottom_center - 25;
+
+
+		imshow("Lines", contours);
+		imshow("Road", outputImg);
+		cv::moveWindow("Lines", monitorHorizontal / 1.6, monitorVertical / 10.8);
+		cv::moveWindow("Road", monitorHorizontal / 1.2673, monitorVertical / 10.8);
+		SetWindowPos(consoleWindow, 0, monitorHorizontal / 1.6, monitorVertical / 2.7, 600, 400, SWP_NOZORDER);
+		SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+		waitKey(1);
+		// WORK IN PROGRESS FOR INPUT IMPLEMENTATION
+		/*
+		unsigned char row_center = gray.at<uchar>(10, 160);
+
+		unsigned char row_left = 0;
+		unsigned char row_right = 0;
+
+		int left = 0;
+		int right = 0;
+		int i = 0;
+		int row_number = 5;
+		while (i < 150) {
+			if (i == 149) {
+				i = 0;
+				row_left = 0;
+				row_right = 0;
+				left = 0;
+				right = 0;
+				row_number++;
+
+			}
+			if (row_left == 255 && row_right == 255) {
+				row_number = 5;
+				break;
+			}
+			if (row_left != 255) {
+				// If matrix is of type CV_8U then use Mat.at<uchar>(y,x) (http://bit.ly/2kINZBI)
+				row_left = gray.at<uchar>(row_number, 159 + left);  
+				left--;
 
 			// diff_max was determined by finding the maxmimum diff that can be used to go from center to the very edge of the lane.
 			// It is an approximation. In testing, 65px was the farthest we could go from center in-game without losing lane.
