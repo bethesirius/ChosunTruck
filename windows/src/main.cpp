@@ -61,11 +61,6 @@ int main()
 	long long int sum = 0;
 	long long int i = 0;
 	int diffOld = 0;
-	double IPM_BOTTOM_LEFT = -400;
-	double IPM_BOTTOM_RIGHT = width + 400;
-	double IPM_RIGHT = width / 2 + 100;
-	double IPM_LEFT = width / 2 - 100;
-	//int IPM_diff = 0;
 
 	while (true) 
 	{
@@ -82,11 +77,11 @@ int main()
 
 		// The 4-points at the input image	
 		vector<Point2f> origPoints;
-		origPoints.push_back(Point2f(IPM_BOTTOM_LEFT, height - 50));
-		origPoints.push_back(Point2f(IPM_BOTTOM_RIGHT, height - 50));
-		origPoints.push_back(Point2f(IPM_RIGHT, height / 2 + 30));
-		origPoints.push_back(Point2f(IPM_LEFT, height / 2 + 30));
-
+		origPoints.push_back(Point2f(0 - 100, height - 50));
+		origPoints.push_back(Point2f(width + 100, height - 50));
+		origPoints.push_back(Point2f(width / 2 + 100, height / 2 + 30));
+		origPoints.push_back(Point2f(width / 2 - 100, height / 2 + 30));
+		
 		// The 4-points correspondences in the destination image
 		vector<Point2f> dstPoints;
 		dstPoints.push_back(Point2f(0, height));
