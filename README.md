@@ -23,7 +23,7 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 
 - [Cuda Toolkit 7.5](https://developer.nvidia.com/cuda-75-downloads-archive) (Note: Do an ADVANCED INSTALLATION. ONLY install the Toolkit + Integration to Visual Studio. Do NOT install the drivers + other stuff it would normally give you. Once installed, your project properties should look like this: https://i.imgur.com/e7IRtjy.png)
 
-- Do you have a problem with an installation. See [Windows Installation wiki page](https://github.com/bethesirius/ChosunTruck/wiki/Windows-Installation)
+- If you have a problem during installation, look at our [Windows Installation wiki page](https://github.com/bethesirius/ChosunTruck/wiki/Windows-Installation)
 
 #### Required to allow input to work in Windows:
 - **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from** 
