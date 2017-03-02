@@ -58,6 +58,10 @@ config_lines[1]: "device mouse `sys.mouse`"
 ```
 make
 ```
+### If you want the car detection function then:
+````
+make Drive
+````
 #### Then:
 - Run ETS2 in windowed mode and set its resolution to 1024 * 768. (It will work properly with 1920 * 1080 screen resolution and 1024 * 768 windowed mode ETS2)
 - It cannot find the ETS2 window automatically. Move the ETS2 window to the right-down corner to fix this.
