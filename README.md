@@ -78,14 +78,12 @@ If you have some problems running this project, reference the demo video below. 
 Lane Detection (Youtube link)
 
 [![youtube link](http://img.youtube.com/vi/vF7J_uC045Q/0.jpg)](http://www.youtube.com/watch?v=vF7J_uC045Q)
+[![youtube link](http://img.youtube.com/vi/qb99czlIklA/0.jpg)](http://www.youtube.com/watch?v=qb99czlIklA)
 
 Lane Detection + Vehicle Detection (Youtube link)
 
 [![youtube link](http://img.youtube.com/vi/w6H2eGEvzvw/0.jpg)](http://www.youtube.com/watch?v=w6H2eGEvzvw)
 
-Lane Detection with Adaptive IPM Area (Youtube link)
-
-[![youtube link](http://img.youtube.com/vi/qb99czlIklA/0.jpg)](http://www.youtube.com/watch?v=qb99czlIklA)
 ## Founders
 - Chiwan Song, chi3236@gmail.com
 
