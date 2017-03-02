@@ -23,6 +23,8 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 
 - [Cuda Toolkit 7.5](https://developer.nvidia.com/cuda-75-downloads-archive) (Note: Do an ADVANCED INSTALLATION. ONLY install the Toolkit + Integration to Visual Studio. Do NOT install the drivers + other stuff it would normally give you. Once installed, your project properties should look like this: https://i.imgur.com/e7IRtjy.png)
 
+- Do you have a problem with an installation. See [Windows Installation wiki page](https://github.com/bethesirius/ChosunTruck/wiki/Windows-Installation)
+
 #### Required to allow input to work in Windows:
 - **Go to C:\Users\YOURUSERNAME\Documents\Euro Truck Simulator 2\profiles and edit controls.sii from** 
 ```
@@ -48,7 +50,6 @@ config_lines[1]: "device mouse `sys.mouse`"
 #### Dependencies
 - OS: Ubuntu 16.04 LTS
 
-
 - [OpenCV version: 3.1](http://embedonix.com/articles/image-processing/installing-opencv-3-1-0-on-ubuntu/)
 
 - (Optional) Tensorflow version: 0.12.1
@@ -69,49 +70,7 @@ make
 ./ChosunTruck [-D|--Car_Detection]
 ```
 ## Troubleshooting
-### OpenCV CUDA Libraries
-
-**Having trouble building OpenCV libraries with CMake? No worries, just use the prebuilt OpenCV libraries provided through nuget.**
-
-- For Release Libaries: https://www.nuget.org/packages/opencvcuda-release/
-- For Debug Libraries: https://www.nuget.org/packages/opencvcuda-debug/
-
-### Linker Errors
-
-**Getting Linker Errors (LNKxxxx)?**
-
-Go to: 
-
-```
- My Project --> properties --> linker --> input --> additional dependencies
-```
-and change the path of your Linker dependencies to
-```
-opencv_calib3d310.lib;opencv_core310.lib;opencv_features2d310.lib;opencv_flann310.lib;opencv_highgui310.lib;opencv_imgcodecs310.lib;opencv_imgproc310.lib;opencv_ml310.lib;opencv_objdetect310.lib;opencv_photo310.lib;opencv_shape310.lib;opencv_stitching310.lib;opencv_superres310.lib;opencv_ts310.lib;opencv_video310.lib;opencv_videoio310.lib;opencv_videostab310.lib;opencv_viz310.lib;%(AdditionalDependencies)
-```
-
-Then, go to 
-```
-C/C++ --> general --> additional #include dependencies
-```
-
-and change the path to where your opencv libraries are located
-
-### Assertion failed
-
-**Getting an error that looks like this when in Debug mode?**
-
-```
-OpenCV Error: Assertion failed (src.checkVector(2, CV_32F) == 4 && dst.checkVect or(2, CV_32F) == 4) in cv::getPerspectiveTransform, file ...\opencv_sources\modules\imgproc\src\imgwarp.cpp, line 6353
-```
-- Switch to Release build for now. Usually this is caused by a wrong Mat type being used (in this case, CV_32F).
-
-**Or this?**
-
-```
-OpenCV Error: Assertion failed (ssize.area() > 0) in cv::remapBilinear, file ...\opencv\sources\modules\imgproc\src\imgwarp.cpp, line 3868 
-```
-- [Try switching to Multi-threaded runtime libs (/MT)](https://i.imgur.com/oIssgHM.png)
+See [Our wiki page](https://github.com/bethesirius/ChosunTruck/wiki/Troubleshooting).
 
 If you have some problems running this project, reference the demo video below. Or, [open a issue to contact our team](https://github.com/bethesirius/ChosunTruck/issues).
 
