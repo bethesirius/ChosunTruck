@@ -15,11 +15,11 @@ We chose Euro Truck Simulator 2 because this simulator provides a good test envi
 ### Windows
 
 #### Dependencies
-- OS: Windows 7 (64bit)
+- OS: Windows 7, 10 (64bit)
 
-- IDE: Visual Studio 2013
+- IDE: Visual Studio 2013, 2015
 
-- OpenCV version: 3.1+
+- OpenCV version: >= 3.1
 
 - [Cuda Toolkit 7.5](https://developer.nvidia.com/cuda-75-downloads-archive) (Note: Do an ADVANCED INSTALLATION. ONLY install the Toolkit + Integration to Visual Studio. Do NOT install the drivers + other stuff it would normally give you. Once installed, your project properties should look like this: https://i.imgur.com/e7IRtjy.png)
 
@@ -50,9 +50,9 @@ config_lines[1]: "device mouse `sys.mouse`"
 #### Dependencies
 - OS: Ubuntu 16.04 LTS
 
-- [OpenCV version: 3.1](http://embedonix.com/articles/image-processing/installing-opencv-3-1-0-on-ubuntu/)
+- [OpenCV version: >= 3.1](http://embedonix.com/articles/image-processing/installing-opencv-3-1-0-on-ubuntu/)
 
-- (Optional) Tensorflow version: 0.12.1
+- (Optional) Tensorflow version: >= 0.12.1
 
 ### Build the source code with the following command (inside the linux directory).
 ```
