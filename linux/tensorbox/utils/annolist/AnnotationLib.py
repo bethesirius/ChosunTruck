@@ -30,7 +30,7 @@ except ImportError:
 ################################################
 
 
-def cmpAnnRectsByScore(r1, r2):
+def cmpAnnoRectsByScore(r1, r2):
     return cmp(r1.score, r2.score)
 
 def cmpAnnoRectsByScoreDescending(r1, r2):
