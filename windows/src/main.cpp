@@ -61,27 +61,32 @@ int main()
 	long long int sum = 0;
 	long long int i = 0;
 	int diffOld = 0;
+	GetGameResolution(width, height);
+	double IPM_BOTTOM_RIGHT = width + 400;
+	double IPM_BOTTOM_LEFT = -400;
+	double IPM_RIGHT = width / 2 + 100;
+	double IPM_LEFT = width / 2 - 100;
+	int IPM_diff = 0;
 
-	while (true) 
+	while (true)
 	{
 		detectPause();
-		GetGameResolution(width, height);
 		HWND hWnd = FindWindow("prism3d", NULL);
 		HWND consoleWindow = GetConsoleWindow();
 		GetDesktopResolution(monitorWidth, monitorHeight);
-		
+
 		Mat image, outputImg;
 		hwnd2mat(hWnd).copyTo(image);
 
-		medianBlur(image, image, 3); 
+		medianBlur(image, image, 3);
 
 		// The 4-points at the input image	
 		vector<Point2f> origPoints;
-		origPoints.push_back(Point2f(0 - 100, height - 50));
-		origPoints.push_back(Point2f(width + 100, height - 50));
-		origPoints.push_back(Point2f(width / 2 + 100, height / 2 + 30));
-		origPoints.push_back(Point2f(width / 2 - 100, height / 2 + 30));
-		
+		origPoints.push_back(Point2f(IPM_BOTTOM_LEFT, height - 50));
+		origPoints.push_back(Point2f(IPM_BOTTOM_RIGHT, height - 50));
+		origPoints.push_back(Point2f(IPM_RIGHT, height / 2 + 30));
+		origPoints.push_back(Point2f(IPM_LEFT, height / 2 + 30));
+
 		// The 4-points correspondences in the destination image
 		vector<Point2f> dstPoints;
 		dstPoints.push_back(Point2f(0, height));
@@ -110,17 +115,17 @@ int main()
 		cv::blur(gray, blur, cv::Size(10, 10));
 		cv::Sobel(blur, sobel, blur.depth(), 1, 0, 3, 0.5, 127);
 		cv::threshold(sobel, contours, 145, 255, CV_THRESH_BINARY);
-		
+
 		//Thinning(contours, contours.rows, contours.cols);
 		//cv::Canny(gray, contours, 125, 350);
-		
+
 		LineFinder ld;
 		ld.setLineLengthAndGap(20, 120);
 		ld.setMinVote(55);
-		
+
 		std::vector<cv::Vec4i> li = ld.findLines(contours);
 		ld.drawDetectedLines(contours);
-		
+
 		// cv::cvtColor(contours, contours, COLOR_GRAY2RGB);
 		/*
 		auto end = chrono::high_resolution_clock::now();
@@ -137,7 +142,7 @@ int main()
 		SetWindowPos(consoleWindow, 0, monitorWidth / 1.6, monitorHeight / 2.7, 600, 400, SWP_NOZORDER);
 		SetWindowPos(hWnd, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 		waitKey(1);
-		
+
 		SetActiveWindow(hWnd);
 		POINT pt;
 		GetCursorPos(&pt);
@@ -203,8 +208,9 @@ int main()
 
 			// diff on a scale of -1 to 1
 			double linearized_diff = diff / diff_max;
-			
+
 			double turn_amount = linearized_diff * jerk_factor;
+
 
 			if (turn_amount < .5)
 			{
@@ -214,10 +220,44 @@ int main()
 			{
 				turn_amount = 1;
 			}
-			
+
 			int moveMouse = (pt.x + diffOld + turn_amount);
 			SetCursorPos(moveMouse, height / 2);
 			cout << "Steer: " << diffOld << "px " << endl;
+			double diffForIPM = (diff - diffOld) / 3;
+			if ((int)diffForIPM == 0) {
+				if (IPM_diff > 0) {
+					IPM_RIGHT -= 1;
+					IPM_LEFT -= 1;
+					IPM_diff -= 1;
+				}
+				else if (IPM_diff < 0) {
+					IPM_RIGHT += 1;
+					IPM_LEFT += 1;
+					IPM_diff += 1;
+				}
+				else {
+					IPM_RIGHT = width / 2 + 100;
+					IPM_LEFT = width / 2 - 100;
+					IPM_diff = 0;
+				}
+			}
+			else {
+				if (IPM_diff >= -30 && IPM_diff <= 30) {
+
+					if ((int)diffForIPM > 0) {
+						IPM_RIGHT += (int)diffForIPM;
+						IPM_LEFT += (int)diffForIPM;
+						IPM_diff++;
+					}
+					else {
+						IPM_RIGHT -= (int)diffForIPM;
+						IPM_LEFT -= (int)diffForIPM;
+						IPM_diff--;
+					}
+				}
+			}
+			//cout << IPM_diff <<" / " << (int)diffForIPM << endl;
 			diffOld = diff;
 		}
 	}
