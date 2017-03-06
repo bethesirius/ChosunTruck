@@ -61,7 +61,6 @@ int main()
 	long long int sum = 0;
 	long long int i = 0;
 	int diffOld = 0;
-	double IPM_BOTTOM_RIGHT = width + 400;
 	double IPM_BOTTOM_LEFT = 0-400;
 	double IPM_BOTTOM_RIGHT = gameWidth + 400;
 	double IPM_RIGHT = gameWidth / 2 + 100;
