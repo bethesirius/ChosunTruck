@@ -224,7 +224,7 @@ int main()
 			int moveMouse = (pt.x + diffOld + turn_amount);
 			SetCursorPos(moveMouse, height / 2);
 			cout << "Steer: " << diffOld << "px " << endl;
-			double diffForIPM = (diff - diffOld) / 3;
+			/*double diffForIPM = (diff - diffOld) / 3;
 			if ((int)diffForIPM == 0) {
 				if (IPM_diff > 0) {
 					IPM_RIGHT -= 1;
@@ -256,7 +256,7 @@ int main()
 						IPM_diff--;
 					}
 				}
-			}
+			}*/
 			//cout << IPM_diff <<" / " << (int)diffForIPM << endl;
 			diffOld = diff;
 		}
