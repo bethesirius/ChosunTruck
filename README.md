@@ -43,6 +43,7 @@ config_lines[1]: "device mouse `sys.mouse`"
  config_lines[34]: "constant c_asteersens 4.650000"
 ```
 #### Then:
+- Set controls.sii to read-only
 - Open the visual studio project and build it. 
 - Run ETS2 in windowed mode and set resolution to 1024 * 768.(It will work properly with 1920 * 1080 screen resolution and 1024 * 768 window mode ETS2.)
 
