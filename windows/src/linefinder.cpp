@@ -19,45 +19,43 @@ cv::Point prev_point;
 using namespace cv;
 using namespace std;
 
-// ÇØ´ç ¼¼ÅÍ ¸Ş¼Òµåµé
-// ´©Àû±â¿¡ ÇØ»óµµ ¼³Á¤
+// í•´ë‹¹ ì„¸í„° ë©”ì†Œë“œë“¤
+// ëˆ„ì ê¸°ì— í•´ìƒë„ ì„¤ì •
 void LineFinder::setAccResolution(double dRho, double dTheta) {
 	deltaRho = dRho;
 	deltaTheta = dTheta;
 }
 
-// ÅõÇ¥ ÃÖ¼Ò °³¼ö ¼³Á¤
+// íˆ¬í‘œ ìµœì†Œ ê°œìˆ˜ ì„¤ì •
 void LineFinder::setMinVote(int minv) {
 	minVote = minv;
 }
 
-// ¼± ±æÀÌ¿Í °£°İ ¼³Á¤
+// ì„  ê¸¸ì´ì™€ ê°„ê²© ì„¤ì •
 void LineFinder::setLineLengthAndGap(double length, double gap) {
 	minLength = length;
 	maxGap = gap;
 }
 
-// ÇãÇÁ ¼± ¼¼±×¸ÕÆ® °¨Áö¸¦ ¼öÇàÇÏ´Â ¸Ş¼Òµå
-// È®·üÀû ÇãÇÁ º¯È¯ Àû¿ë
+// í—ˆí”„ ì„  ì„¸ê·¸ë¨¼íŠ¸ ê°ì§€ë¥¼ ìˆ˜í–‰í•˜ëŠ” ë©”ì†Œë“œ
+// í™•ë¥ ì  í—ˆí”„ ë³€í™˜ ì ìš©
 std::vector<cv::Vec4i> LineFinder::findLines(cv::Mat& binary) {
 	lines.clear();
 	cv::HoughLinesP(binary, lines, deltaRho, deltaTheta, minVote, minLength, maxGap);
 	return lines;
-} // cv::Vec4i º¤ÅÍ¸¦ ¹İÈ¯ÇÏ°í, °¨ÁöµÈ °¢ ¼¼±×¸ÕÆ®ÀÇ ½ÃÀÛ°ú ¸¶Áö¸· Á¡ ÁÂÇ¥¸¦ Æ÷ÇÔ.
+} // cv::Vec4i ë²¡í„°ë¥¼ ë°˜í™˜í•˜ê³ , ê°ì§€ëœ ê° ì„¸ê·¸ë¨¼íŠ¸ì˜ ì‹œì‘ê³¼ ë§ˆì§€ë§‰ ì  ì¢Œí‘œë¥¼ í¬í•¨.
 
-// À§ ¸Ş¼Òµå¿¡¼­ °¨ÁöÇÑ ¼±À» ´ÙÀ½ ¸Ş¼Òµå¸¦ »ç¿ëÇØ¼­ ±×¸²
-// ¿µ»ó¿¡¼­ °¨ÁöµÈ ¼±À» ±×¸®±â
+// ìœ„ ë©”ì†Œë“œì—ì„œ ê°ì§€í•œ ì„ ì„ ë‹¤ìŒ ë©”ì†Œë“œë¥¼ ì‚¬ìš©í•´ì„œ ê·¸ë¦¼
+// ì˜ìƒì—ì„œ ê°ì§€ëœ ì„ ì„ ê·¸ë¦¬ê¸°
 void LineFinder::drawDetectedLines(cv::Mat &image, cv::Scalar color) {
 
-	// ¼± ±×¸®±â
-	std::vector<cv::Vec4i>::const_iterator it2 = lines.begin();
+	// ì„  ê·¸ë¦¬ê¸°
 	cv::Point endPoint;
 
-	while (it2 != lines.end()) {
-		cv::Point startPoint((*it2)[0], (*it2)[1]);
-		endPoint = cv::Point((*it2)[2], (*it2)[3]);
+	for (auto it2&& : lines) {
+		cv::Point startPoint(it2[0], it2[1]);
+		endPoint = cv::Point(it2[2], it2[3]);
 		cv::line(image, startPoint, endPoint, color, 3);
-		++it2;
 	}
 }
 
