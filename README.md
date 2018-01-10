@@ -89,6 +89,10 @@ Lane Detection + Vehicle Detection (Youtube link)
 
 [![youtube link](http://img.youtube.com/vi/w6H2eGEvzvw/0.jpg)](http://www.youtube.com/watch?v=w6H2eGEvzvw)
 
+## Todo
+* For better detection performance, Change the Tensorbox to YOLO2.
+* The information from in-game screen have Restrictions. Read ETS2 process memory to collect more driving environment data.
+
 ## Founders
 - Chiwan Song, chi3236@gmail.com
 
