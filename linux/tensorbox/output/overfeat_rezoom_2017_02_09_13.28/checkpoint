@@ -1,0 +1,2 @@
+model_checkpoint_path: "save.ckpt-100000"
+all_model_checkpoint_paths: "save.ckpt-100000"
