@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
 
 		//------------------------
 		//cv::cvtColor(image, sendImg, CV_YUV2RGBA_NV21);
-		cv::cvtColor(image, sendImg, CV_RGBA2RGB);
+		cv::cvtColor(image, sendImg, COLOR_RGBA2RGB);
 		//printf("%d\n", sendImg.dataend - sendImg.datastart);
 
 		if(detection == true) {
@@ -177,7 +177,7 @@ int main(int argc, char** argv) {
 		cv::cvtColor(outputImg, gray, COLOR_RGB2GRAY);
 		cv::blur(gray, blur, cv::Size(10, 10));
 		cv::Sobel(blur, sobel, blur.depth(), 1, 0, 3, 0.5, 127);
-		cv::threshold(sobel, contours, 145, 255, CV_THRESH_BINARY);
+		cv::threshold(sobel, contours, 145, 255, THRESH_BINARY);
 		//Thinning(contours, contours.rows, contours.cols);
 		//cv::Canny(gray, contours, 125, 350);
 		
